@@ -1,0 +1,83 @@
+{
+  "common": {
+    "appName": "জিসান এন্টারপ্রাইজ",
+    "loading": "লোড হচ্ছে…",
+    "close": "বন্ধ করুন",
+    "retry": "আবার চেষ্টা করুন",
+    "goHome": "হোমে যান"
+  },
+  "nav": {
+    "label": "প্রধান মেনু",
+    "home": "হোম",
+    "uiDemo": "UI ডেমো"
+  },
+  "shell": {
+    "skipToContent": "মূল অংশে যান",
+    "openMenu": "মেনু খুলুন",
+    "collapseSidebar": "সাইডবার ছোট করুন",
+    "expandSidebar": "সাইডবার বড় করুন",
+    "userMenu": "ব্যবহারকারী মেনু (শীঘ্রই আসছে)"
+  },
+  "theme": {
+    "label": "থিম",
+    "light": "সাদা",
+    "dark": "কালো",
+    "system": "সিস্টেম"
+  },
+  "locale": {
+    "label": "ভাষা",
+    "bn": "বাংলা",
+    "en": "English"
+  },
+  "pagination": {
+    "label": "পাতা নির্বাচন",
+    "previous": "আগের",
+    "next": "পরের",
+    "page": "পাতা {page}",
+    "summary": "{total}টির মধ্যে {from}–{to} দেখানো হচ্ছে"
+  },
+  "home": {
+    "title": "এন্টারপ্রাইজ ড্যাশবোর্ড",
+    "description": "আপনার সব ব্যবসা এক জায়গায়।",
+    "backendUp": "Backend: চলছে",
+    "backendDown": "Backend: বন্ধ"
+  },
+  "errors": {
+    "title": "কিছু একটা সমস্যা হয়েছে",
+    "description": "পেজটি দেখানো যায়নি। আবার চেষ্টা করুন।",
+    "notFoundTitle": "পেজ পাওয়া যায়নি",
+    "notFoundDescription": "আপনি যে পেজটি খুঁজছেন সেটি নেই।"
+  },
+  "demo": {
+    "title": "UI উপাদান",
+    "description": "শুধু ডেভেলপমেন্টের পেজ: সব মূল উপাদান দুই থিমে ও বর্তমান ভাষায়।",
+    "lightTheme": "সাদা থিম",
+    "darkTheme": "কালো থিম",
+    "buttons": "বাটন",
+    "primary": "প্রধান",
+    "secondary": "দ্বিতীয়",
+    "ghost": "হালকা",
+    "danger": "বিপজ্জনক",
+    "disabled": "নিষ্ক্রিয়",
+    "card": "কার্ড",
+    "cardBody": "কার্ড, সাইডবার ও modal-এ glass ইফেক্ট; বড় টেবিলে কখনো নয়।",
+    "formats": "সংখ্যা, টাকা ও তারিখের ফরম্যাট",
+    "number": "সংখ্যা",
+    "money": "টাকা",
+    "quantity": "পরিমাণ",
+    "date": "তারিখ",
+    "status": "অবস্থার রঙ",
+    "success": "সফল",
+    "warning": "সতর্কতা",
+    "emptyTitle": "এখনো কিছু নেই",
+    "emptyDescription": "আপনি যা যোগ করবেন তা এখানে দেখাবে।",
+    "skeleton": "লোডিং স্কেলিটন",
+    "table": "পাতাসহ টেবিল",
+    "column": "কলাম",
+    "value": "মান",
+    "row": "সারি {n}",
+    "openModal": "Modal খুলুন",
+    "modalTitle": "উদাহরণ modal",
+    "modalBody": "বন্ধ করতে Esc বা বন্ধ বাটন চাপুন।"
+  }
+}

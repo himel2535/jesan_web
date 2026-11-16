@@ -1,0 +1,83 @@
+{
+  "common": {
+    "appName": "Jesan Enterprise",
+    "loading": "Loading…",
+    "close": "Close",
+    "retry": "Try again",
+    "goHome": "Go to home"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "uiDemo": "UI demo"
+  },
+  "shell": {
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "userMenu": "User menu (coming soon)"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "locale": {
+    "label": "Language",
+    "bn": "বাংলা",
+    "en": "English"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page}",
+    "summary": "Showing {from}–{to} of {total}"
+  },
+  "home": {
+    "title": "Enterprise Dashboard",
+    "description": "All your businesses in one place.",
+    "backendUp": "Backend: running",
+    "backendDown": "Backend: down"
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "description": "The page could not be shown. Please try again.",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The page you are looking for does not exist."
+  },
+  "demo": {
+    "title": "UI components",
+    "description": "Development-only page showing every core component in both themes and the current language.",
+    "lightTheme": "Light theme",
+    "darkTheme": "Dark theme",
+    "buttons": "Buttons",
+    "primary": "Primary",
+    "secondary": "Secondary",
+    "ghost": "Ghost",
+    "danger": "Danger",
+    "disabled": "Disabled",
+    "card": "Card",
+    "cardBody": "Cards, the sidebar and modals use the glass effect; long tables never do.",
+    "formats": "Number, money and date formats",
+    "number": "Number",
+    "money": "Money",
+    "quantity": "Quantity",
+    "date": "Date",
+    "status": "Status colours",
+    "success": "Success",
+    "warning": "Warning",
+    "emptyTitle": "Nothing here yet",
+    "emptyDescription": "Items you add will appear here.",
+    "skeleton": "Loading skeleton",
+    "table": "Table with pagination",
+    "column": "Column",
+    "value": "Value",
+    "row": "Row {n}",
+    "openModal": "Open modal",
+    "modalTitle": "Example modal",
+    "modalBody": "Press Esc or the close button to close this dialog."
+  }
+}
