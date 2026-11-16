@@ -20,20 +20,21 @@ Jesan Enterprise মাল্টি-বিজনেস ERP প্ল্যাট
 
 ## CI (GitHub Actions)
 
-- `.github/workflows/ci.yml` প্রতিটা PR-এ ও `main`-এ push-এ চলে: Node (`.nvmrc` থেকে) → `npm ci` → `format:check` → `lint` → `type-check` → `build`।
+- `.github/workflows/ci.yml` প্রতিটা PR-এ ও `main`-এ push-এ চলে: Node (`.nvmrc` থেকে) → `npm ci` → `format:check` → `lint` → `type-check` → `test` → `build`।
 - CI সবুজ না হলে merge নয়। লোকালে একই ধাপগুলো চালিয়ে তারপর push করো।
 - নতুন স্ক্রিপ্ট (যেমন test) যোগ হলে CI-তেও যোগ করো। Action-এর ভার্সন exact tag-এ রাখো।
 
 ## প্রতিটা কাজের পর (বাধ্যতামূলক)
 
 ```bash
-npm run dev          # চালিয়ে পেজ নিজে দেখো
+npm run dev          # চালিয়ে পেজ নিজে দেখো (UI বদলালে /dev/ui-তে দুই থিম ও দুই ভাষায়)
 npm run lint
 npm run type-check
+npm test
 npm run build
 ```
 
-চারটাই পাস না করলে কাজ শেষ নয়। `npm run format` দিয়ে ফরম্যাট ঠিক রাখো।
+সবগুলো পাস না করলে কাজ শেষ নয়। নতুন উপাদান বা logic-এর সাথে টেস্টও লেখো। `npm run format` দিয়ে ফরম্যাট ঠিক রাখো।
 
 ## স্থাপত্য (প্রপোজাল সেকশন ৩)
 
@@ -41,6 +42,33 @@ npm run build
 - `src/modules/<type>` (এখন `dealership`) শুধু core ব্যবহার করবে। core কখনো module import করবে না (ESLint দিয়ে আটকানো), এক module অন্য module সরাসরি ডাকবে না।
 - API ডাকা শুধু `src/core/api` এর মাধ্যমে।
 - Route: `/` Enterprise Dashboard, ব্যবসার ভেতরে `/b/[businessSlug]/...`।
+
+## Frontend নিয়ম
+
+**লেখা ও ভাষা (next-intl)**
+
+- UI-এর কোনো লেখা কোডে নয়: সব `messages/en.json` ও `messages/bn.json`-এ, দুই ফাইলে একই key (টেস্ট যাচাই করে)। JSX-এ সরাসরি লেখা ESLint error।
+- URL-এ ভাষার প্রিফিক্স নেই; ভাষা `NEXT_LOCALE` cookie-তে।
+- নতুন namespace client component-এ লাগলে `src/core/i18n/client-messages.ts`-এ যোগ করো, নইলে ব্রাউজারে যাবে না।
+- সংখ্যা, টাকা, পরিমাণ, তারিখ শুধু `src/core/i18n/format.ts` (`useFormat()` client-এ) দিয়ে। নিজে `toLocaleString` বা ৳ বসানো নয়। টাকার হিসাব ব্রাউজারে নয়।
+
+**থিম ও স্টাইল**
+
+- রঙ/ছায়া/মাপ শুধু টোকেন ক্লাস দিয়ে (`bg-surface`, `text-fg-muted`, …); hex বা `dark:` নয়। নতুন টোকেন `src/core/theme/tokens.css`-এ, light ও dark দুটোতেই, এবং কনট্রাস্ট টেস্টে জোড়া যোগ করো।
+- `glass` (blur) শুধু Card, Sidebar, Modal-এ। টেবিল, লম্বা তালিকা বা topbar-এ নয়।
+- কীবোর্ড ফোকাস দৃশ্যমান রাখো, আইকন-বাটনে `aria-label`, বাটন কমপক্ষে ৪০px উঁচু।
+
+**ডেটা আনা (TanStack Query, সেকশন ৯.২)**
+
+- API ডাকা শুধু `apiFetch` (`src/core/api/client.ts`) দিয়ে।
+- Query key সবসময় `createModuleKeys(module)` থেকে: `[module, businessId, entity, …]`।
+- Mutation-এর পর শুধু সরাসরি প্রভাবিত key invalidate। filter ছাড়া `invalidateQueries()`/`refetchQueries()`/`resetQueries()` নিষেধ (ESLint)। পুরো পেজ refresh নয়।
+- সাইডবার লিংক ডিফল্ট prefetch করে না; শুধু হালকা পেজে `prefetch: 'hover'`। সাইডবার নিজে ডেটা আনে না।
+- তালিকা সবসময় সার্ভার-সাইড ১০ সারি, `<Pagination>` ও `?page=` দিয়ে।
+
+**UI উপাদান**
+
+- পুনর্ব্যবহারযোগ্য উপাদান `src/core/ui`-তে, কোনো ব্যবসার নাম ছাড়া। ডেভ-অনলি পেজ `page.dev.tsx` নামে (production-এ বাদ যায়)।
 
 ## পারফরম্যান্স চেকলিস্ট (সেকশন ৯.৬) — প্রতিটা feature শেষে
 

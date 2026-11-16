@@ -1,0 +1,69 @@
+/*
+ * Design tokens (raw values). Components never use these directly; they use the Tailwind
+ * classes mapped in src/app/globals.css (@theme inline), e.g. bg-surface, text-fg-muted.
+ * Contrast of every text/background pair is checked by src/core/theme/contrast.test.ts.
+ * The [data-theme='system'] block must stay identical to the dark block (also tested).
+ */
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f4f5;
+  --surface: #ffffff;
+  --surface-glass: rgb(255 255 255 / 0.72);
+  --surface-muted: #f4f4f5;
+  --border: #e4e4e7;
+  --fg: #18181b;
+  --fg-muted: #52525b;
+  --primary: #18181b;
+  --primary-fg: #fafafa;
+  --success: #15803d;
+  --warning: #854d0e;
+  --danger: #b91c1c;
+  --danger-fg: #ffffff;
+  --focus: #2563eb;
+  --shadow-card-value: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
+  --shadow-glass-value: 0 8px 32px rgb(0 0 0 / 0.08);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #09090b;
+  --surface: #18181b;
+  --surface-glass: rgb(24 24 27 / 0.62);
+  --surface-muted: #27272a;
+  --border: #3f3f46;
+  --fg: #fafafa;
+  --fg-muted: #a1a1aa;
+  --primary: #fafafa;
+  --primary-fg: #18181b;
+  --success: #4ade80;
+  --warning: #facc15;
+  --danger: #f87171;
+  --danger-fg: #18181b;
+  --focus: #60a5fa;
+  --shadow-card-value: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+  --shadow-glass-value: 0 8px 32px rgb(0 0 0 / 0.45);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] {
+    color-scheme: dark;
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-glass: rgb(24 24 27 / 0.62);
+    --surface-muted: #27272a;
+    --border: #3f3f46;
+    --fg: #fafafa;
+    --fg-muted: #a1a1aa;
+    --primary: #fafafa;
+    --primary-fg: #18181b;
+    --success: #4ade80;
+    --warning: #facc15;
+    --danger: #f87171;
+    --danger-fg: #18181b;
+    --focus: #60a5fa;
+    --shadow-card-value: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+    --shadow-glass-value: 0 8px 32px rgb(0 0 0 / 0.45);
+  }
+}
