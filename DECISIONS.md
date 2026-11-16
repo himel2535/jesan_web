@@ -43,11 +43,14 @@
 
 - 8টা moderate: সবই dev-only lint টুলচেইনে (`typescript-eslint` → `minimatch` ReDoS, GHSA-g3hv-75wg-m249)। npm-এর একমাত্র সমাধান `audit fix --force`, যা eslint-config-next-কে 15-এ নামাবে; তাই করা হয়নি। production bundle-এ যায় না। typescript-eslint নতুন রিলিজ এলে আবার দেখা।
 
-### লোকালে যাচাই বাকি (macOS 12.7.6)
+### লোকালে যাচাই (macOS 12.7.6) — সম্পন্ন
 
-- [ ] Next.js 16.4.6-এর SWC নেটিভ বাইনারি (`@next/swc-darwin-arm64` / `-x64`) macOS 12-এ চলে কি না (`npm run dev` ও `npm run build`)।
-- [ ] Tailwind 4.3.5-এর `@tailwindcss/oxide` নেটিভ বাইনারি (`-darwin-*`) macOS 12-এ চলে কি না।
-- [ ] `npm ci` macOS-এ পরিষ্কারভাবে ইনস্টল হয় কি না (lockfile Linux-এ তৈরি; optional platform বাইনারি npm নিজে বাছে)।
+ডেভেলপারের Mac-এ (macOS 12.7.6, Node 22.23.5) যাচাই করা হয়েছে:
+
+- [x] Next.js 16.4.6-এর SWC নেটিভ বাইনারি macOS 12-এ চলে (`npm run dev` সফল)।
+- [x] Tailwind 4.3.5-এর `@tailwindcss/oxide` নেটিভ বাইনারি macOS 12-এ চলে।
+- [x] `npm ci` macOS-এ পরিষ্কারভাবে ইনস্টল হয় (Linux-এ তৈরি lockfile দিয়ে)।
+- [x] লোকাল jesan-api-এর সাথে হোম পেজে "Backend: চলছে" দেখায়।
 
 ## ২০২৬-১১-১৬ — CI ও কাজের ধরন
 
@@ -55,3 +58,8 @@
 - Action ভার্সন: `actions/checkout@v7.0.1`, `actions/setup-node@v7.1.0` (git tag থেকে যাচাই করা সর্বশেষ)। exact tag-এ pin।
 - `permissions: contents: read` (ন্যূনতম), একই ref-এর পুরনো রান `concurrency` দিয়ে বাতিল, `NEXT_TELEMETRY_DISABLED=1`।
 - কাজের ধরন CLAUDE.md-তে: প্ল্যান অনুমোদনের পর PR, CI সবুজ হলে `main`-এ squash merge।
+
+## ২০২৬-১১-১৬ — hydration warning (ব্রাউজার এক্সটেনশন)
+
+- `src/app/layout.tsx`-এর `<body>`-এ `suppressHydrationWarning`। কারণ: Grammarly-র মতো ব্রাউজার এক্সটেনশন React hydrate করার আগে `<body>`-তে `data-gr-ext-installed`, `data-new-gr-c-s-check-loaded` ইত্যাদি attribute বসায়, ফলে সার্ভার ও ক্লায়েন্টের HTML মেলে না। এটা আমাদের কোডের ভুল নয়।
+- এই prop শুধু ওই একটা এলিমেন্টের নিজের attribute-এর অমিল চুপ করায়; children-এর বা অন্য কোনো এলিমেন্টের আসল hydration ভুল আগের মতোই warning দেবে। অন্য কোথাও এটা ব্যবহার নিষেধ।
