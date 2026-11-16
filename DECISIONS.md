@@ -48,3 +48,10 @@
 - [ ] Next.js 16.4.6-এর SWC নেটিভ বাইনারি (`@next/swc-darwin-arm64` / `-x64`) macOS 12-এ চলে কি না (`npm run dev` ও `npm run build`)।
 - [ ] Tailwind 4.3.5-এর `@tailwindcss/oxide` নেটিভ বাইনারি (`-darwin-*`) macOS 12-এ চলে কি না।
 - [ ] `npm ci` macOS-এ পরিষ্কারভাবে ইনস্টল হয় কি না (lockfile Linux-এ তৈরি; optional platform বাইনারি npm নিজে বাছে)।
+
+## ২০২৬-১১-১৬ — CI ও কাজের ধরন
+
+- GitHub Actions `ci.yml`: PR ও `main`-এ push-এ `npm ci` → format:check → lint → type-check → build; Node ভার্সন `.nvmrc` থেকে।
+- Action ভার্সন: `actions/checkout@v7.0.1`, `actions/setup-node@v7.1.0` (git tag থেকে যাচাই করা সর্বশেষ)। exact tag-এ pin।
+- `permissions: contents: read` (ন্যূনতম), একই ref-এর পুরনো রান `concurrency` দিয়ে বাতিল, `NEXT_TELEMETRY_DISABLED=1`।
+- কাজের ধরন CLAUDE.md-তে: প্ল্যান অনুমোদনের পর PR, CI সবুজ হলে `main`-এ squash merge।
