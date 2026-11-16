@@ -11,6 +11,13 @@ Jesan Enterprise মাল্টি-বিজনেস ERP প্ল্যাট
 5. **Secret:** আসল secret কখনো কোডে, চ্যাটে বা commit-এ নয় (নিচে বিস্তারিত)।
 6. **শেষে রিপোর্ট:** প্রতিটা কাজের শেষে ছোট করে জানাও কী হলো এবং মালিকের কী করতে হবে।
 
+## Git branch নিয়ম
+
+- প্রতিটা নতুন কাজের জন্য সর্বশেষ `main` থেকে নতুন নামের branch: `claude/<কাজের-নাম>` (যেমন `claude/branch-rules`)। আগের কোনো branch পুনরায় ব্যবহার নয়।
+- **force push কখনো নয়** (`--force`, `--force-with-lease` কোনোটাই নয়)।
+- `main`-এ সরাসরি push নয়; সব পরিবর্তন PR দিয়ে, CI সবুজ হলে squash merge।
+- merge-এর পর branch মুছে ফেলো; মুছতে না পারলে শুধু রিপোর্টে জানাও।
+
 ## CI (GitHub Actions)
 
 - `.github/workflows/ci.yml` প্রতিটা PR-এ ও `main`-এ push-এ চলে: Node (`.nvmrc` থেকে) → `npm ci` → `format:check` → `lint` → `type-check` → `build`।
