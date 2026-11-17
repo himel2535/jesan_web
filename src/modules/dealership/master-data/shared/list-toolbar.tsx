@@ -17,7 +17,8 @@ export function ListToolbar({
   searchPlaceholder,
   children,
 }: {
-  searchPlaceholder: string;
+  /** Leave out when the API has no `search` for this list (e.g. suppliers). */
+  searchPlaceholder?: string;
   children?: ReactNode;
 }) {
   const t = useTranslations('dealership.common');
@@ -47,26 +48,28 @@ export function ListToolbar({
 
   return (
     <div role="search" className="flex flex-wrap items-end gap-3">
-      <div className="min-w-56 flex-1">
-        <label htmlFor={`${id}-search`} className="mb-1.5 block text-sm font-medium text-fg">
-          {t('searchLabel')}
-        </label>
-        <div className="relative">
-          <Search
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-muted"
-          />
-          <input
-            id={`${id}-search`}
-            type="search"
-            value={text}
-            maxLength={LIMITS.search}
-            placeholder={searchPlaceholder}
-            onChange={(e) => setText(e.target.value)}
-            className={`${inputClass} pl-9`}
-          />
+      {searchPlaceholder !== undefined ? (
+        <div className="min-w-56 flex-1">
+          <label htmlFor={`${id}-search`} className="mb-1.5 block text-sm font-medium text-fg">
+            {t('searchLabel')}
+          </label>
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-muted"
+            />
+            <input
+              id={`${id}-search`}
+              type="search"
+              value={text}
+              maxLength={LIMITS.search}
+              placeholder={searchPlaceholder}
+              onChange={(e) => setText(e.target.value)}
+              className={`${inputClass} pl-9`}
+            />
+          </div>
         </div>
-      </div>
+      ) : null}
       {children}
       <div>
         <label htmlFor={`${id}-active`} className="mb-1.5 block text-sm font-medium text-fg">

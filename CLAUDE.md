@@ -25,7 +25,7 @@ Jesan Enterprise মাল্টি-বিজনেস ERP প্ল্যাট
 
 ## CI (GitHub Actions)
 
-- `.github/workflows/ci.yml` প্রতিটা PR-এ ও `main`-এ push-এ চলে: Node (`.nvmrc` থেকে) → `npm ci` → `format:check` → `lint` → `type-check` → `test` → `build`।
+- `.github/workflows/ci.yml` প্রতিটা PR-এ ও `main`-এ push-এ চলে: Node (`.nvmrc` থেকে) → `npm ci` → `format:check` → `lint` → `type-check` → `test` → `build` → Playwright (`npm run test:e2e`, `e2e/mock-api.mjs`-এর উপর)।
 - CI সবুজ না হলে merge নয়। লোকালে একই ধাপগুলো চালিয়ে তারপর push করো।
 - নতুন স্ক্রিপ্ট (যেমন test) যোগ হলে CI-তেও যোগ করো। Action-এর ভার্সন exact tag-এ রাখো।
 
@@ -37,6 +37,7 @@ npm run lint
 npm run type-check
 npm test
 npm run build
+npm run test:e2e     # Playwright (build-এর পরে); নতুন প্রবাহে e2e/mock-api.mjs-এ endpoint যোগ করো
 ```
 
 সবগুলো পাস না করলে কাজ শেষ নয়। নতুন উপাদান বা logic-এর সাথে টেস্টও লেখো। `npm run format` দিয়ে ফরম্যাট ঠিক রাখো।
@@ -88,6 +89,13 @@ npm run build
 - ত্রুটির বার্তা status দেখে (`settingsErrorKind`), API-র `message` লেখা দেখে নয়।
 - ঝুঁকির কাজে (মোছা, নিষ্ক্রিয়, রিসেট) `ConfirmDialog`।
 - API-র ঘাটতির TODO-গুলো DECISIONS.md-তে; backend ঠিক হলে সেখানে লেখা জায়গায় বদলাও।
+
+**ডিলারশিপ মাস্টার ডেটা (`src/modules/dealership/master-data`)**
+
+- টাকা সবসময় স্ট্রিং (`src/core/lib/money.ts`); কখনো Number-এ বদলে হিসাব নয়।
+- লুকানো ফিল্ড: অনুমতি থাকলে **এবং** response-এ ফিল্ড থাকলে তবেই কলাম/ঘর; না হলে জায়গাও রাখবে না।
+- তৈরির পরে দাম/বাকি/সীমা ও নিষ্ক্রিয় করা মালিক-স্তরের: আলাদা অংশে, কারণ বাধ্যতামূলক, অনুমতি না থাকলে শুধু-পড়ার। মৃত বাটন নয়।
+- PATCH-এ শুধু বদলানো ঘর।
 
 **UI উপাদান**
 
