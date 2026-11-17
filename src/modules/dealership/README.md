@@ -8,4 +8,6 @@ Dealership ধরনের ব্যবসার generic module: নির্দ
 
 - `manifest.ts`: sidebar-এর মেনু (প্রপোজাল ৭-এর ক্রমে), প্রতিটার পথ, আইকন ও প্রয়োজনীয় অনুমতি। লেবেল `messages/*.json`-এর `dealership` namespace-এ। `src/modules/registry.ts` ধরন `dealership`-কে এই manifest-এ মেলায়।
 
-এখনো কোনো ফিচার নেই; মেনুর পেজগুলো "শীঘ্রই আসছে"।
+- `master-data/`: পণ্য ক্যাটাগরি, পণ্য, গ্রাহক, সরবরাহকারীর পাতা (API hooks, ফর্ম, তালিকা, টেস্ট)। route ফাইল `src/app/(app)/b/[slug]/{products,customers,suppliers}`।
+
+কেনা, বিক্রি, স্টক, হিসাব, কমিশন ও রিপোর্টের পাতা এখনো "শীঘ্রই আসছে"।

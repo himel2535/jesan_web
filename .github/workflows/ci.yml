@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   check:
-    name: format · lint · type-check · build
+    name: format · lint · type-check · test · build · e2e
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -31,5 +31,10 @@ jobs:
       - run: npm run type-check
       - run: npm test
       - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+      # End-to-end flows (Playwright 1.65.1) against the build above and e2e/mock-api.mjs.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
         env:
           NEXT_TELEMETRY_DISABLED: '1'

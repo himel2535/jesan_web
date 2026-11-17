@@ -2,7 +2,7 @@
 
 Jesan Enterprise (জিসান এন্টারপ্রাইজ) মাল্টি-বিজনেস ERP প্ল্যাটফর্মের frontend। Backend আলাদা repo: **jesan-api**।
 
-বর্তমান অবস্থা: লগইন, সেশন (cookie, সার্ভারে যাচাই), Enterprise Dashboard (ব্যবসার কার্ড), ব্যবসার ভেতরের কাঠামো `/b/[slug]` (অনুমতি অনুযায়ী মেনু, ব্যবসা বদল), ব্যবহারকারী মেনু ও পাসওয়ার্ড বদল, এবং ব্যবসার Settings: রোল × অনুমতির ছক (শুধু platform owner) ও ইউজার ব্যবস্থাপনা (`/b/[slug]/settings`)। থিম, ভাষা ও API ক্লায়েন্ট আগের ধাপের। ব্যবসার ফিচারগুলো এখন "শীঘ্রই আসছে"। লগইন পেজের নিচে backend-এর `/health` অনুযায়ী "Backend: চলছে/বন্ধ" দেখায়।
+বর্তমান অবস্থা: লগইন, সেশন (cookie, সার্ভারে যাচাই), Enterprise Dashboard (ব্যবসার কার্ড), ব্যবসার ভেতরের কাঠামো `/b/[slug]` (অনুমতি অনুযায়ী মেনু, ব্যবসা বদল), ব্যবহারকারী মেনু ও পাসওয়ার্ড বদল, এবং ব্যবসার Settings: রোল × অনুমতির ছক (শুধু platform owner) ও ইউজার ব্যবস্থাপনা (`/b/[slug]/settings`)। ডিলারশিপের মাস্টার ডেটা: পণ্য ও ক্যাটাগরি, গ্রাহক, সরবরাহকারী (`/b/[slug]/products`, `/customers`, `/suppliers`)। থিম, ভাষা ও API ক্লায়েন্ট আগের ধাপের। কেনা, বিক্রি, স্টক ইত্যাদি এখন "শীঘ্রই আসছে"। লগইন পেজের নিচে backend-এর `/health` অনুযায়ী "Backend: চলছে/বন্ধ" দেখায়।
 
 ## প্রযুক্তি
 
@@ -46,14 +46,15 @@ jesan-api (localhost:4000) চালু রেখে http://localhost:3000 খ�
 
 ## স্ক্রিপ্ট
 
-| কমান্ড                             | কাজ                       |
-| --------------------------------- | ------------------------- |
-| `npm run dev`                     | ডেভ সার্ভার                |
-| `npm run build` / `npm run start` | production build ও চালানো |
-| `npm run lint`                    | ESLint                    |
-| `npm run type-check`              | `tsc --noEmit`            |
-| `npm test` / `npm run test:watch` | Vitest টেস্ট               |
-| `npm run format` / `format:check` | Prettier                  |
+| কমান্ড                             | কাজ                                                            |
+| --------------------------------- | -------------------------------------------------------------- |
+| `npm run dev`                     | ডেভ সার্ভার                                                     |
+| `npm run build` / `npm run start` | production build ও চালানো                                      |
+| `npm run lint`                    | ESLint                                                         |
+| `npm run type-check`              | `tsc --noEmit`                                                 |
+| `npm test` / `npm run test:watch` | Vitest টেস্ট                                                    |
+| `npm run test:e2e`                | Playwright প্রবাহ (আগে `npm run build`; Mac-এ ঐচ্ছিক, CI-তে চলে) |
+| `npm run format` / `format:check` | Prettier                                                       |
 
 ## Environment variable
 
@@ -91,10 +92,11 @@ src/core/settings/        Settings: রোল-অনুমতির ছক, ই�
 src/core/i18n/            ভাষা ও সংখ্যা/টাকা/তারিখের ফরম্যাট
 src/core/theme/           থিম ও design token
 src/core/ui/              অ্যাপের কাঠামো ও পুনর্ব্যবহারযোগ্য উপাদান
-src/modules/dealership/   generic dealership module (আকিজ সিমেন্ট, পরে BSRM); manifest.ts = মেনু ও অনুমতি
+src/modules/dealership/   generic dealership module (আকিজ সিমেন্ট, পরে BSRM); manifest.ts = মেনু ও অনুমতি; master-data/ = পণ্য, ক্যাটাগরি, গ্রাহক, সরবরাহকারী
 src/modules/registry.ts   ব্যবসার ধরন → module
 src/proxy.ts              পেজে ঢোকার আগে cookie আছে কি না দেখা
 test/                     টেস্টের setup ও helper
+e2e/                      Playwright প্রবাহ ও নকল API (mock-api.mjs)
 ```
 
 প্রতিটা ফোল্ডারের README-তে তার দায়িত্ব লেখা আছে।

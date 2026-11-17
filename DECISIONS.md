@@ -232,3 +232,34 @@
 ### যাচাই
 
 - নতুন টেস্ট ৩০টা (মোট ১৮২)। docs/API.md §8 অনুযায়ী নকল API-তে production build-এ Playwright: ছকে ম্যানেজারের অনুমতি বদল ও সেভ, কমিশন (owner-only) নিষ্ক্রিয়, না-সংরক্ষিত সতর্কতা, তীর-কী, ইউজার তৈরি (409 সহ), রোল বদল, রিসেট (নিজের ইমেইল পাসওয়ার্ড হিসেবে আটকানো), নিষ্ক্রিয়/সক্রিয়, নতুন ইউজারের লগইন, ম্যানেজারের শুধু-দেখা অবস্থা ও `/roles`-এ 403, মোবাইল ছক, আংশিক ব্যর্থতায় শুধু ব্যর্থ রোল আবার পাঠানো।
+
+## ২০২৬-১১-১৭ — Step 4c: মাস্টার ডেটা (ক্যাটাগরি, পণ্য, গ্রাহক, সরবরাহকারী)
+
+### API চুক্তি
+
+- এই repo-র `docs/API.md` পুরনো ছিল (মাস্টার ডেটা ছিল না)। backend `himel2535/jesan_api` main (`61bf8ed`) থেকে **হুবহু কপি** করা হয়েছে। CLAUDE.md-তে নিয়ম: প্রতিটা কাজের আগে মিলিয়ে নেওয়া।
+- বাধ্যতামূলক ঘর ও সীমা backend-এর DTO (`src/modules/dealership/master-data/dto/requests.ts`) ও Prisma schema থেকে নেওয়া: নাম ১–১২০; ক্যাটাগরি ও পণ্যে `nameEn` + `nameBn` বাধ্যতামূলক, গ্রাহকে `nameBn` ঐচ্ছিক; ফোন বাধ্যতামূলক ≤২০; ঠিকানা ≤২৫৫; এলাকা ≤৮০; ক্রম ০–১০০০০; কারণ ৩–৫০০; টাকা `^\d{1,12}(\.\d{1,2})?$` (বাকিতে ঋণাত্মক চলে) = `Decimal(14,2)`। ফোনের নিয়ম backend-এর `normalizePhone` হুবহু (`src/core/lib/phone.ts`)।
+- নতুন ৪টা অনুমতি (`product.price.edit`, `product.deactivate`, `customer.balance.edit`, `customer.deactivate`) — Settings-এর ছকে দুই ভাষার লেবেল যোগ।
+
+### সিদ্ধান্ত
+
+- পাতাগুলো ডিলারশিপ module-এ (`src/modules/dealership/master-data/`); app-এর route ফাইল পাতলা। ব্যবসার ধরন dealership না হলে 404, অনুমতি না থাকলে 403 পেজ (`dealershipPage` guard)।
+- **টাকা সবসময় স্ট্রিং**: দেখানো `formatMoney(string)`; "অগ্রিম" ঠিক হয় `-` চিহ্ন দেখে; PATCH-এ "570" আর "570.00" একই কিনা স্ট্রিং তুলনায় (`sameMoney`), Number-এ রূপান্তর নেই। ইনপুটে বাংলা অঙ্ক ও কমা গ্রহণ করে স্ট্রিং হিসেবেই পাঠানো হয়।
+- কেনা-দাম ও বাকি/সীমা: অনুমতি থাকলে **এবং** API ফিল্ড পাঠালে তবেই কলাম/ঘর থাকে; না হলে কলাম, header, বিস্তারিতের সারি — কিছুই নয়।
+- সংবেদনশীল সংশোধন (দাম, শুরুর বাকি, ক্রেডিট সীমা) সম্পাদনা পাতার আলাদা "মালিক-স্তরের সংশোধন" অংশে: অনুমতি থাকলে বদলানো যায় এবং বদলালে কারণ বাধ্যতামূলক; না থাকলে শুধু-পড়ার। "সংশোধনের অনুরোধ"-এর জন্য `SensitiveSection`-এর `requestSlot` রাখা, এখন কিছু render হয় না (মৃত বাটন নেই)। নিষ্ক্রিয়/সক্রিয় বিস্তারিত পাতায় (ক্যাটাগরিতে তালিকায়), কারণসহ।
+- তালিকার অনুসন্ধান ৩০০ms debounce, অবস্থা ও ফিল্টার URL-এ; ফিল্টার বদলালে পাতা ১। সরবরাহকারীর API-তে `search` নেই, তাই সেখানে শুধু অবস্থার ফিল্টার।
+- ফোনে টেবিলের বদলে কার্ড (`useMediaQuery`; সার্ভার ও টেস্টে ডিফল্ট ডেস্কটপ)।
+- query key `['dealership', businessId, entity, …]`; পণ্য বদলে শুধু `products`, ক্যাটাগরি বদলে `categories` + `products` (পণ্যের সারিতে ক্যাটাগরির নাম), গ্রাহক বদলে শুধু `customers`।
+- `dealership` namespace এখন ব্রাউজারেও পাঠানো হয় (module-এর client পাতার জন্য)।
+
+### Playwright (মালিকের সিদ্ধান্ত)
+
+- `@playwright/test` **1.65.1** (exact), `e2e/` ফোল্ডারে; `e2e/mock-api.mjs` docs/API.md মেনে নকল API (শুধু টেস্টের অ্যাকাউন্ট ও পাসওয়ার্ড)। `npm run test:e2e` production build-এর উপর চলে (আগে `npm run build`)। CI-তে `npx playwright install --with-deps chromium` তারপর `npm run test:e2e`।
+- **CI-ই মূল জায়গা; Mac-এ e2e ঐচ্ছিক।** macOS 12.7.6-এ Playwright-এর Chromium চলবে কি না যাচাই বাকি (নতুন Chrome পুরনো macOS বাদ দিচ্ছে)।
+- আগে থেকে ব্রাউজার থাকা মেশিনে `PW_CHROMIUM_PATH` দিয়ে সেটা ব্যবহার করা যায় (যেমন এই ক্লাউড পরিবেশ)।
+
+### API-র ঘাটতি (backend-এ আলাদা PR)
+
+- **TODO ঘাটতি — 400-এর উত্তরে মেশিন-পড়ার মতো `code`/`field` নেই।** এখন: সব 400 → একটাই সাধারণ বার্তা (`dealership.common.error.refused`); ক্লায়েন্ট আগেই DTO-র নিয়ম যাচাই করে, তাই সাধারণত 400 আসে না। 409 প্রতিটা ফর্মে একটাই কারণ (পণ্য/ক্যাটাগরি = নাম, গ্রাহক = ফোন), তাই ঘরে দেখানো যায়। ঠিক হলে বদলাতে হবে: `src/core/api/error-kind.ts` (field/code পড়া), আর ফর্মগুলোর catch শাখা — `products/product-form.tsx`, `customers/customer-form.tsx`, `categories/category-dialog.tsx`, `shared/deactivate-dialog.tsx` — যাতে `Category not found or inactive`, `Unknown unit`, `Phone number is not valid`, `A reason is required` নিজ নিজ ঘরে দেখায়।
+- (আগের) Settings-এর `isPlatformOwner` ও `users/lookup` backend-এ এসে গেছে; frontend-এ বসানো আলাদা ছোট PR-এ হবে (এই PR-এ নয়)।
+- ক্যাটাগরির `GET :id` নেই; সম্পাদনায় তালিকার ডেটা ব্যবহার — ঠিক আছে (মালিকের সিদ্ধান্ত)।

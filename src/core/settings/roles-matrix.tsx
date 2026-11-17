@@ -3,21 +3,14 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Lock, RotateCcw } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import {
-  Fragment,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type KeyboardEvent,
-} from 'react';
+import { Fragment, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { localizedName } from '@/core/auth/types';
 import { useDynamicT } from '@/core/i18n/use-dynamic-t';
 import { Button } from '@/core/ui/button';
 import { cn } from '@/core/ui/cn';
 import { ConfirmDialog } from '@/core/ui/confirm-dialog';
 import { Skeleton } from '@/core/ui/skeleton';
+import { useIsDesktop } from '@/core/ui/use-media-query';
 import { saveRolePermissions, settingsKeys, useRolesMatrix } from './api';
 import { settingsErrorKind, type SettingsErrorKind } from './errors';
 import {
@@ -31,25 +24,6 @@ import {
 } from './permission-groups';
 import type { PermissionDef, RoleDef, RolesMatrix as Matrix } from './types';
 import { useUnsavedChangesGuard } from './unsaved-changes';
-
-const DESKTOP_QUERY = '(min-width: 768px)';
-
-/** Desktop shows the full grid; phones show one role at a time. Server/tests default to desktop. */
-function useIsDesktop(): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      if (typeof window === 'undefined' || !window.matchMedia) return () => {};
-      const media = window.matchMedia(DESKTOP_QUERY);
-      media.addEventListener('change', onChange);
-      return () => media.removeEventListener('change', onChange);
-    },
-    () =>
-      typeof window !== 'undefined' && window.matchMedia
-        ? window.matchMedia(DESKTOP_QUERY).matches
-        : true,
-    () => true,
-  );
-}
 
 interface SaveOutcome {
   saved: string[];

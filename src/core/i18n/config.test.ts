@@ -50,7 +50,7 @@ describe('translation files', () => {
 describe('pickClientMessages', () => {
   it('sends only client namespaces, plus demo outside production', () => {
     expect(Object.keys(pickClientMessages(en, true))).not.toContain('dashboard');
-    expect(Object.keys(pickClientMessages(en, true))).not.toContain('dealership');
+    expect(Object.keys(pickClientMessages(en, true))).toContain('dealership');
     expect(Object.keys(pickClientMessages(en, true))).toContain('auth');
     expect(Object.keys(pickClientMessages(en, true))).not.toContain('demo');
     expect(Object.keys(pickClientMessages(en, false))).toContain('demo');
