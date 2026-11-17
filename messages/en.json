@@ -8,7 +8,7 @@
   },
   "nav": {
     "label": "Main navigation",
-    "home": "Home",
+    "home": "All businesses",
     "uiDemo": "UI demo"
   },
   "shell": {
@@ -16,7 +16,7 @@
     "openMenu": "Open menu",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
-    "userMenu": "User menu (coming soon)"
+    "userMenu": "User menu"
   },
   "theme": {
     "label": "Theme",
@@ -35,12 +35,6 @@
     "next": "Next",
     "page": "Page {page}",
     "summary": "Showing {from}–{to} of {total}"
-  },
-  "home": {
-    "title": "Enterprise Dashboard",
-    "description": "All your businesses in one place.",
-    "backendUp": "Backend: running",
-    "backendDown": "Backend: down"
   },
   "errors": {
     "title": "Something went wrong",
@@ -79,5 +73,92 @@
     "openModal": "Open modal",
     "modalTitle": "Example modal",
     "modalBody": "Press Esc or the close button to close this dialog."
+  },
+  "status": {
+    "backendUp": "Backend: running",
+    "backendDown": "Backend: down"
+  },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Sign in to manage your businesses.",
+    "identifier": "Email or phone",
+    "identifierHint": "For example name@example.com or 01712345678",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "required": "This field is required.",
+    "invalid": "Wrong email/phone or password, or the account is temporarily locked. Please check and try again.",
+    "tooManyWithSeconds": "Too many sign-in attempts. Try again in {seconds} seconds.",
+    "tooMany": "Too many sign-in attempts. Please wait a minute and try again.",
+    "unavailable": "The server is not reachable right now. Please try again shortly.",
+    "unknown": "Sign-in failed. Please try again."
+  },
+  "session": {
+    "unavailableTitle": "Server unavailable",
+    "unavailableDescription": "Your session could not be checked because the server is not reachable. Please try again shortly.",
+    "retry": "Try again"
+  },
+  "dashboard": {
+    "title": "Enterprise Dashboard",
+    "description": "Choose a business to open.",
+    "emptyTitle": "No business yet",
+    "emptyDescription": "You do not have access to any business. Ask the owner to give you access.",
+    "role": "Your role: {role}"
+  },
+  "business": {
+    "forbiddenTitle": "No access",
+    "forbiddenDescription": "You do not have permission to see this, or it does not exist.",
+    "comingSoonTitle": "Coming soon",
+    "comingSoonDescription": "This section of {business} is being built.",
+    "dashboardDescription": "Business overview will appear here.",
+    "backToDashboard": "Back to all businesses",
+    "switcherLabel": "Switch business",
+    "allBusinesses": "All businesses",
+    "currentBusiness": "Current business"
+  },
+  "userMenu": {
+    "platformOwner": "Platform owner",
+    "language": "Language",
+    "theme": "Theme",
+    "changePassword": "Change password",
+    "logout": "Sign out",
+    "loggingOut": "Signing out…"
+  },
+  "account": {
+    "passwordTitle": "Change password",
+    "passwordDescription": "After the change, this device stays signed in and every other device is signed out.",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "rules": "10 to 128 characters, not your email or phone number.",
+    "submit": "Change password",
+    "saving": "Saving…",
+    "success": "Password changed. Other devices have been signed out.",
+    "required": "This field is required.",
+    "tooShort": "Use at least 10 characters.",
+    "tooLong": "Use at most 128 characters.",
+    "sameAsIdentity": "The password cannot be your email or phone number.",
+    "mismatch": "The two new passwords do not match.",
+    "currentWrong": "The current password is wrong.",
+    "unavailable": "The server is not reachable right now. Please try again shortly.",
+    "unknown": "The password could not be changed. Please try again."
+  },
+  "dealership": {
+    "typeName": "Dealership",
+    "nav": {
+      "dashboard": "Dashboard",
+      "products": "Products & categories",
+      "customers": "Customers",
+      "suppliers": "Supplier",
+      "purchases": "Purchases",
+      "sales": "Sales",
+      "stock": "Stock",
+      "accounts": "Accounts",
+      "commission": "Commission",
+      "reports": "Reports",
+      "settings": "Settings"
+    }
   }
 }

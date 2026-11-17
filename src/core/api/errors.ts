@@ -8,6 +8,8 @@ export class ApiError extends Error {
   /** Stable machine-readable code, e.g. `HTTP_404`, `NETWORK`, `TIMEOUT` or the backend's own. */
   readonly code: string;
   readonly details?: unknown;
+  /** From the Retry-After header (429): seconds to wait before trying again. */
+  readonly retryAfterSeconds?: number;
 
   constructor(init: {
     kind: ApiErrorKind;
@@ -15,6 +17,7 @@ export class ApiError extends Error {
     code: string;
     message: string;
     details?: unknown;
+    retryAfterSeconds?: number;
   }) {
     super(init.message);
     this.name = 'ApiError';
@@ -22,6 +25,7 @@ export class ApiError extends Error {
     this.status = init.status;
     this.code = init.code;
     this.details = init.details;
+    this.retryAfterSeconds = init.retryAfterSeconds;
   }
 
   get isUnauthorized(): boolean {
@@ -31,6 +35,11 @@ export class ApiError extends Error {
   /** 4xx: the request itself is wrong, so retrying it will not help. */
   get isClientError(): boolean {
     return this.status >= 400 && this.status < 500;
+  }
+
+  /** The server could not be reached or is failing: show "server unavailable", not "wrong input". */
+  get isServerUnavailable(): boolean {
+    return this.kind !== 'http' || this.status >= 500;
   }
 }
 
@@ -42,7 +51,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Accepts both `{ error: { code, message, details } }` and the NestJS default
  * `{ statusCode, message: string | string[], error }`, so the backend format can settle later.
  */
-export function apiErrorFromResponse(status: number, body: unknown): ApiError {
+export function apiErrorFromResponse(status: number, body: unknown, headers?: Headers): ApiError {
+  const retryAfterSeconds = parseRetryAfter(headers?.get('retry-after'));
   const fallbackCode = `HTTP_${status}`;
   const fallbackMessage = `Request failed with status ${status}`;
 
@@ -54,6 +64,7 @@ export function apiErrorFromResponse(status: number, body: unknown): ApiError {
       code: typeof code === 'string' ? code : fallbackCode,
       message: typeof message === 'string' ? message : fallbackMessage,
       details,
+      retryAfterSeconds,
     });
   }
 
@@ -66,8 +77,27 @@ export function apiErrorFromResponse(status: number, body: unknown): ApiError {
       code: typeof body.code === 'string' ? body.code : fallbackCode,
       message: list ? list.join('; ') : typeof message === 'string' ? message : fallbackMessage,
       details: list ?? (typeof error === 'string' ? error : undefined),
+      retryAfterSeconds,
     });
   }
 
-  return new ApiError({ kind: 'http', status, code: fallbackCode, message: fallbackMessage });
+  return new ApiError({
+    kind: 'http',
+    status,
+    code: fallbackCode,
+    message: fallbackMessage,
+    retryAfterSeconds,
+  });
+}
+
+/** Retry-After is either seconds or an HTTP date; returns whole seconds, or undefined. */
+export function parseRetryAfter(
+  value: string | null | undefined,
+  now = Date.now(),
+): number | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  const date = Date.parse(trimmed);
+  return Number.isNaN(date) ? undefined : Math.max(0, Math.ceil((date - now) / 1000));
 }

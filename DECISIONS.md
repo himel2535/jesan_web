@@ -141,3 +141,48 @@
 - [x] Vitest/Vite 8-এর `rolldown` ও `lightningcss` darwin বাইনারি চলে (`npm test` সফল)।
 - [x] প্রথম `npm run dev`-এ Google Fonts থেকে Inter ও Noto Sans Bengali নামে।
 - [x] থিম ও ভাষা বদল এবং `/dev/ui` ঠিকমতো কাজ করে।
+
+## ২০২৬-১১-১৭ — Step 3b-২: লগইন, সেশন, Enterprise Dashboard, ব্যবসার কাঠামো
+
+নতুন কোনো প্যাকেজ নেই, তাই নতুন নেটিভ বাইনারিও নেই (macOS 12.7.6-এ নতুন যাচাই লাগে না)।
+
+### সেশন ও same-site proxy (মালিকের অনুমোদিত)
+
+- **Next.js proxy (`rewrites`)**: ব্রাউজার শুধু এই সাইটের `/api/v1/*` ডাকে; `next.config.ts` সেটা `API_INTERNAL_URL`-এ পাঠায় এবং API-র `Set-Cookie` ফেরত দেয়। তাই `jesan_at` (Path `/`) ও `jesan_rt` (Path `/api/v1/auth`) web সাইটের নামে বসে; সার্ভার পেজ-অনুরোধে `jesan_at` পায়। লোকাল ও ডিপ্লয়ে একই নিয়ম, CORS লাগে না, আলাদা domain-এও চলে। (সরাসরি `api.` সাবডোমেইনে cookie `api.` host-এ থাকত, Next সার্ভার দেখত না।)
+- **`NEXT_PUBLIC_API_URL` বাদ**: ব্রাউজারের পথ সবসময় `/api/v1`; সার্ভারের পথ `API_INTERNAL_URL` (শুধু সার্ভার env)। `docs/API.md`-র উদাহরণ কোডে `NEXT_PUBLIC_API_URL` আছে; ওটা backend-এর ডকুমেন্ট, frontend এটা ব্যবহার করে না।
+- **ডিপ্লয়ের শর্ত**: (১) `API_INTERNAL_URL` `next build`-এর আগে দিতে হবে (rewrites build-এ তৈরি হয়); (২) jesan-api-র `CORS_ORIGIN`-এ web সাইটের origin (হুবহু) থাকতে হবে, নইলে POST-এ 403 `Origin not allowed`; (৩) proxy-র পেছনে `APP_ORIGIN` দেওয়া ভালো।
+- **সুরক্ষিত পেজ**: `src/proxy.ts` (Next 16-এ middleware-এর নতুন নাম) শুধু `jesan_at` আছে কি না দেখে, API ডাকে না; না থাকলে `/api/v1/auth/resume?next=…`। লেআউট সার্ভারে `GET /auth/me` ডাকে (React `cache`-এ প্রতি অনুরোধে একবার; অনুরোধের বাইরে cache নেই, যাতে অনুমতি বদল সঙ্গে সঙ্গে কার্যকর)। 401 → resume; API বন্ধ → লগআউট নয়, "সার্ভার বন্ধ" পেজ।
+- **Resume route** (`src/app/api/v1/auth/resume/route.ts`): এই পথ `/api/v1/auth`-এর নিচে, তাই `jesan_rt` এখানে আসে। সার্ভার থেকে `POST /auth/refresh` ডাকে **স্পষ্ট `Origin` header দিয়ে** (`APP_ORIGIN`, না থাকলে `x-forwarded-host/proto` বা `Host` থেকে), কারণ সার্ভার-সাইড fetch নিজে Origin পাঠায় না আর API-র CSRF চেক তা চায়। API-র `Set-Cookie` **হুবহু** ফেরত দেয় (`relaySetCookies`; `response.cookies.set` ব্যবহার করা হয়নি কারণ সেটা সব Set-Cookie নতুন করে লিখত)। সফল → `next`, ব্যর্থ → `/login?next=…`। লুপ ঠেকাতে ১৫ সেকেন্ডের `jesan_resumed` cookie। Next-এ আসল route ফাইল rewrite-এর আগে মেলে, তাই এই পথ API-তে যায় না।
+- **ব্রাউজারে 401** (`apiFetch`, docs/API.md §3): একসাথে একটাই refresh; তারপর মূল অনুরোধ একবার আবার — **refresh ব্যর্থ হলেও**, কারণ অন্য ট্যাব হয়তো ১০ সেকেন্ডের মধ্যে refresh করে নতুন cookie এনেছে। তাতেও 401 → `/login?next=বর্তমান পেজ`। শুধু `login`/`refresh`/`logout`-এ refresh নয় (আগে সব `/auth/*` বাদ ছিল, যা `/auth/me` ও `change-password`-এর জন্য ভুল ছিল; ঠিক করা হয়েছে)।
+- **`next` পথ** শুধু এই সাইটের (`safeNextPath`): বাইরের সাইট, `//`, `/\`, scheme, `/login`, `/api` → `/`।
+- লগইন, লগআউট ও সেশন শেষে পুরো পেজ লোড (`navigateTo`), যাতে সার্ভার নতুন cookie দেখে আর query cache মুছে যায়।
+
+### লগইন
+
+- ভুল তথ্য, অজানা ইউজার, নিষ্ক্রিয় ও **লক** — API সবগুলোতে একই 401 দেয়, তাই একটাই বার্তা ("…ভুল, অথবা অ্যাকাউন্ট সাময়িকভাবে বন্ধ")। লকের আলাদা বার্তা দেওয়া সম্ভব নয়।
+- 429 → আলাদা বার্তা, `Retry-After`-এর সেকেন্ডসহ। নেটওয়ার্ক/timeout ও 5xx → "সার্ভার বন্ধ" (API বন্ধ থাকলে Next proxy 500 দেয়)।
+- দুবার জমা ঠেকাতে ref (state-এর আগেই কাজ করে) + নিষ্ক্রিয় বাটন। ভুল হলে পাসওয়ার্ড মুছে সেখানে ফোকাস।
+- লগইন পেজে backend `/health`-এর অবস্থা (আগের হোম পেজের "Backend: চলছে/বন্ধ" এখানে সরানো হয়েছে)।
+
+### ড্যাশবোর্ড ও ব্যবসা
+
+- Enterprise Dashboard-এর কার্ড সার্ভারে `me` থেকে (অনুরোধে আগেই আনা, বাড়তি API ডাক নেই)। কার্ড hover/focus-এ prefetch।
+- `/b/[slug]`: platform owner-এর অচেনা slug → **404**; অন্যদের অচেনা বা অ্যাক্সেস নেই → একই **403** পেজ (API-র মতো, ব্যবসা আছে কি না ফাঁস হয় না)। Next-এর `forbidden()` এখনো experimental, তাই 403 পেজ নিজে render (HTTP 200)। অনুমতি ছাড়া ফিচার URL সরাসরি খুললেও 403।
+- মেনু module manifest থেকে (`src/modules/dealership/manifest.ts`), অনুমতি অনুযায়ী ছাঁকা; core কোনো module import করে না, `src/modules/registry.ts` (app স্তর) ধরন → manifest মেলায়। core-এর ফোল্ডারের নাম `module-system` (ESLint-এর `**/modules/*` নিয়ম যাতে core-এর নিজের ফোল্ডারে ভুল করে না লাগে)।
+- কমিশন মেনুতে `commission.view` (owner-only), রিপোর্টে `reports.finance.view` লাগে; তাই ম্যানেজার এগুলো দেখে না।
+- `loading.tsx` পেজ স্তরে (লেআউট স্তরে নয়), যাতে লেআউটের 404 আসল HTTP 404 থাকে।
+
+### অনুমতি সহায়ক
+
+- `can`, `useCan`, `<Can>` **শুধু দেখানোর সুবিধা, সুরক্ষা নয়**। আসল যাচাই jesan-api-তে: অনুমতি না থাকলে 403, আর টাকার সংবেদনশীল ফিল্ড (কমিশন, লাভ, কেনা-দাম) response-এ পাঠায়ই না।
+
+### UI
+
+- ভাষা ও থিমের সুইচ টপবার থেকে ব্যবহারকারী মেনুতে; লগইন পেজে আলাদা করে আছে।
+- Dropdown (ব্যবহারকারী মেনু, ব্যবসা বদল) disclosure ধাঁচে: বাটনে `aria-expanded`, ভেতরে সাধারণ লিংক-বাটন, Esc ও বাইরে ক্লিকে বন্ধ। নিরেট surface, blur নয়।
+- পাসওয়ার্ড বদল: নিয়ম (১০–১২৮ অক্ষর, নিজের email/phone নয়, দুবার একই) পাঠানোর আগে যাচাই; তাই API-র 400 মানে "বর্তমান পাসওয়ার্ড ভুল"।
+
+### যাচাই
+
+- ইউনিট টেস্ট ১৫২টা। এছাড়া docs/API.md অনুযায়ী একটা নকল API বানিয়ে production build-এ Playwright দিয়ে পুরো প্রবাহ চালানো হয়েছে: cookie-র সব বৈশিষ্ট্য (`jesan_rt` Path `/api/v1/auth`, HttpOnly, SameSite=Lax), resume-এ `Origin: http://localhost:3000`, 401 → একটা refresh → retry, ম্যানেজারে কমিশন/রিপোর্ট নেই, 403/404, open redirect বন্ধ, API বন্ধে সঠিক বার্তা।
+- `docs/API.md` `.prettierignore`-এ: এটা jesan-api-র চুক্তির হুবহু কপি, তাই frontend-এর Prettier এটা নতুন করে সাজাবে না (না হলে `format:check` ব্যর্থ হতো)।

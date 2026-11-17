@@ -1,20 +1,14 @@
-import { cookies } from 'next/headers';
-import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
-import { buildCoreNav } from '@/core/navigation/core-nav';
-import { SIDEBAR_COOKIE, THEME_COOKIE, resolveTheme } from '@/core/theme/config';
-import { AppShell } from '@/core/ui/app-shell';
+import { SessionProvider } from '@/core/auth/session-context';
+import { requireSession } from '@/core/auth/session';
+import { ServiceUnavailable } from '@/core/auth/ui/service-unavailable';
 
-export default async function AppLayout({ children }: { children: ReactNode }) {
-  const [cookieStore, t] = await Promise.all([cookies(), getTranslations('nav')]);
-
-  return (
-    <AppShell
-      navItems={buildCoreNav((key) => t(key))}
-      initialCollapsed={cookieStore.get(SIDEBAR_COOKIE)?.value === 'collapsed'}
-      theme={resolveTheme(cookieStore.get(THEME_COOKIE)?.value)}
-    >
-      {children}
-    </AppShell>
-  );
+/**
+ * Every page in this group needs a signed-in user. The session is checked on the server with the
+ * cookie (GET /auth/me); without one the user is resumed or sent to /login with a `next` link.
+ */
+export default async function ProtectedLayout({ children }: { children: ReactNode }) {
+  const session = await requireSession();
+  if (session.status === 'unavailable') return <ServiceUnavailable />;
+  return <SessionProvider me={session.me}>{children}</SessionProvider>;
 }

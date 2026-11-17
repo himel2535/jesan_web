@@ -15,4 +15,6 @@ export interface NavItem {
   href: string;
   icon: NavIconName;
   prefetch?: NavPrefetch;
+  /** Active only on this exact path (e.g. a dashboard whose children are other entries). */
+  exact?: boolean;
 }

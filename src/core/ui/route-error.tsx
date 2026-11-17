@@ -6,7 +6,8 @@ import { useEffect } from 'react';
 import { Button } from '@/core/ui/button';
 import { EmptyState } from '@/core/ui/empty-state';
 
-export default function AppError({
+/** Shared body of route `error.tsx` files: a message and a retry button. */
+export function RouteError({
   error,
   reset,
 }: {

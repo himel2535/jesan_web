@@ -8,7 +8,7 @@
   },
   "nav": {
     "label": "প্রধান মেনু",
-    "home": "হোম",
+    "home": "সব ব্যবসা",
     "uiDemo": "UI ডেমো"
   },
   "shell": {
@@ -16,7 +16,7 @@
     "openMenu": "মেনু খুলুন",
     "collapseSidebar": "সাইডবার ছোট করুন",
     "expandSidebar": "সাইডবার বড় করুন",
-    "userMenu": "ব্যবহারকারী মেনু (শীঘ্রই আসছে)"
+    "userMenu": "ব্যবহারকারী মেনু"
   },
   "theme": {
     "label": "থিম",
@@ -35,12 +35,6 @@
     "next": "পরের",
     "page": "পাতা {page}",
     "summary": "{total}টির মধ্যে {from}–{to} দেখানো হচ্ছে"
-  },
-  "home": {
-    "title": "এন্টারপ্রাইজ ড্যাশবোর্ড",
-    "description": "আপনার সব ব্যবসা এক জায়গায়।",
-    "backendUp": "Backend: চলছে",
-    "backendDown": "Backend: বন্ধ"
   },
   "errors": {
     "title": "কিছু একটা সমস্যা হয়েছে",
@@ -79,5 +73,92 @@
     "openModal": "Modal খুলুন",
     "modalTitle": "উদাহরণ modal",
     "modalBody": "বন্ধ করতে Esc বা বন্ধ বাটন চাপুন।"
+  },
+  "status": {
+    "backendUp": "Backend: চলছে",
+    "backendDown": "Backend: বন্ধ"
+  },
+  "auth": {
+    "title": "লগইন",
+    "subtitle": "আপনার ব্যবসা পরিচালনা করতে লগইন করুন।",
+    "identifier": "ইমেইল বা ফোন",
+    "identifierHint": "যেমন name@example.com বা 01712345678",
+    "password": "পাসওয়ার্ড",
+    "showPassword": "পাসওয়ার্ড দেখান",
+    "hidePassword": "পাসওয়ার্ড লুকান",
+    "submit": "লগইন",
+    "submitting": "লগইন হচ্ছে…",
+    "required": "এই ঘরটি পূরণ করুন।",
+    "invalid": "ইমেইল/ফোন বা পাসওয়ার্ড ভুল, অথবা অ্যাকাউন্ট সাময়িকভাবে বন্ধ। দেখে আবার চেষ্টা করুন।",
+    "tooManyWithSeconds": "অনেকবার চেষ্টা হয়েছে। {seconds} সেকেন্ড পর আবার চেষ্টা করুন।",
+    "tooMany": "অনেকবার চেষ্টা হয়েছে। এক মিনিট অপেক্ষা করে আবার চেষ্টা করুন।",
+    "unavailable": "এখন সার্ভারে পৌঁছানো যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।",
+    "unknown": "লগইন হয়নি। আবার চেষ্টা করুন।"
+  },
+  "session": {
+    "unavailableTitle": "সার্ভার বন্ধ",
+    "unavailableDescription": "সার্ভারে পৌঁছানো যাচ্ছে না, তাই আপনার সেশন যাচাই করা যায়নি। একটু পরে আবার চেষ্টা করুন।",
+    "retry": "আবার চেষ্টা করুন"
+  },
+  "dashboard": {
+    "title": "এন্টারপ্রাইজ ড্যাশবোর্ড",
+    "description": "কোন ব্যবসা খুলবেন বেছে নিন।",
+    "emptyTitle": "এখনো কোনো ব্যবসা নেই",
+    "emptyDescription": "কোনো ব্যবসায় আপনার অ্যাক্সেস নেই। মালিককে অ্যাক্সেস দিতে বলুন।",
+    "role": "আপনার রোল: {role}"
+  },
+  "business": {
+    "forbiddenTitle": "অনুমতি নেই",
+    "forbiddenDescription": "এটা দেখার অনুমতি আপনার নেই, অথবা এটা নেই।",
+    "comingSoonTitle": "শীঘ্রই আসছে",
+    "comingSoonDescription": "{business}-এর এই অংশ তৈরি হচ্ছে।",
+    "dashboardDescription": "ব্যবসার সারসংক্ষেপ এখানে দেখাবে।",
+    "backToDashboard": "সব ব্যবসায় ফিরুন",
+    "switcherLabel": "ব্যবসা বদলান",
+    "allBusinesses": "সব ব্যবসা",
+    "currentBusiness": "বর্তমান ব্যবসা"
+  },
+  "userMenu": {
+    "platformOwner": "প্ল্যাটফর্ম মালিক",
+    "language": "ভাষা",
+    "theme": "থিম",
+    "changePassword": "পাসওয়ার্ড বদলান",
+    "logout": "লগআউট",
+    "loggingOut": "লগআউট হচ্ছে…"
+  },
+  "account": {
+    "passwordTitle": "পাসওয়ার্ড বদলান",
+    "passwordDescription": "বদলানোর পর এই ডিভাইস লগইন থাকবে, অন্য সব ডিভাইস লগআউট হবে।",
+    "current": "বর্তমান পাসওয়ার্ড",
+    "new": "নতুন পাসওয়ার্ড",
+    "confirm": "নতুন পাসওয়ার্ড আবার লিখুন",
+    "rules": "১০ থেকে ১২৮ অক্ষর, আপনার ইমেইল বা ফোন নম্বর নয়।",
+    "submit": "পাসওয়ার্ড বদলান",
+    "saving": "সেভ হচ্ছে…",
+    "success": "পাসওয়ার্ড বদলানো হয়েছে। অন্য ডিভাইসগুলো লগআউট হয়েছে।",
+    "required": "এই ঘরটি পূরণ করুন।",
+    "tooShort": "কমপক্ষে ১০টি অক্ষর দিন।",
+    "tooLong": "সর্বোচ্চ ১২৮টি অক্ষর দিন।",
+    "sameAsIdentity": "পাসওয়ার্ড আপনার ইমেইল বা ফোন নম্বর হতে পারবে না।",
+    "mismatch": "দুটি নতুন পাসওয়ার্ড মেলেনি।",
+    "currentWrong": "বর্তমান পাসওয়ার্ড ভুল।",
+    "unavailable": "এখন সার্ভারে পৌঁছানো যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।",
+    "unknown": "পাসওয়ার্ড বদলানো যায়নি। আবার চেষ্টা করুন।"
+  },
+  "dealership": {
+    "typeName": "ডিলারশিপ",
+    "nav": {
+      "dashboard": "ড্যাশবোর্ড",
+      "products": "পণ্য ও ক্যাটাগরি",
+      "customers": "গ্রাহক",
+      "suppliers": "সরবরাহকারী",
+      "purchases": "কেনা",
+      "sales": "বিক্রি",
+      "stock": "স্টক",
+      "accounts": "হিসাব",
+      "commission": "কমিশন",
+      "reports": "রিপোর্ট",
+      "settings": "সেটিংস"
+    }
   }
 }

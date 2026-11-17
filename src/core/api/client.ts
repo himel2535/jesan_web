@@ -1,9 +1,9 @@
-import { API_BASE_URL } from './config';
+import { BROWSER_API_BASE } from './config';
 import { ApiError, apiErrorFromResponse } from './errors';
 
 export const DEFAULT_TIMEOUT_MS = 3000;
 
-/** Refresh endpoint of jesan-api (cookie based). Align with the backend when auth lands. */
+/** Refresh endpoint of jesan-api (docs/API.md §3): refresh cookie in, two new cookies out. */
 export const AUTH_REFRESH_PATH = '/auth/refresh';
 
 export type QueryParams = Record<string, string | number | boolean | null | undefined>;
@@ -24,13 +24,13 @@ export interface ApiRequestOptions {
 let refreshInFlight: Promise<boolean> | null = null;
 let onAuthFailure: (() => void) | null = null;
 
-/** Called when the session cannot be refreshed (the login step will redirect here). */
+/** Called when the session is over (refresh and retry both failed): sends the user to /login. */
 export function setAuthFailureHandler(handler: (() => void) | null): void {
   onAuthFailure = handler;
 }
 
 export function buildUrl(path: string, query?: QueryParams): string {
-  const url = `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  const url = `${BROWSER_API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
   if (!query) return url;
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
@@ -106,25 +106,31 @@ function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
-function isAuthPath(path: string): boolean {
-  return path.replace(/^\/?/, '/').startsWith('/auth/');
+/** A 401 from these means "wrong login" or "session over", never "refresh and retry" (§3). */
+const NO_REFRESH_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout'];
+
+function skipsRefresh(path: string): boolean {
+  const normalized = path.replace(/^\/?/, '/').split('?')[0] ?? '';
+  return NO_REFRESH_PATHS.includes(normalized);
 }
 
 /**
  * fetch-based API call: cookies included, 3 s timeout, one normalized error type (ApiError).
- * On 401 it refreshes the session once and retries the request once.
+ *
+ * On 401 (docs/API.md §3): one shared refresh, then the request is sent once more — even when the
+ * refresh failed, because another tab may have refreshed a moment earlier and the browser already
+ * holds the new cookie. A second 401 means the session is over: the auth-failure handler runs.
  */
 export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   let response = await send(path, options);
 
-  if (response.status === 401 && !options.skipAuthRefresh && !isAuthPath(path)) {
-    if (await refreshSession()) {
-      response = await send(path, options);
-    }
+  if (response.status === 401 && !options.skipAuthRefresh && !skipsRefresh(path)) {
+    await refreshSession();
+    response = await send(path, options);
     if (response.status === 401) onAuthFailure?.();
   }
 
   const body = await readBody(response);
-  if (!response.ok) throw apiErrorFromResponse(response.status, body);
+  if (!response.ok) throw apiErrorFromResponse(response.status, body, response.headers);
   return body as T;
 }

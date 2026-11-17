@@ -3,6 +3,8 @@ import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
 afterEach(() => {
+  // Server tests run with `@vitest-environment node`: no DOM to clean there.
+  if (typeof document === 'undefined') return;
   cleanup();
   document.cookie.split(';').forEach((c) => {
     const name = c.split('=')[0]?.trim();
