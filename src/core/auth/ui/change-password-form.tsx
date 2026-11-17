@@ -8,37 +8,29 @@ import { ApiError } from '@/core/api/errors';
 import { Button } from '@/core/ui/button';
 import { PasswordInput } from '@/core/ui/password-input';
 import { Field, describedBy } from '@/core/ui/text-field';
+import {
+  passwordRuleError,
+  type PasswordIdentity,
+  type PasswordRuleError,
+} from '../password-rules';
 import { useSession } from '../session-context';
 
-export const PASSWORD_MIN = 10;
-export const PASSWORD_MAX = 128;
+export { PASSWORD_MAX, PASSWORD_MIN } from '../password-rules';
 
 type FieldName = 'current' | 'new' | 'confirm';
-type FieldError = 'required' | 'tooShort' | 'tooLong' | 'sameAsIdentity' | 'mismatch';
-
-function digits(value: string) {
-  return value.replace(/\D/g, '').replace(/^88/, '');
-}
+type FieldError = PasswordRuleError | 'mismatch';
 
 /** The API's password rules (docs/API.md §7), checked before sending; the API checks again. */
 export function validatePasswords(
   values: Record<FieldName, string>,
-  identity: { email: string | null; phone: string | null },
+  identity: PasswordIdentity,
 ): Partial<Record<FieldName, FieldError>> {
   const errors: Partial<Record<FieldName, FieldError>> = {};
   if (!values.current) errors.current = 'required';
-  const next = values.new;
-  if (!next) errors.new = 'required';
-  else if (next.length < PASSWORD_MIN) errors.new = 'tooShort';
-  else if (next.length > PASSWORD_MAX) errors.new = 'tooLong';
-  else if (
-    (identity.email && next.trim().toLowerCase() === identity.email.toLowerCase()) ||
-    (identity.phone && digits(next) !== '' && digits(next) === digits(identity.phone))
-  ) {
-    errors.new = 'sameAsIdentity';
-  }
+  const newError = passwordRuleError(values.new, identity);
+  if (newError) errors.new = newError;
   if (!values.confirm) errors.confirm = 'required';
-  else if (values.confirm !== next) errors.confirm = 'mismatch';
+  else if (values.confirm !== values.new) errors.confirm = 'mismatch';
   return errors;
 }
 

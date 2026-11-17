@@ -76,6 +76,14 @@ npm run build
 - ব্যবসার নাম কোডে নয়: নাম, ধরন, রোল `GET /auth/me` থেকে; মেনু module manifest থেকে।
 - `next` বা redirect-এর পথ সবসময় `safeNextPath` দিয়ে (বাইরের সাইটে পাঠানো নিষেধ)।
 
+**Settings (`src/core/settings`)**
+
+- ছক শুধু `roles.manage`; ইউজারের তালিকা `users.view`, বাটন `users.manage`। এগুলো UI সুবিধা, আসল সুরক্ষা API-তে।
+- পাসওয়ার্ডের নিয়ম শুধু `src/core/auth/password-rules.ts` থেকে। পাসওয়ার্ড কখনো URL, log, query cache বা storage-এ নয়; পাঠানোর পর মুছে ফেলো।
+- ত্রুটির বার্তা status দেখে (`settingsErrorKind`), API-র `message` লেখা দেখে নয়।
+- ঝুঁকির কাজে (মোছা, নিষ্ক্রিয়, রিসেট) `ConfirmDialog`।
+- API-র ঘাটতির TODO-গুলো DECISIONS.md-তে; backend ঠিক হলে সেখানে লেখা জায়গায় বদলাও।
+
 **UI উপাদান**
 
 - পুনর্ব্যবহারযোগ্য উপাদান `src/core/ui`-তে, কোনো ব্যবসার নাম ছাড়া। ডেভ-অনলি পেজ `page.dev.tsx` নামে (production-এ বাদ যায়)।
