@@ -12,6 +12,7 @@
 - `i18n/` — ভাষা নির্বাচন (cookie), next-intl কনফিগ, সংখ্যা/টাকা/তারিখের helper।
 - `theme/` — থিম cookie ও design token (`tokens.css`)।
 - `navigation/` — সাইডবার মেনুর ধরন (পরে module manifest এখান দিয়ে আসবে)।
+- `settings/` — ব্যবসার Settings: রোল × অনুমতির ছক, ইউজার ব্যবস্থাপনা, তাদের query key ও API hooks।
 - `ui/` — AppShell, Sidebar, Topbar, Modal, Pagination, Button, Card ইত্যাদি।
 - `lib/` — ছোট সাধারণ helper।
 

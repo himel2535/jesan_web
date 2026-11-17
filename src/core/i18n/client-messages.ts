@@ -18,6 +18,8 @@ export const CLIENT_NAMESPACES = [
   'business',
   'userMenu',
   'account',
+  'settings',
+  'permissions',
 ] as const satisfies readonly (keyof Messages)[];
 
 const DEV_ONLY_NAMESPACES = ['demo'] as const satisfies readonly (keyof Messages)[];
