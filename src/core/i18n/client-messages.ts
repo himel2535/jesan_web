@@ -20,6 +20,8 @@ export const CLIENT_NAMESPACES = [
   'account',
   'settings',
   'permissions',
+  // Module namespaces whose client pages need them (module type names, not business names).
+  'dealership',
 ] as const satisfies readonly (keyof Messages)[];
 
 const DEV_ONLY_NAMESPACES = ['demo'] as const satisfies readonly (keyof Messages)[];

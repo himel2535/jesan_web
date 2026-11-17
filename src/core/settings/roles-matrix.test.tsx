@@ -105,7 +105,7 @@ describe('<RolesMatrix>', () => {
     });
     renderMatrix();
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Void sales for Manager' }));
-    await userEvent.click(cell('View customer dues', 'Salesman'));
+    await userEvent.click(cell('View customer dues and credit limits', 'Salesman'));
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 

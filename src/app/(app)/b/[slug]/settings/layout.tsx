@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { lookupBusiness } from '@/core/module-system/business-context';
 import { settingsPath, settingsSections } from '@/core/settings/access';
-import { SettingsNav } from '@/core/settings/settings-nav';
+import { TabNav } from '@/core/ui/tab-nav';
 import { Forbidden } from '@/core/ui/forbidden';
 import { PageHeader } from '@/core/ui/page-header';
 
@@ -28,7 +28,7 @@ export default async function SettingsLayout({
   return (
     <>
       <PageHeader title={t('title')} description={t('description', { business: lookup.name })} />
-      <SettingsNav label={t('navLabel')} items={items} />
+      <TabNav label={t('navLabel')} items={items} />
       {children}
     </>
   );

@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/core/ui/cn';
 
-/** Tabs between Settings sections (only those the user may open). */
-export function SettingsNav({
+/** Tabs between sections of a page (only those the user may open). */
+export function TabNav({
   label,
   items,
 }: {

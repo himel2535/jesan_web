@@ -14,8 +14,9 @@ API বদলালে এই ফাইলও একই PR-এ হালনা�
 6. [Health](#৬-health)
 7. [Auth](#৭-auth)
 8. [Settings API](#৮-settings-api)
-9. [ত্রুটির রূপ ও কোড](#৯-ত্রুটির-রূপ-ও-কোড)
-10. [রোল ও অনুমতি](#১০-রোল-ও-অনুমতি)
+9. [মাস্টার ডেটা (dealership)](#৯-মাস্টার-ডেটা-dealership)
+10. [ত্রুটির রূপ ও কোড](#১০-ত্রুটির-রূপ-ও-কোড)
+11. [রোল ও অনুমতি](#১১-রোল-ও-অনুমতি)
 
 ---
 
@@ -29,9 +30,12 @@ API বদলালে এই ফাইলও একই PR-এ হালনা�
 | id | UUID (v7, সময়ক্রমে সাজানো), স্ট্রিং |
 | প্রমাণীকরণ | সব route ডিফল্টে লগইন লাগে; শুধু health ও `login`/`refresh`/`logout` খোলা |
 | ব্যবসার route | `/b/:businessSlug/...`, যেমন `/b/akij-cement/users` |
-| তালিকা | প্রতি পাতায় ১০টা, `?page=1` থেকে শুরু |
+| তালিকা | প্রতি পাতায় ১০টা, `?page=1` থেকে শুরু; উত্তর `{ items, page, pageSize, total }` |
+| টাকা | **স্ট্রিং**, ঠিক দুই দশমিক (`"570.00"`); পাঠানোর সময়ও স্ট্রিং (`"570"` বা `"570.50"`), সংখ্যা নয় |
 
 - request body-তে অঘোষিত কোনো ফিল্ড পাঠালে 400 (`property x should not exist`)।
+- টাকা কখনো JavaScript-এর `number` হিসেবে হিসাব করবেন না (দশমিকের ভুল হয়); দেখানোর জন্য স্ট্রিংটাই ফরম্যাট করুন।
+- অন্য ব্যবসার কোনো রেকর্ডের id দিলে উত্তর 404 (রেকর্ডটা "নেই"), কখনো অন্য ব্যবসার ডেটা নয়।
 - response-এ এমন কোনো ফিল্ড থাকে না যা এখানে লেখা নেই। কোনো ফিল্ড দেখার অনুমতি না থাকলে সেটা response-এ **একেবারেই থাকে না** (`null` নয়)। তাই frontend-এ `if ('margin' in row)` বা `row.margin !== undefined` দিয়ে দেখুন।
 
 ---
@@ -137,11 +141,26 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | PUT | `/b/:businessSlug/roles/:roleKey/permissions` | হ্যাঁ | `roles.manage` (owner-only) | 200 |
 | GET | `/b/:businessSlug/users?page=1` | হ্যাঁ | `users.view` | 200 |
 | POST | `/b/:businessSlug/users` | হ্যাঁ | `users.manage` (owner-only) | 201 |
+| POST | `/b/:businessSlug/users/lookup` | হ্যাঁ | `users.manage` (owner-only); প্রতি ইউজার মিনিটে ২০টা | 200 |
 | POST | `/b/:businessSlug/users/:userId/access` | হ্যাঁ | `users.manage` (owner-only) | 200 |
 | PATCH | `/b/:businessSlug/users/:userId/role` | হ্যাঁ | `users.manage` (owner-only) | 200 |
 | DELETE | `/b/:businessSlug/users/:userId/access` | হ্যাঁ | `users.manage` (owner-only) | 204 |
 | PATCH | `/b/:businessSlug/users/:userId/status` | হ্যাঁ | `users.manage` (owner-only) | 204 |
 | POST | `/b/:businessSlug/users/:userId/reset-password` | হ্যাঁ | `users.manage` (owner-only) | 204 |
+| GET | `/b/:businessSlug/product-units` | হ্যাঁ | `product.view` | 200 |
+| GET | `/b/:businessSlug/product-categories?active=` | হ্যাঁ | `product.view` | 200 |
+| POST | `/b/:businessSlug/product-categories` | হ্যাঁ | `product.manage` | 201 |
+| PATCH | `/b/:businessSlug/product-categories/:id` | হ্যাঁ | `product.manage` (+ নিষ্ক্রিয়ে `product.deactivate`) | 200 |
+| GET | `/b/:businessSlug/products?search=&categoryId=&active=&page=` | হ্যাঁ | `product.view` | 200 |
+| GET | `/b/:businessSlug/products/:id` | হ্যাঁ | `product.view` | 200 |
+| POST | `/b/:businessSlug/products` | হ্যাঁ | `product.manage` (+ কেনা-দামে `product.cost.view`) | 201 |
+| PATCH | `/b/:businessSlug/products/:id` | হ্যাঁ | `product.manage` (+ দামে `product.price.edit`, নিষ্ক্রিয়ে `product.deactivate`) | 200 |
+| GET | `/b/:businessSlug/customers?search=&active=&page=` | হ্যাঁ | `customer.view` | 200 |
+| GET | `/b/:businessSlug/customers/:id` | হ্যাঁ | `customer.view` | 200 |
+| POST | `/b/:businessSlug/customers` | হ্যাঁ | `customer.manage` (+ বাকি/সীমায় `customer.due.view`) | 201 |
+| PATCH | `/b/:businessSlug/customers/:id` | হ্যাঁ | `customer.manage` (+ বাকি/সীমায় `customer.balance.edit`, নিষ্ক্রিয়ে `customer.deactivate`) | 200 |
+| GET | `/b/:businessSlug/suppliers?active=&page=` | হ্যাঁ | `supplier.view` | 200 |
+| GET | `/b/:businessSlug/suppliers/:id` | হ্যাঁ | `supplier.view` | 200 |
 
 `/b/:businessSlug/...` পথে আগে যাচাই হয় ইউজার ওই ব্যবসায় ঢুকতে পারেন কি না, তারপর অনুমতি। অজানা ব্যবসা আর ঢোকার অনুমতি নেই, দুটোই একই 403।
 
@@ -259,6 +278,8 @@ Response: **204**, body নেই।
         "collection.create",
         "commission.manage",
         "commission.view",
+        "customer.balance.edit",
+        "customer.deactivate",
         "customer.due.view",
         "customer.manage",
         "customer.view",
@@ -267,7 +288,9 @@ Response: **204**, body নেই।
         "ledger.view",
         "payment.create",
         "product.cost.view",
+        "product.deactivate",
         "product.manage",
+        "product.price.edit",
         "product.view",
         "profit.view",
         "purchase.create",
@@ -373,7 +396,7 @@ Response: **204**, body নেই।
 - `roles`: চারটা রোল, Settings-এর কলামের ক্রমে। প্রতিটায় চালু অনুমতির তালিকা।
 - `locked: true` (শুধু `owner` রোলে): এই রোলের অনুমতি বদলানো যায় না; সবসময় সব owner-only-বহির্ভূত অনুমতি।
 
-Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৩২টা, অংশ ১০-এর টেবিলে সব):
+Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৩৬টা, অংশ ১১-এর টেবিলে সব):
 
 ```json
 {
@@ -454,7 +477,7 @@ Response 200 (কী যোগ হলো, কী বাদ গেল):
 
 ### `GET users?page=1`: ব্যবসার ইউজার
 
-প্রতি পাতায় ১০ জন; `page` ১ থেকে শুরু।
+প্রতি পাতায় ১০ জন; `page` ১ থেকে শুরু। ক্রম: ইউজারকে এই ব্যবসায় যোগ করার ক্রমে।
 
 ```json
 {
@@ -465,6 +488,7 @@ Response 200 (কী যোগ হলো, কী বাদ গেল):
       "email": "manager@example.com",
       "phone": "+8801712345678",
       "isActive": true,
+      "isPlatformOwner": false,
       "lastLoginAt": "2026-11-17T07:35:26.027Z",
       "role": "manager"
     }
@@ -475,7 +499,60 @@ Response 200 (কী যোগ হলো, কী বাদ গেল):
 }
 ```
 
-`lastLoginAt` কখনো লগইন না করলে `null`। মোট পাতা = `Math.ceil(total / pageSize)`।
+প্রতিটা item-এ ঠিক এই ফিল্ডগুলো থাকে, এর বেশি কিছু নয়:
+
+| ফিল্ড | টাইপ | মানে |
+|---|---|---|
+| `id` | string (UUID) | ইউজারের id |
+| `name` | string | নাম |
+| `email` | string \| null | ইমেইল (না থাকলে `null`) |
+| `phone` | string \| null | ফোন, `+880...` রূপে (না থাকলে `null`) |
+| `isActive` | boolean | `false` = নিষ্ক্রিয়, লগইন করতে পারেন না (সব ব্যবসায়) |
+| `isPlatformOwner` | boolean | platform owner কি না (নিচে দেখুন; এই তালিকায় কার্যত সবসময় `false`) |
+| `lastLoginAt` | string (ISO সময়) \| null | শেষ সফল লগইন; কখনো লগইন না করলে `null` |
+| `role` | string | এই ব্যবসায় রোলের key: `owner`, `manager`, `accountant`, `salesman` |
+
+পাসওয়ার্ড, hash বা লকের তথ্য কখনো আসে না। মোট পাতা = `Math.ceil(total / pageSize)`।
+
+**platform owner কি তালিকায় আসেন?** না। platform owner (`isPlatformOwner: true`) সব ব্যবসায় এমনিই ঢোকেন, তাঁর কোনো ব্যবসায় সদস্যপদের সারি থাকে না, আর এই API দিয়ে তাঁকে কোনো ব্যবসায় যোগ বা বদল করা যায় না। তাই তালিকায় শুধু এই ব্যবসার সদস্যরা আসেন। Settings পেজে platform owner-কে দেখাতে চাইলে `GET /auth/me`-এর `user` থেকে নিজেকে আলাদা করে দেখান।
+
+**ইউজারকে `owner` রোল দেওয়া যায় কি?** হ্যাঁ। platform owner কোনো ইউজারকে এক বা একাধিক ব্যবসায় ব্যবসা-স্তরের `owner` রোল দিতে পারেন (তৈরির সময় `roleKey: "owner"`, অথবা `access`/`role` endpoint দিয়ে)। সেই ইউজার ওই ব্যবসায় সব অনুমতি পান **শুধু owner-only গুলো ছাড়া** (কমিশন, লাভ, Settings বদল, ইউজার ও রোল ব্যবস্থাপনা, audit)। তাই তিনি Settings API ব্যবহার করতে বা অন্যকে রোল দিতে পারেন না। কাউকে platform owner বানানো শুধু কমান্ড-লাইনে (`npm run admin:create`), API দিয়ে নয়।
+
+### `POST users/lookup`: বিদ্যমান ইউজার খোঁজা
+
+কেউ আগে থেকেই অন্য ব্যবসায় কাজ করেন (একই ইমেইল বা ফোন), তাঁকে এই ব্যবসায় যোগ করার আগে খোঁজার জন্য। শুধু platform owner (`users.manage`)। ইমেইল বা ফোন body-তে যায় (URL-এ নয়), যাতে সার্ভারের লগে না থাকে।
+
+Request:
+
+```json
+{ "identifier": "manager@example.com" }
+```
+
+ইমেইলের বড়-ছোট হাতের অক্ষর ধরা হয় না; ফোন `01712345678` বা `+8801712345678` দুভাবেই চলে।
+
+Response 200:
+
+```json
+{
+  "id": "01a1e86e-9e22-720b-bd46-0235039e175b",
+  "name": "Rahim Uddin",
+  "isActive": true,
+  "isPlatformOwner": false,
+  "hasAccess": false,
+  "role": null
+}
+```
+
+| ফিল্ড | মানে |
+|---|---|
+| `hasAccess` | এই ব্যবসায় আগে থেকে ঢুকতে পারেন কি না (platform owner হলে সবসময় `true`) |
+| `role` | এই ব্যবসায় বর্তমান রোলের key; সদস্য না হলে বা platform owner হলে `null` |
+
+উত্তরে ইমেইল, ফোন বা অন্য কোন কোন ব্যবসায় আছেন, তা থাকে না। পরের ধাপ: `hasAccess: false` হলে `POST users/:id/access` দিয়ে রোলসহ যোগ করুন; `isPlatformOwner: true` হলে কিছু করার নেই।
+
+- না মিললে (বা identifier ইমেইল/ফোন না হলে) **404** `User not found`; খালি হলে 400।
+- **Rate limit:** প্রতি ইউজার প্রতি মিনিটে ২০টা খোঁজ; বেশি হলে **429** (`Retry-After` header দেখুন)।
+- প্রতিটা খোঁজ audit log-এ যায় (কে, কোন ব্যবসায়, ইমেইল নাকি ফোন দিয়ে, পাওয়া গেল কি না); খোঁজার ইমেইল বা ফোন লগে রাখা হয় না।
 
 ### `POST users`: ইউজার তৈরি ও রোল বরাদ্দ
 
@@ -499,7 +576,7 @@ Response **201**:
 { "id": "01a1e86e-9e22-720b-bd46-0235039e175b", "role": "manager" }
 ```
 
-ত্রুটি: একই email বা phone আগে থেকে থাকলে 409 `A user with this email or phone already exists; grant them access instead` (তখন নিচের `access` endpoint দিয়ে ওই ইউজারকে এই ব্যবসায় যোগ করুন); অজানা রোল 400 `Unknown role`; email ও phone কোনোটাই না থাকলে 400।
+ত্রুটি: একই email বা phone আগে থেকে থাকলে 409 `A user with this email or phone already exists; grant them access instead`। এই উত্তরে বিদ্যমান ইউজারের id **থাকে না**; id পেতে `POST users/lookup` দিয়ে খুঁজুন, তারপর `access` endpoint দিয়ে যোগ করুন; অজানা রোল 400 `Unknown role`; email ও phone কোনোটাই না থাকলে 400।
 
 ### `POST users/:userId/access`: বিদ্যমান ইউজারকে এই ব্যবসায় যোগ
 
@@ -531,7 +608,199 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 ---
 
-## ৯. ত্রুটির রূপ ও কোড
+## ৯. মাস্টার ডেটা (dealership)
+
+ক্যাটাগরি, পণ্য, গ্রাহক ও সরবরাহকারী। সব পথ `/api/v1/b/:businessSlug/...`; প্রতিটা ব্যবসার ডেটা সম্পূর্ণ আলাদা (একই নাম বা ফোন অন্য ব্যবসায় থাকতে পারে)। **কিছুই মোছা যায় না**, শুধু নিষ্ক্রিয় (`isActive: false`)।
+
+### সাধারণ নিয়ম
+
+- **তালিকার query:** `page` (১ থেকে), `search` (সর্বোচ্চ ১০০ অক্ষর), `active` = `true` (ডিফল্ট) | `false` | `all`। পণ্যে বাড়তি `categoryId`। ক্যাটাগরির তালিকা ছোট, তাই পাতা নেই।
+- **অনুসন্ধান:** অংশ মিললেই হয়, বড়-ছোট হাতের অক্ষর ধরা হয় না। পণ্য: ইংরেজি নাম, বাংলা নাম, কোড। গ্রাহক: ইংরেজি নাম, বাংলা নাম, ফোন, কোড। ফোন `01712...` লিখলেও `+8801712...`-তে মেলে।
+- **সাজানো:** ইংরেজি নাম অনুযায়ী (ক্যাটাগরি `sortOrder` অনুযায়ী; সরবরাহকারীতে প্রিন্সিপাল আগে)।
+- **কোড:** স্বয়ংক্রিয়, বদলানো যায় না: পণ্য `P-0001`, গ্রাহক `C-00001`, সরবরাহকারী `S-001` (prefix ব্যবসার settings থেকে, যেমন অন্য ব্যবসায় `R-0001`)। একসাথে অনেক তৈরি হলেও কখনো ডুপ্লিকেট হয় না।
+- **সংবেদনশীল সংশোধন:** তৈরির পরে দাম, শুরুর বাকি, ক্রেডিট সীমা বদলানো আর নিষ্ক্রিয়/সক্রিয় করা শুধু মালিক-স্তরের (platform owner ও `owner` রোল; অনুমতি `product.price.edit`, `product.deactivate`, `customer.balance.edit`, `customer.deactivate`)। এতে body-তে `reason` (৩-৫০০ অক্ষর) বাধ্যতামূলক, আর audit log-এ আগের ও পরের মান লেখা হয়। নাম, ঠিকানা, ফোন, ক্যাটাগরির বদল `product.manage` / `customer.manage` দিয়েই চলে। ম্যানেজার সংবেদনশীল বদলের জন্য পরের ধাপে "সংশোধনের অনুরোধ" পাঠাবেন।
+- **PATCH:** শুধু যা বদলাবেন সেটা পাঠান। আগের মানের সমান মান পাঠালে সেটা বদল ধরা হয় না (অনুমতিও লাগে না)। কিছুই না বদলালে 400 `Nothing to change`।
+- **লুকানো ফিল্ড:** কেনা-দাম (`purchasePrice`) `product.cost.view` ছাড়া, আর গ্রাহকের `openingBalance`, `currentBalance`, `creditLimit` `customer.due.view` ছাড়া response-এ থাকেই না। অনুমতি ছাড়া এগুলো পাঠালে 403।
+
+### `GET product-units`
+
+ব্যবসা কোন এককে বেচে (settings থেকে)। পণ্যের ফর্মের ড্রপডাউনের জন্য।
+
+```json
+{
+  "defaultUnitKey": "bag",
+  "items": [{ "key": "bag", "nameEn": "Bag", "nameBn": "বস্তা", "decimals": 0 }]
+}
+```
+
+`decimals`: পরিমাণে কত দশমিক চলে (বস্তায় ০ = পূর্ণ সংখ্যা)।
+
+### ক্যাটাগরি
+
+`GET product-categories?active=true`:
+
+```json
+{
+  "items": [
+    {
+      "id": "01a1e8a7-f6d0-7858-ba94-86452eb3eb44",
+      "nameEn": "OPC",
+      "nameBn": "ওপিসি",
+      "sortOrder": 1,
+      "isActive": true,
+      "createdAt": "2026-11-17T08:38:04.236Z",
+      "updatedAt": "2026-11-17T08:38:04.236Z"
+    }
+  ]
+}
+```
+
+`POST product-categories` → 201, একই রূপের একটা ক্যাটাগরি:
+
+```json
+{ "nameEn": "Special", "nameBn": "বিশেষ", "sortOrder": 3 }
+```
+
+`PATCH product-categories/:id`: `nameEn`, `nameBn`, `sortOrder`; নিষ্ক্রিয় করতে `{ "isActive": false, "reason": "..." }`। একই নাম (বড়-ছোট হাতের অক্ষর নির্বিশেষে) থাকলে 409 `A category with this name already exists`।
+
+### পণ্য
+
+`GET products?search=opc%2050&page=1`, ম্যানেজারের উত্তর:
+
+```json
+{
+  "items": [
+    {
+      "id": "01a1e8a7-f6d8-774d-b0c9-bedc6b889618",
+      "code": "P-0001",
+      "category": { "id": "01a1e8a7-f6d0-7858-ba94-86452eb3eb44", "nameEn": "OPC", "nameBn": "ওপিসি" },
+      "nameEn": "Sample OPC 50kg",
+      "nameBn": "নমুনা ওপিসি ৫০ কেজি",
+      "unitKey": "bag",
+      "purchasePrice": "540.00",
+      "defaultSalePrice": "560.00",
+      "isActive": true,
+      "createdAt": "2026-11-17T08:38:04.236Z",
+      "updatedAt": "2026-11-17T08:38:04.236Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 1
+}
+```
+
+বিক্রয়কর্মীর উত্তর একই, শুধু `purchasePrice` ফিল্ডটা **নেই**। `GET products/:id` একটা পণ্য, একই রূপে।
+
+`POST products` (`unitKey` না দিলে ব্যবসার প্রধান একক; `purchasePrice` না দিলে `"0"` এবং দিতে হলে `product.cost.view` লাগে):
+
+```json
+{
+  "categoryId": "01a1e8a7-f6d0-7858-ba94-86452eb3eb44",
+  "nameEn": "Sample OPC 40kg",
+  "nameBn": "নমুনা ওপিসি ৪০ কেজি",
+  "purchasePrice": "450",
+  "defaultSalePrice": "470"
+}
+```
+
+→ 201, তৈরি হওয়া পণ্য (`"code": "P-0005"`, দাম `"450.00"` / `"470.00"`)।
+
+`PATCH products/:id`: `nameEn`, `nameBn`, `categoryId`, `unitKey` (`product.manage`); `purchasePrice`, `defaultSalePrice` (`product.price.edit` + `reason`); `isActive` (`product.deactivate` + `reason`)। উদাহরণ (মালিক):
+
+```json
+{ "defaultSalePrice": "565", "reason": "new rate from Akij" }
+```
+
+`defaultSalePrice` শুধু ডিফল্ট; বিক্রির সময় প্রতিটা বিক্রিতে আলাদা দাম দেওয়া যাবে, কেনা-দামের চেয়ে কম হলেও কোনো সতর্কতা নেই।
+
+ত্রুটি: একই নাম 409 `A product with this name already exists`; অজানা বা নিষ্ক্রিয় ক্যাটাগরি 400 `Category not found or inactive`; settings-এ নেই এমন একক 400 `Unknown unit: ton`; টাকা সংখ্যা হিসেবে পাঠালে 400।
+
+### গ্রাহক
+
+`GET customers?search=sample%20store%20two`, ম্যানেজার বা হিসাবরক্ষকের উত্তর:
+
+```json
+{
+  "items": [
+    {
+      "id": "01a1e8a7-f6e4-7bd2-b880-de1971ef4cf0",
+      "code": "C-00002",
+      "nameEn": "Sample Store Two",
+      "nameBn": "নমুনা স্টোর দুই",
+      "phone": "+8801000000002",
+      "address": null,
+      "area": "Sample Area",
+      "openingBalance": "12500.00",
+      "currentBalance": "12500.00",
+      "creditLimit": null,
+      "isActive": true,
+      "createdAt": "2026-11-17T08:38:04.236Z",
+      "updatedAt": "2026-11-17T08:38:04.236Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 1
+}
+```
+
+- বিক্রয়কর্মীর উত্তরে `openingBalance`, `currentBalance`, `creditLimit` **নেই**।
+- বাকি: ধনাত্মক = গ্রাহক আমাদের কাছে দেনা; **ঋণাত্মক = অগ্রিম** (আমরা তার কাছে দেনা)।
+- `currentBalance` সার্ভার নিজে হালনাগাদ রাখে (পরের ধাপে বিক্রি ও আদায়ে); frontend কখনো হিসাব করবে না।
+- `creditLimit: null` মানে কোনো সীমা নেই।
+
+`POST customers` (ফোন বাধ্যতামূলক, ব্যবসায় unique; বিক্রয়কর্মী শুধু নাম-ফোন-ঠিকানা দিয়ে যোগ করতে পারেন):
+
+```json
+{ "nameEn": "Karim Store", "nameBn": "করিম স্টোর", "phone": "01000000099", "area": "Sample Bazar" }
+```
+
+→ 201 (`"code": "C-00006"`, `"phone": "+8801000000099"`)। বাকি ও সীমাসহ (`customer.due.view` লাগে):
+
+```json
+{ "nameEn": "Due Shop", "phone": "01700000000", "openingBalance": "12500.50", "creditLimit": "50000" }
+```
+
+`PATCH customers/:id`: `nameEn`, `nameBn`, `phone`, `address`, `area` (`customer.manage`; `null` বা `""` দিলে খালি); `openingBalance`, `creditLimit` (`customer.balance.edit` + `reason`; `creditLimit: null` = সীমা তুলে দেওয়া); `isActive` (`customer.deactivate` + `reason`)। শুরুর বাকি বদলালে বর্তমান বাকিও একই পরিমাণ সরে। উদাহরণ (মালিক):
+
+```json
+{ "openingBalance": "13000", "creditLimit": "50000", "reason": "opening balance was mistyped" }
+```
+
+ত্রুটি: একই ফোন 409 `A customer with this phone number already exists`; ভুল ফোন 400 `Phone number is not valid`; বিক্রয়কর্মী বাকি পাঠালে 403।
+
+### সরবরাহকারী (শুধু দেখা)
+
+প্রিন্সিপাল সরবরাহকারী (যেমন Akij Cement) ব্যবসার settings থেকে আসে; যোগ বা বদলের API এখন নেই।
+
+`GET suppliers`:
+
+```json
+{
+  "items": [
+    {
+      "id": "01a1e8a7-f5e1-74da-acca-262544b16a00",
+      "code": "S-001",
+      "nameEn": "Akij Cement",
+      "nameBn": "আকিজ সিমেন্ট",
+      "phone": null,
+      "address": null,
+      "isPrincipal": true,
+      "isActive": true
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 1
+}
+```
+
+`GET suppliers/:id` একটা সরবরাহকারী, একই রূপে।
+
+---
+
+## ১০. ত্রুটির রূপ ও কোড
 
 সব ত্রুটির রূপ একই:
 
@@ -557,13 +826,13 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 | Status | কখন | উদাহরণ `message` | frontend কী করবে |
 |---|---|---|---|
-| 400 | ফর্মের ভুল, নিয়ম ভাঙা | তালিকা (উপরে), `Password must be at least 10 characters`, `Current password is incorrect`, `"commission.view" is owner-only and cannot be given to a role` | ফর্মে ত্রুটি দেখান |
+| 400 | ফর্মের ভুল, নিয়ম ভাঙা | তালিকা (উপরে), `Password must be at least 10 characters`, `Current password is incorrect`, `"commission.view" is owner-only and cannot be given to a role`, `A reason is required for this change`, `Nothing to change` | ফর্মে ত্রুটি দেখান |
 | 401 | লগইন নেই বা token শেষ | `Unauthorized`; লগইনে `Invalid credentials` | একবার refresh (অংশ ৩); লগইনের 401-এ শুধু বার্তা |
 | 403 | অনুমতি বা ব্যবসার অ্যাক্সেস নেই | `Access denied` | "অনুমতি নেই" দেখান; refresh নয় |
 | 403 | অবিশ্বস্ত origin থেকে বদলানোর অনুরোধ | `Origin not allowed` | কনফিগারেশনের ভুল (`CORS_ORIGIN`) |
-| 404 | জিনিসটা নেই | `User not found`, `Unknown role` | "পাওয়া যায়নি" |
-| 409 | আগে থেকে আছে | `A user with this email or phone already exists; grant them access instead` | বিদ্যমান ইউজারকে যোগ করার পথ দেখান |
-| 429 | এক IP থেকে প্রতি মিনিটে বেশি লগইন চেষ্টা | `ThrottlerException: Too Many Requests` | `Retry-After` header-এর সেকেন্ড পর্যন্ত অপেক্ষা |
+| 404 | জিনিসটা নেই (অথবা অন্য ব্যবসার) | `User not found`, `Unknown role`, `Product not found`, `Customer not found` | "পাওয়া যায়নি" |
+| 409 | আগে থেকে আছে | `A user with this email or phone already exists; grant them access instead`, `A customer with this phone number already exists`, `A product with this name already exists` | কোন ফিল্ড ডুপ্লিকেট তা দেখান |
+| 429 | এক IP থেকে প্রতি মিনিটে বেশি লগইন চেষ্টা, অথবা এক ইউজারের প্রতি মিনিটে ২০টার বেশি ইউজার-খোঁজ | `ThrottlerException: Too Many Requests` | `Retry-After` header-এর সেকেন্ড পর্যন্ত অপেক্ষা |
 | 503 | ডাটাবেস কনফিগার করা নেই বা পাওয়া যায় না | `Database is not configured: set DATABASE_URL` | "সার্ভার সাময়িকভাবে বন্ধ" |
 | 500 | অপ্রত্যাশিত | `Internal server error` | সাধারণ ত্রুটি |
 
@@ -578,7 +847,7 @@ Retry-After: 60
 
 ---
 
-## ১০. রোল ও অনুমতি
+## ১১. রোল ও অনুমতি
 
 ### রোল
 
@@ -608,9 +877,13 @@ Retry-After: 60
 | `product.view` | dealership | | ✓ | | ✓ | পণ্য ও category দেখা |
 | `product.manage` | dealership | | ✓ | | | পণ্য ও category বানানো, বদলানো |
 | `product.cost.view` | dealership | | ✓ | | | কেনা-দাম দেখা |
+| `product.price.edit` | dealership | | | | | তৈরির পরে কেনা-দাম ও বিক্রয়মূল্য বদল (কারণসহ) |
+| `product.deactivate` | dealership | | | | | পণ্য ও ক্যাটাগরি নিষ্ক্রিয়/সক্রিয় (কারণসহ) |
 | `customer.view` | dealership | | ✓ | ✓ | ✓ | গ্রাহকের তালিকা |
 | `customer.manage` | dealership | | ✓ | | ✓ | গ্রাহক যোগ ও বদল |
-| `customer.due.view` | dealership | | ✓ | ✓ | | গ্রাহকের বাকি দেখা |
+| `customer.due.view` | dealership | | ✓ | ✓ | | গ্রাহকের বাকি ও ক্রেডিট সীমা দেখা |
+| `customer.balance.edit` | dealership | | | | | তৈরির পরে শুরুর বাকি ও ক্রেডিট সীমা বদল (কারণসহ) |
+| `customer.deactivate` | dealership | | | | | গ্রাহক নিষ্ক্রিয়/সক্রিয় (কারণসহ) |
 | `collection.create` | dealership | | ✓ | ✓ | | বাকি আদায়ের এন্ট্রি |
 | `supplier.view` | dealership | | ✓ | | | সরবরাহকারী দেখা |
 | `purchase.view` | dealership | | ✓ | | | কেনা দেখা |
@@ -632,7 +905,9 @@ Retry-After: 60
 | `commission.manage` | dealership | **হ্যাঁ** | | | | কমিশন scheme |
 | `profit.view` | dealership | **হ্যাঁ** | | | | লাভ দেখা |
 
-`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। বিজনেস ফিচারগুলো এখনো তৈরি হয়নি; অনুমতিগুলো আগে থেকে ঘোষণা করা আছে, যাতে Settings-এর ছক এখনই তৈরি করা যায়।
+`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা (পণ্য, গ্রাহক, সরবরাহকারী) তৈরি হয়েছে; কেনা, বিক্রি, স্টক, খাতা ও কমিশনের অনুমতি আগে থেকে ঘোষণা করা আছে, যাতে Settings-এর ছক এখনই তৈরি করা যায়।
+
+তৈরির পরে দাম, বাকি বা সীমা বদল আর নিষ্ক্রিয় করার চারটা অনুমতি কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)।
 
 ### frontend-এ কীভাবে ব্যবহার করবেন
 
