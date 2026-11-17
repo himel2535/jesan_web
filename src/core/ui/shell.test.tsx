@@ -1,7 +1,9 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { managerMe } from '../../../test/fixtures/me';
 import { expectNoA11yViolations, renderWithIntl } from '../../../test/utils';
+import { SessionProvider } from '@/core/auth/session-context';
 import { buildCoreNav } from '@/core/navigation/core-nav';
 import type { NavItem } from '@/core/navigation/types';
 import { AppShell } from './app-shell';
@@ -62,9 +64,16 @@ describe('<LocaleSwitcher>', () => {
 describe('<AppShell>', () => {
   const renderShell = (collapsed = false) =>
     renderWithIntl(
-      <AppShell navItems={items} initialCollapsed={collapsed} theme="light">
-        <p>content</p>
-      </AppShell>,
+      <SessionProvider me={managerMe}>
+        <AppShell
+          title="Example Cement"
+          navItems={items}
+          initialCollapsed={collapsed}
+          theme="light"
+        >
+          <p>content</p>
+        </AppShell>
+      </SessionProvider>,
     );
 
   it('marks the current page and has a skip link to main content', () => {

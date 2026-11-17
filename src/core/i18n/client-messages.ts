@@ -13,6 +13,11 @@ export const CLIENT_NAMESPACES = [
   'locale',
   'pagination',
   'errors',
+  'auth',
+  'session',
+  'business',
+  'userMenu',
+  'account',
 ] as const satisfies readonly (keyof Messages)[];
 
 const DEV_ONLY_NAMESPACES = ['demo'] as const satisfies readonly (keyof Messages)[];

@@ -7,13 +7,14 @@ import { cn } from './cn';
 import { NavLinks } from './nav-links';
 
 export interface SidebarProps {
+  title: string;
   items: NavItem[];
   collapsed: boolean;
   onToggle: () => void;
 }
 
 /** Desktop sidebar (md and up). On phones the same links live in <MobileDrawer>. */
-export function Sidebar({ items, collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ title, items, collapsed, onToggle }: SidebarProps) {
   const t = useTranslations();
 
   return (
@@ -27,9 +28,7 @@ export function Sidebar({ items, collapsed, onToggle }: SidebarProps) {
         className={cn('flex items-center gap-2', collapsed ? 'justify-center' : 'justify-between')}
       >
         {collapsed ? null : (
-          <span className="truncate px-2 text-base font-semibold text-fg">
-            {t('common.appName')}
-          </span>
+          <span className="truncate px-2 text-base font-semibold text-fg">{title}</span>
         )}
         <button
           type="button"

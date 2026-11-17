@@ -4,7 +4,7 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { applyTheme } from '@/core/theme/apply';
-import { themes, type Theme } from '@/core/theme/config';
+import { resolveTheme, themes, type Theme } from '@/core/theme/config';
 import { cn } from './cn';
 
 const icons = { light: Sun, dark: Moon, system: Monitor } as const;
@@ -15,7 +15,12 @@ const icons = { light: Sun, dark: Moon, system: Monitor } as const;
  */
 export function ThemeToggle({ initialTheme }: { initialTheme: Theme }) {
   const t = useTranslations('theme');
-  const [theme, setTheme] = useState<Theme>(initialTheme);
+  // Inside a menu this remounts on every open: prefer what <html> shows now over the server value.
+  const [theme, setTheme] = useState<Theme>(() =>
+    typeof document === 'undefined'
+      ? initialTheme
+      : resolveTheme(document.documentElement.dataset.theme ?? initialTheme),
+  );
 
   const choose = (next: Theme) => {
     setTheme(next);

@@ -66,6 +66,16 @@ npm run build
 - সাইডবার লিংক ডিফল্ট prefetch করে না; শুধু হালকা পেজে `prefetch: 'hover'`। সাইডবার নিজে ডেটা আনে না।
 - তালিকা সবসময় সার্ভার-সাইড ১০ সারি, `<Pagination>` ও `?page=` দিয়ে।
 
+**সেশন ও অনুমতি**
+
+- ব্রাউজার API ডাকে শুধু নিজের সাইটের `/api/v1/*` দিয়ে (Next proxy)। সরাসরি API host নয়; `NEXT_PUBLIC_API_URL` নেই। সার্ভারে `serverApiGet` (`API_INTERNAL_URL`)।
+- টোকেন কখনো JavaScript-এ, localStorage-এ বা কোডে নয়; cookie HttpOnly, ব্রাউজার নিজে পাঠায়।
+- সুরক্ষিত পেজ `src/app/(app)/` গ্রুপে (লেআউট `requireSession`)। নতুন public পেজ লাগলে `src/proxy.ts`-এর matcher-ও দেখো।
+- API-র `Set-Cookie` কখনো পার্স করে নতুন করে বানাবে না; `relaySetCookies` দিয়ে হুবহু পাঠাও।
+- `useCan` / `<Can>` / manifest-এর `permission` শুধু দেখানো-লুকানোর সুবিধা; আসল সুরক্ষা API-তে। অনুমতি ছাড়া URL সরাসরি খুললেও 403 পেজ দেখাও।
+- ব্যবসার নাম কোডে নয়: নাম, ধরন, রোল `GET /auth/me` থেকে; মেনু module manifest থেকে।
+- `next` বা redirect-এর পথ সবসময় `safeNextPath` দিয়ে (বাইরের সাইটে পাঠানো নিষেধ)।
+
 **UI উপাদান**
 
 - পুনর্ব্যবহারযোগ্য উপাদান `src/core/ui`-তে, কোনো ব্যবসার নাম ছাড়া। ডেভ-অনলি পেজ `page.dev.tsx` নামে (production-এ বাদ যায়)।

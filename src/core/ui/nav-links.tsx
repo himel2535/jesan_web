@@ -6,8 +6,8 @@ import type { NavItem } from '@/core/navigation/types';
 import { cn } from './cn';
 import { navIcons } from './icons';
 
-export function isActive(pathname: string, href: string): boolean {
-  if (href === '/') return pathname === '/';
+export function isActive(pathname: string, href: string, exact = false): boolean {
+  if (href === '/' || exact) return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -31,7 +31,7 @@ export function NavLinks({
     <ul className="flex flex-col gap-1">
       {items.map((item) => {
         const Icon = navIcons[item.icon];
-        const active = isActive(pathname, item.href);
+        const active = isActive(pathname, item.href, item.exact);
         const hover = item.prefetch === 'hover';
         const prefetchOnIntent = hover ? () => router.prefetch(item.href) : undefined;
         return (

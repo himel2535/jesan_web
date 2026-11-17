@@ -6,7 +6,9 @@
 
 ফোল্ডার:
 
-- `api/` — `apiFetch` (cookie, timeout, ত্রুটির রূপ, 401-এ refresh), TanStack Query client ও module-ভিত্তিক query key।
+- `api/` — `apiFetch` (ব্রাউজার), `serverApiGet` (সার্ভার), ত্রুটির রূপ, TanStack Query ও module-ভিত্তিক query key।
+- `auth/` — সেশন (`getSession`, `requireSession`), resume ও `next` পথ, অনুমতি (`can`, `useCan`, `<Can>`), লগইন ও পাসওয়ার্ড বদলের ফর্ম।
+- `module-system/` — module manifest-এর ধরন, অনুমতি অনুযায়ী ব্যবসার মেনু, `/b/[slug]`-এর ব্যবসা খোঁজা। কোনো নির্দিষ্ট module import করে না।
 - `i18n/` — ভাষা নির্বাচন (cookie), next-intl কনফিগ, সংখ্যা/টাকা/তারিখের helper।
 - `theme/` — থিম cookie ও design token (`tokens.css`)।
 - `navigation/` — সাইডবার মেনুর ধরন (পরে module manifest এখান দিয়ে আসবে)।

@@ -11,10 +11,12 @@ import { useDialog } from './use-dialog';
  * Solid surface, not glass: over page content a translucent drawer is hard to read.
  */
 export function MobileDrawer({
+  title,
   items,
   open,
   onClose,
 }: {
+  title: string;
   items: NavItem[];
   open: boolean;
   onClose: () => void;
@@ -29,7 +31,7 @@ export function MobileDrawer({
       className="m-0 h-dvh max-h-dvh w-72 max-w-[85vw] border-r border-border bg-surface p-3 text-fg shadow-glass md:hidden"
     >
       <div className="mb-4 flex items-center justify-between gap-2">
-        <span className="px-2 text-base font-semibold">{t('common.appName')}</span>
+        <span className="truncate px-2 text-base font-semibold">{title}</span>
         <button
           type="button"
           onClick={onClose}

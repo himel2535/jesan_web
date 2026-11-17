@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_REFRESH_PATH, apiFetch, buildUrl, setAuthFailureHandler } from './client';
-import { API_BASE_URL } from './config';
+import { BROWSER_API_BASE as API_BASE_URL } from './config';
+import { parseRetryAfter } from './errors';
 import { ApiError, apiErrorFromResponse } from './errors';
 
 type Handler = (url: string, init: RequestInit) => Response | Promise<Response>;
@@ -116,13 +117,34 @@ describe('apiFetch auth refresh', () => {
     expect(fetchMock.mock.calls[1]![1].method).toBe('POST');
   });
 
-  it('gives up with 401 and calls the auth-failure handler when refresh fails', async () => {
+  it('when refresh fails, retries once more, then calls the auth-failure handler', async () => {
     const onFailure = vi.fn();
     setAuthFailureHandler(onFailure);
-    fetchMock.mockResolvedValueOnce(json(401)).mockResolvedValueOnce(json(401));
-    await expect(apiFetch('/me')).rejects.toMatchObject({ status: 401 });
-    expect(paths()).toEqual(['/me', AUTH_REFRESH_PATH]);
+    fetchMock.mockResolvedValue(json(401));
+    await expect(apiFetch('/b/x/users')).rejects.toMatchObject({ status: 401 });
+    // docs/API.md §3: one refresh, one retry (another tab may already hold new cookies), no loop.
+    expect(paths()).toEqual(['/b/x/users', AUTH_REFRESH_PATH, '/b/x/users']);
     expect(onFailure).toHaveBeenCalledOnce();
+  });
+
+  it('succeeds when another tab already refreshed (refresh 401, retry 200)', async () => {
+    const onFailure = vi.fn();
+    setAuthFailureHandler(onFailure);
+    fetchMock
+      .mockResolvedValueOnce(json(401))
+      .mockResolvedValueOnce(json(401)) // refresh token already rotated by the other tab
+      .mockResolvedValueOnce(json(200, { ok: true }));
+    await expect(apiFetch('/b/x/users')).resolves.toEqual({ ok: true });
+    expect(onFailure).not.toHaveBeenCalled();
+  });
+
+  it('refreshes for /auth/me and /auth/change-password (they need a session)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(json(401))
+      .mockResolvedValueOnce(json(200))
+      .mockResolvedValueOnce(json(200, { user: {} }));
+    await apiFetch('/auth/me');
+    expect(paths()).toEqual(['/auth/me', AUTH_REFRESH_PATH, '/auth/me']);
   });
 
   it('does not loop when the retried request is still 401', async () => {
@@ -152,13 +174,22 @@ describe('apiFetch auth refresh', () => {
     expect(paths().filter((p) => p === AUTH_REFRESH_PATH)).toHaveLength(1);
   });
 
-  it('never refreshes for /auth/* calls or when skipped', async () => {
+  it('never refreshes for login/refresh/logout or when skipped', async () => {
+    const onFailure = vi.fn();
+    setAuthFailureHandler(onFailure);
     fetchMock.mockResolvedValue(json(401));
-    await expect(apiFetch('/auth/login', { method: 'POST' })).rejects.toMatchObject({
-      status: 401,
-    });
+    for (const path of ['/auth/login', '/auth/refresh', '/auth/logout']) {
+      await expect(apiFetch(path, { method: 'POST' })).rejects.toMatchObject({ status: 401 });
+    }
     await expect(apiFetch('/me', { skipAuthRefresh: true })).rejects.toMatchObject({ status: 401 });
-    expect(paths()).toEqual(['/auth/login', '/me']);
+    expect(paths()).toEqual(['/auth/login', '/auth/refresh', '/auth/logout', '/me']);
+    expect(onFailure).not.toHaveBeenCalled();
+  });
+
+  it('calls the same-origin proxy path, never the API host directly', async () => {
+    fetchMock.mockResolvedValueOnce(json(200, {}));
+    await apiFetch('/auth/me');
+    expect(fetchMock.mock.calls[0]![0]).toBe('/api/v1/auth/me');
   });
 });
 
@@ -185,6 +216,41 @@ describe('apiErrorFromResponse', () => {
     expect(error.message).toBe('qty must be positive; date is required');
     expect(error.details).toEqual(['qty must be positive', 'date is required']);
     expect(error.isClientError).toBe(true);
+  });
+
+  it('exposes Retry-After seconds on 429', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ statusCode: 429, message: 'ThrottlerException: Too Many Requests' }),
+        {
+          status: 429,
+          headers: { 'Retry-After': '60' },
+        },
+      ),
+    );
+    await expect(apiFetch('/auth/login', { method: 'POST' })).rejects.toMatchObject({
+      status: 429,
+      retryAfterSeconds: 60,
+    });
+  });
+
+  it('parses Retry-After as seconds or an HTTP date', () => {
+    const now = Date.parse('2026-11-17T08:00:00Z');
+    expect(parseRetryAfter('42', now)).toBe(42);
+    expect(parseRetryAfter('Tue, 17 Nov 2026 08:00:30 GMT', now)).toBe(30);
+    expect(parseRetryAfter('soon', now)).toBeUndefined();
+    expect(parseRetryAfter(null, now)).toBeUndefined();
+  });
+
+  it('marks network, timeout and 5xx as "server unavailable", 4xx not', () => {
+    const http = (status: number) => apiErrorFromResponse(status, {});
+    expect(http(503).isServerUnavailable).toBe(true);
+    expect(http(500).isServerUnavailable).toBe(true);
+    expect(http(401).isServerUnavailable).toBe(false);
+    expect(
+      new ApiError({ kind: 'network', status: 0, code: 'NETWORK', message: '' })
+        .isServerUnavailable,
+    ).toBe(true);
   });
 
   it('falls back for unknown bodies', () => {

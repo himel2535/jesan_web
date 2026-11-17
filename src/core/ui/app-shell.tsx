@@ -13,10 +13,12 @@ export interface AppShellProps {
   navItems: NavItem[];
   initialCollapsed: boolean;
   theme: Theme;
+  /** Sidebar heading: the business name inside a business, otherwise the app name. */
+  title: string;
   children: ReactNode;
 }
 
-export function AppShell({ navItems, initialCollapsed, theme, children }: AppShellProps) {
+export function AppShell({ navItems, initialCollapsed, theme, title, children }: AppShellProps) {
   const t = useTranslations('shell');
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -35,8 +37,13 @@ export function AppShell({ navItems, initialCollapsed, theme, children }: AppShe
       >
         {t('skipToContent')}
       </a>
-      <Sidebar items={navItems} collapsed={collapsed} onToggle={toggleSidebar} />
-      <MobileDrawer items={navItems} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <Sidebar title={title} items={navItems} collapsed={collapsed} onToggle={toggleSidebar} />
+      <MobileDrawer
+        title={title}
+        items={navItems}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar theme={theme} onOpenMenu={() => setDrawerOpen(true)} />
         <main id="main" tabIndex={-1} className="flex-1 p-4 md:p-6">
