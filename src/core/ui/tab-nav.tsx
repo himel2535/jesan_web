@@ -8,9 +8,12 @@ import { cn } from '@/core/ui/cn';
 export function TabNav({
   label,
   items,
+  exact = false,
 }: {
   label: string;
   items: { href: string; label: string }[];
+  /** Match only the exact path (when one tab's path is a prefix of another's). */
+  exact?: boolean;
 }) {
   const pathname = usePathname();
   if (items.length < 2) return null;
@@ -18,7 +21,7 @@ export function TabNav({
     <nav aria-label={label} className="mb-6 border-b border-border">
       <ul className="-mb-px flex gap-1 overflow-x-auto">
         {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = pathname === item.href || (!exact && pathname.startsWith(`${item.href}/`));
           return (
             <li key={item.href}>
               <Link
