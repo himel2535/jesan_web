@@ -133,8 +133,11 @@
 
 - Vitest + Testing Library + jsdom + axe-core (রঙের কনট্রাস্ট jsdom মাপতে পারে না, তাই টোকেনের উপর আলাদা টেস্ট)। CI-তে `npm test` যোগ: format → lint → type-check → test → build।
 
-### macOS 12.7.6-এ যাচাই বাকি (নতুন নেটিভ বাইনারি)
+### macOS 12.7.6-এ যাচাই (নতুন নেটিভ বাইনারি) — সম্পন্ন
 
-- [ ] next-intl 4.15.1-এর সাথে আসা `@swc/core` 1.16.x ও `@parcel/watcher` (অনুবাদ extractor-এর জন্য; অ্যাপ চালাতে লাগে না, তবে `npm ci`-তে ইনস্টল হয়)।
-- [ ] Vitest/Vite 8-এর `rolldown` ও `lightningcss` darwin বাইনারি (`npm test`)।
-- [ ] প্রথম `npm run dev`-এ Google Fonts থেকে Inter ও Noto Sans Bengali নামানো।
+ডেভেলপারের Mac-এ (macOS 12.7.6, Node 22) `npm ci`, `npm test` ও `npm run dev` সফল:
+
+- [x] next-intl 4.15.1-এর সাথে আসা `@swc/core` 1.16.x ও `@parcel/watcher` ইনস্টল হয় ও চলে।
+- [x] Vitest/Vite 8-এর `rolldown` ও `lightningcss` darwin বাইনারি চলে (`npm test` সফল)।
+- [x] প্রথম `npm run dev`-এ Google Fonts থেকে Inter ও Noto Sans Bengali নামে।
+- [x] থিম ও ভাষা বদল এবং `/dev/ui` ঠিকমতো কাজ করে।
