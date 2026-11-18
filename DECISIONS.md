@@ -342,3 +342,38 @@
 
 - Vitest: প্রতিটা code-এর দুই ভাষার বার্তা, `fieldErrorsOf`, অচেনা code-এ status-এর বার্তা, ঘরে/উপরে ভাগ, পণ্য (ক্যাটাগরি নিষ্ক্রিয়, অচেনা একক, বাংলায়), গ্রাহক (সার্ভারের অবৈধ ফোন), কারণের ঘর, পাসওয়ার্ড, Settings (platform owner-এর সারি, খোঁজার সব শাখা, 409 থেকে খোঁজায় যাওয়া, axe)।
 - Playwright: বিক্রয়মূল্য ছাড়া নতুন পণ্য (ডুপ্লিকেট নাম ঘরের নিচে), platform owner বিদ্যমান ইউজার খুঁজে যোগ করেন। নকল API-র সব ত্রুটি এখন §11-এর রূপে।
+
+## ২০২৬-১১-১৮ — Step 4d: অনুমোদন ইনবক্স ও সংশোধনের অনুরোধ
+
+### স্থাপত্য
+
+- ইনবক্স core-এ (`src/core/approvals/`), কোনো ব্যবসার নাম নেই। কোন `entityType`-এর পাতা কোথায় আর অনুমোদনের পর কোন entity key রিফ্রেশ, তা module manifest-এর `changeEntities`-এ (কেবল ডেটা, function নয়, তাই server থেকে client-এ যায়): `product` → `products/:id`, `['products']`; `customer` → `customers/:id`, `['customers']`; `product_category` → `products/categories/:id`, `['categories','products']`। layout `ChangeEntitiesProvider` দিয়ে দেয়; core কখনো module import করে না।
+- query key: `[type, businessId, 'change-requests', 'list'|'detail', …]`, ব্যাজ `[…, 'change-requests', 'count']`।
+- **রিফ্রেশ:** নতুন অনুরোধ, প্রত্যাখ্যান বা তুলে নেওয়ার পর শুধু `change-requests` (তালিকা, বিস্তারিত, ব্যাজ একসাথে)। অনুমোদনের পর তার সাথে manifest-এ বলা entity (রেকর্ড শুধু অনুমোদনেই বদলায়)। 409/404 এলে `change-requests` রিফ্রেশ, যাতে stale বা আগেই সিদ্ধান্ত হওয়া অবস্থা দেখায়।
+
+### সাইডবারের ব্যাজ: "সাইডবার নিজে ডেটা আনবে না" নিয়মের সচেতন ব্যতিক্রম
+
+- "অনুমোদন" লিংক core-এর (`withApprovalsEntry`), Settings-এর আগে; দেখায় `change.view.own` বা `change.view.all` থাকলে।
+- সংখ্যা শুধু `change.view.all`-এ (`GET pending-count`): ৬০ সেকেন্ড পর পর, ট্যাব লুকানো থাকলে বন্ধ (`refetchIntervalInBackground: false`), ট্যাব আবার দেখা গেলে সঙ্গে সঙ্গে একবার (`refetchOnWindowFocus: 'always'`, `staleTime: 0`), আর প্রতিটা সিদ্ধান্ত বা নতুন অনুরোধের পরে (key invalidate)।
+- কারণ: মালিকের কাছে অপেক্ষমাণ অনুরোধ চোখে পড়া জরুরি; উত্তর একটা ছোট সংখ্যা, শুধু অনুমতিধারীর জন্য, লুকানো ট্যাবে কোনো অনুরোধ নেই। অন্য কোনো সাইডবার লিংক ডেটা আনে না।
+
+### পাতা ও আচরণ
+
+- Route: `/approvals` (অনুমতি অনুযায়ী `all` বা `mine`-এ), `/approvals/mine` (`change.view.own`, শুধু অবস্থার ফিল্টার), `/approvals/all` (`change.view.all`, অবস্থা ও ধরন; `entityId` শুধু লিংক থেকে, চিপে দেখায় ও মোছা যায়), `/approvals/[id]`। অনুমতি ছাড়া 403 পেজ।
+- তালিকা: ১০টা, মান URL-এ; সারিতে রেকর্ড + API-র `summary`, কে, কবে, অবস্থা, বিস্তারিত। কারণ শুধু বিস্তারিতে। `summary` API যেমন পাঠায় (ইংরেজি) তেমনই দেখায়: এতে দর্শকের অনুমতি অনুযায়ী মান লুকানো থাকে, UI নিজে বানালে সেই সুরক্ষা হারাত।
+- বিস্তারিত: আগের ও প্রস্তাবিত মান (শুধু API যা পাঠায়; ক্রয়মূল্য বা বাকি দেখার অনুমতি না থাকলে ঘর, মান ও প্রভাবের লাইন UI-তেও নেই), কারণ, প্রভাব (`impact[]`, লেবেল `approvals.impact.<key>` অনুবাদ থেকে, অচেনা key-তে API-র লেবেল; নিষ্ক্রিয়ের নোটও অনুবাদ), সিদ্ধান্তের নোট। প্রস্তাবিত মান শুধু পড়া যায়।
+- অনুমোদন: `change.approve` + অন্যের + pending + stale নয়; নোট ঐচ্ছিক (≤৫০০)। প্রত্যাখ্যান: নোট ৩–৫০০ বাধ্যতামূলক। তুলে নেওয়া: শুধু নিজের pending। নিজের অনুরোধে অনুমোদন/প্রত্যাখ্যানের বাটনই নেই (মালিক হলেও)। সব কাজে নিশ্চিতকরণ dialog ও ref-guard।
+- stale (`isStale` বা 409 `STALE_REQUEST`): স্পষ্ট বার্তা ও রেকর্ডের পাতায় "নতুন করে অনুরোধ করুন" লিংক; অনুমোদন বাটন থাকে না।
+
+### "সংশোধনের অনুরোধ"
+
+- বাটন শুধু যার `change.request` আছে অথচ সরাসরি অনুমতি নেই (`product.price.edit`, `product.deactivate`, `customer.balance.edit`, `customer.deactivate`): মালিক কখনো দেখেন না। ঘর দেওয়া হয় শুধু যা API পাঠিয়েছে এবং ইউজার দেখতে পারেন (ক্রয়মূল্য `product.cost.view`, বাকি/সীমা `customer.due.view`)। কোথায়: পণ্য ও গ্রাহকের বিস্তারিত ও সম্পাদনার পাতার মালিক-স্তরের অংশ (`requestSlot`), ক্যাটাগরির "কাজ" মেনু ও বিস্তারিত পাতা। (`src/modules/dealership/master-data/shared/correction.tsx`)
+- dialog (core, `request-dialog.tsx`): কোন ঘর বদলাবে বাছাই করে নতুন মান, বা নিষ্ক্রিয়/সক্রিয়ের অনুরোধ, আর কারণ (৩–৫০০)। "পর্যালোচনা" → `POST preview`-এর প্রভাব; মান বদলালে আবার পর্যালোচনা লাগে; তারপর "পাঠান"। টাকা স্ট্রিং।
+- Idempotency-Key dialog খোলার সময় একবার (`crypto.randomUUID()`), প্রতিটা চেষ্টায় সেটাই; সাথে ref-guard। ব্যর্থ হলে লেখা মান ও কারণ থাকে।
+- dialog `createPortal`-এ document.body-তে, আর submit-এ `stopPropagation`: সম্পাদনার ফর্মের ভেতরে বাটন থাকলেও form-এর ভেতর form হয় না, আর অনুরোধ পাঠাতে গিয়ে পণ্য/গ্রাহক সেভ হয় না।
+- **TODO (backend):** 409 `CHANGE_REQUEST_PENDING_EXISTS`-এ অপেক্ষমাণ অনুরোধের id নেই। এখন: `change.view.all` থাকলে `/approvals/all?entityId=…&status=pending` লিংক; না থাকলে নিজের `mine?status=pending` প্রথম পাতা থেকে মিলিয়ে সেই অনুরোধের লিংক; তাও না মিললে শুধু বার্তা। backend id দিলে `request-dialog.tsx`-এর `findPendingLink` বাদ দিয়ে সরাসরি `/approvals/<id>`।
+
+### যাচাই
+
+- Vitest: অনুমতিভেদে বাটন (মালিক/ম্যানেজার/বিক্রয়কর্মী), নিজের অনুরোধে অনুমোদন নেই, stale (আগে ও 409-এ), প্রত্যাখ্যানে নোট বাধ্যতামূলক, Idempotency-Key ও দুবার জমা না হওয়া, ব্যর্থতায় মান থাকা, 409 pending-exists-এর দুই লিংক, ব্যাজ (৬০ সেকেন্ড, লুকানো ট্যাবে বন্ধ, দেখা গেলে সঙ্গে সঙ্গে), ঠিক key-ই invalidate, লুকানো ঘর, ফাঁকা বনাম কিছু মেলেনি, 403/404, দুই ভাষা, axe, কীবোর্ড।
+- Playwright (দুটো আলাদা browser context): ম্যানেজার নিষ্ক্রিয়ের অনুরোধ পাঠান → মালিক ব্যাজে ১ দেখে অনুমোদন → পণ্য নিষ্ক্রিয়, ম্যানেজারের তালিকায় "অনুমোদিত"; প্রত্যাখ্যানে নোট; মালিক সরাসরি বদলালে অনুরোধ stale। নকল API-তে change-requests (preview, idempotency, mine/all/count, approve/reject/cancel, stale, নিজের সিদ্ধান্ত নিষেধ, লুকানো ঘর)।

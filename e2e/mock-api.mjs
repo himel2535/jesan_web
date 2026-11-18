@@ -22,6 +22,8 @@ const MANAGER = [
   'stock.view',
   'supplier.view',
   'users.view',
+  'change.request',
+  'change.view.own',
 ];
 const SALESMAN = [
   'customer.manage',
@@ -30,6 +32,8 @@ const SALESMAN = [
   'sale.create',
   'sale.view.own',
   'stock.view',
+  'change.request',
+  'change.view.own',
 ];
 const OWNER = [
   ...MANAGER,
@@ -44,6 +48,8 @@ const OWNER = [
   'commission.view',
   'commission.manage',
   'profit.view',
+  'change.view.all',
+  'change.approve',
 ];
 
 const role = (key, nameEn, nameBn) => ({ id: `r-${key}`, key, nameEn, nameBn });
@@ -224,6 +230,43 @@ const invalid = (res, list) =>
     errors: list,
   });
 
+/**
+ * Change requests (docs/API.md §10), in memory. Fields per type: who may SEE them, and which
+ * direct permission applies them. Values hidden from a viewer are left out of every answer.
+ */
+const changeRequests = [];
+const idempotency = new Map();
+const CHANGE_FIELDS = {
+  product: {
+    purchasePrice: {
+      see: 'product.cost.view',
+      apply: 'product.price.edit',
+      label: 'Purchase price',
+    },
+    isActive: { see: null, apply: 'product.deactivate', label: 'Active' },
+  },
+  customer: {
+    openingBalance: {
+      see: 'customer.due.view',
+      apply: 'customer.balance.edit',
+      label: 'Opening balance',
+    },
+    creditLimit: {
+      see: 'customer.due.view',
+      apply: 'customer.balance.edit',
+      label: 'Credit limit',
+    },
+    isActive: { see: null, apply: 'customer.deactivate', label: 'Active' },
+  },
+  product_category: { isActive: { see: null, apply: 'product.deactivate', label: 'Active' } },
+};
+const money = (v) => {
+  if (v === null) return null;
+  const [a, b = ''] = String(v).split('.');
+  return `${a}.${(b + '00').slice(0, 2)}`;
+};
+const INACTIVE_NOTE = 'While inactive it cannot be chosen for new entries; existing records stay.';
+
 /** Someone with an account in another business only (for "add existing user"). */
 const OUTSIDER = {
   id: 'u4',
@@ -392,6 +435,248 @@ http
         };
         products.push(p);
         return send(res, 201, hide(perms, p, ['purchasePrice'], 'product.cost.view'));
+      }
+      if (rest === 'change-requests' || rest.startsWith('change-requests/')) {
+        const sub = rest.slice('change-requests'.length).replace(/^\//, '');
+        const records = { product: products, customer: customers, product_category: categories };
+        const visible = (type, field) => {
+          const rule = CHANGE_FIELDS[type]?.[field];
+          return rule && (!rule.see || perms.includes(rule.see));
+        };
+        const only = (type, obj) =>
+          obj && Object.fromEntries(Object.entries(obj).filter(([k]) => visible(type, k)));
+        const labelOf = (type, rec) =>
+          type === 'product_category' ? rec.nameEn : `${rec.code} ${rec.nameEn}`;
+        const impactOf = (type, rec, change) =>
+          Object.entries(only(type, change)).flatMap(([field, after]) => {
+            const before = rec[field];
+            const line = {
+              key: `${type}.${field}`,
+              label: CHANGE_FIELDS[type][field].label,
+              before,
+              after,
+            };
+            if (field === 'isActive' && after === false) line.note = INACTIVE_NOTE;
+            const lines = [line];
+            if (type === 'customer' && field === 'openingBalance' && visible(type, field)) {
+              const delta = (Number(after) - Number(before)).toFixed(2);
+              lines.push({
+                key: 'customer.currentBalance',
+                label: 'Current balance',
+                before: rec.currentBalance,
+                after: (Number(rec.currentBalance) + Number(delta)).toFixed(2),
+                delta: `${Number(delta) >= 0 ? '+' : ''}${delta}`,
+              });
+            }
+            return lines;
+          });
+        const summaryOf = (type, snap, change) =>
+          Object.keys(change ?? {})
+            .map((f) =>
+              visible(type, f)
+                ? `${CHANGE_FIELDS[type][f].label}: ${snap[f]} → ${change[f]}`
+                : `${CHANGE_FIELDS[type][f].label} changed`,
+            )
+            .join('; ');
+        const view = (cr, full) => {
+          const rec = records[cr.entityType].find((x) => x.id === cr.entityId);
+          const base = {
+            id: cr.id,
+            entityType: cr.entityType,
+            entityId: cr.entityId,
+            entityLabel: cr.entityLabel,
+            kind: 'edit',
+            summary: summaryOf(cr.entityType, cr.snapshot, cr.proposedChange),
+            status: cr.status,
+            requestedBy: cr.requestedBy,
+            requestedAt: cr.requestedAt,
+            decidedBy: cr.decidedBy,
+            decidedAt: cr.decidedAt,
+          };
+          if (!full) return base;
+          const stale =
+            cr.status === 'stale' || (cr.status === 'pending' && rec.updatedAt > cr.requestedAt);
+          return {
+            ...base,
+            reason: cr.reason,
+            snapshot: only(cr.entityType, cr.snapshot),
+            proposedChange: only(cr.entityType, cr.proposedChange),
+            impact:
+              cr.status === 'pending' ? impactOf(cr.entityType, rec, cr.proposedChange) : null,
+            isStale: stale,
+            decisionNote: cr.decisionNote,
+            appliedAt: cr.appliedAt,
+          };
+        };
+        const readBody = () => {
+          const type = body.entityType;
+          const list = records[type];
+          if (!list)
+            return [
+              null,
+              err(res, 400, 'Unknown record type', 'ENTITY_TYPE_UNKNOWN', 'entityType'),
+            ];
+          const rec = list.find((x) => x.id === body.entityId);
+          if (!rec)
+            return [null, err(res, 404, 'Record not found', 'RECORD_NOT_FOUND', 'entityId')];
+          const change = {};
+          for (const [k, v] of Object.entries(body.proposedChange ?? {})) {
+            if (!CHANGE_FIELDS[type][k])
+              return [
+                null,
+                err(
+                  res,
+                  400,
+                  'Field cannot be changed by request',
+                  'FIELD_NOT_CHANGEABLE',
+                  `proposedChange.${k}`,
+                ),
+              ];
+            if (!visible(type, k)) return [null, err(res, 403, 'Access denied', 'ACCESS_DENIED')];
+            change[k] = k === 'isActive' ? v : money(v);
+          }
+          if (!Object.keys(change).length)
+            return [null, err(res, 400, 'Empty change', 'PROPOSED_CHANGE_EMPTY', 'proposedChange')];
+          return [{ type, rec, change }, null];
+        };
+
+        if (sub === 'preview' && req.method === 'POST') {
+          if (!perms.includes('change.request') && !perms.includes('change.approve'))
+            return err(res, 403, 'Access denied');
+          const [ok] = readBody();
+          if (!ok) return;
+          return send(res, 200, {
+            entityLabel: labelOf(ok.type, ok.rec),
+            impact: impactOf(ok.type, ok.rec, ok.change),
+          });
+        }
+        if (sub === '' && req.method === 'POST') {
+          if (!need('change.request')) return;
+          const key = req.headers['idempotency-key'];
+          const seen = key && idempotency.get(`${email}:${key}`);
+          if (seen) return send(res, 200, view(seen, true));
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(
+              res,
+              400,
+              'reason must be longer than or equal to 3 characters',
+              'REASON_TOO_SHORT',
+              'reason',
+            );
+          const [ok] = readBody();
+          if (!ok) return;
+          if (changeRequests.some((c) => c.entityId === ok.rec.id && c.status === 'pending'))
+            return err(
+              res,
+              409,
+              'This record already has a pending change request',
+              'CHANGE_REQUEST_PENDING_EXISTS',
+            );
+          const cr = {
+            id: `cr${changeRequests.length + 1}`,
+            entityType: ok.type,
+            entityId: ok.rec.id,
+            entityLabel: labelOf(ok.type, ok.rec),
+            snapshot: Object.fromEntries(Object.keys(ok.change).map((k) => [k, ok.rec[k]])),
+            proposedChange: ok.change,
+            status: 'pending',
+            reason: body.reason.trim(),
+            requestedBy: { id: me.user.id, name: me.user.name },
+            requestedAt: new Date().toISOString(),
+            decidedBy: null,
+            decidedAt: null,
+            decisionNote: null,
+            appliedAt: null,
+          };
+          changeRequests.unshift(cr);
+          if (key) idempotency.set(`${email}:${key}`, cr);
+          return send(res, 201, view(cr, true));
+        }
+        const filterList = (list) => {
+          const status = url.searchParams.get('status');
+          const type = url.searchParams.get('entityType');
+          const eid = url.searchParams.get('entityId');
+          return list.filter(
+            (c) =>
+              (!status || c.status === status) &&
+              (!type || c.entityType === type) &&
+              (!eid || c.entityId === eid),
+          );
+        };
+        if (sub === 'mine' && req.method === 'GET') {
+          if (!need('change.view.own')) return;
+          const list = filterList(changeRequests.filter((c) => c.requestedBy.id === me.user.id));
+          const pg = pageOf(list, page);
+          return send(res, 200, { ...pg, items: pg.items.map((c) => view(c, false)) });
+        }
+        if (sub === '' && req.method === 'GET') {
+          if (!need('change.view.all')) return;
+          const pg = pageOf(filterList(changeRequests), page);
+          return send(res, 200, { ...pg, items: pg.items.map((c) => view(c, false)) });
+        }
+        if (sub === 'pending-count' && req.method === 'GET') {
+          if (!need('change.view.all')) return;
+          return send(res, 200, {
+            count: changeRequests.filter((c) => c.status === 'pending').length,
+          });
+        }
+        const m2 = sub.match(/^([^/]+)(?:\/(approve|reject|cancel))?$/);
+        const cr = m2 && changeRequests.find((c) => c.id === m2[1]);
+        const own = cr && cr.requestedBy.id === me.user.id;
+        if (!cr || !(own ? perms.includes('change.view.own') : perms.includes('change.view.all')))
+          return err(res, 404, 'Change request not found', 'CHANGE_REQUEST_NOT_FOUND');
+        const action = m2[2];
+        if (!action && req.method === 'GET') return send(res, 200, view(cr, true));
+        if (req.method !== 'POST') return err(res, 404, 'Not Found', 'ROUTE_NOT_FOUND');
+        if (action === 'cancel') {
+          if (!own) return err(res, 404, 'Change request not found', 'CHANGE_REQUEST_NOT_FOUND');
+          if (cr.status !== 'pending')
+            return err(res, 409, 'Already decided', 'CHANGE_REQUEST_ALREADY_DECIDED');
+          cr.status = 'cancelled';
+          cr.decidedAt = new Date().toISOString();
+          return send(res, 200, view(cr, true));
+        }
+        if (!need('change.approve')) return;
+        if (own)
+          return err(
+            res,
+            403,
+            'You cannot decide your own change request',
+            'SELF_DECISION_FORBIDDEN',
+          );
+        if (cr.status !== 'pending')
+          return err(res, 409, 'Already decided', 'CHANGE_REQUEST_ALREADY_DECIDED');
+        const rec = records[cr.entityType].find((x) => x.id === cr.entityId);
+        const decided = () => {
+          cr.decidedBy = { id: me.user.id, name: me.user.name };
+          cr.decidedAt = new Date().toISOString();
+          cr.decisionNote = body.note?.trim() || null;
+        };
+        if (action === 'reject') {
+          if (!body.note || body.note.trim().length < 3)
+            return err(
+              res,
+              400,
+              'note must be longer than or equal to 3 characters',
+              'NOTE_TOO_SHORT',
+              'note',
+            );
+          cr.status = 'rejected';
+          decided();
+          return send(res, 200, view(cr, true));
+        }
+        if (rec.updatedAt > cr.requestedAt) {
+          cr.status = 'stale';
+          return err(res, 409, 'The record changed after this request was made', 'STALE_REQUEST');
+        }
+        for (const f of Object.keys(cr.proposedChange))
+          if (!perms.includes(CHANGE_FIELDS[cr.entityType][f].apply))
+            return err(res, 403, 'Access denied');
+        Object.assign(rec, cr.proposedChange, { updatedAt: new Date().toISOString() });
+        cr.status = 'approved';
+        decided();
+        cr.appliedAt = cr.decidedAt;
+        return send(res, 200, view(cr, true));
       }
       if (rest === 'users' && req.method === 'GET')
         return need('users.view') && send(res, 200, pageOf(members, page));

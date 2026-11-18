@@ -13,6 +13,7 @@
 - `theme/` — থিম cookie ও design token (`tokens.css`)।
 - `navigation/` — সাইডবার মেনুর ধরন (পরে module manifest এখান দিয়ে আসবে)।
 - `settings/` — ব্যবসার Settings: রোল × অনুমতির ছক, ইউজার ব্যবস্থাপনা, তাদের query key ও API hooks।
+- `approvals/` — সংশোধনের অনুরোধ ও অনুমোদন ইনবক্স (`/b/[slug]/approvals`), সাইডবারের অপেক্ষমাণ-সংখ্যার ব্যাজ, অনুরোধের dialog; কোন রেকর্ড কোথায় তা module manifest-এর `changeEntities` থেকে।
 - `ui/` — AppShell, Sidebar, Topbar, Modal, Pagination, Button, Card ইত্যাদি।
 - `lib/` — ছোট সাধারণ helper।
 
