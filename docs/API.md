@@ -15,8 +15,9 @@ API বদলালে এই ফাইলও একই PR-এ হালনা�
 7. [Auth](#৭-auth)
 8. [Settings API](#৮-settings-api)
 9. [মাস্টার ডেটা (dealership)](#৯-মাস্টার-ডেটা-dealership)
-10. [ত্রুটির রূপ ও কোড](#১০-ত্রুটির-রূপ-ও-কোড)
-11. [রোল ও অনুমতি](#১১-রোল-ও-অনুমতি)
+10. [সংশোধনের অনুরোধ ও অনুমোদন](#১০-সংশোধনের-অনুরোধ-ও-অনুমোদন)
+11. [ত্রুটির রূপ ও কোড](#১১-ত্রুটির-রূপ-ও-কোড)
+12. [রোল ও অনুমতি](#১২-রোল-ও-অনুমতি)
 
 ---
 
@@ -161,6 +162,15 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | PATCH | `/b/:businessSlug/customers/:id` | হ্যাঁ | `customer.manage` (+ বাকি/সীমায় `customer.balance.edit`, নিষ্ক্রিয়ে `customer.deactivate`) | 200 |
 | GET | `/b/:businessSlug/suppliers?active=&page=` | হ্যাঁ | `supplier.view` | 200 |
 | GET | `/b/:businessSlug/suppliers/:id` | হ্যাঁ | `supplier.view` | 200 |
+| POST | `/b/:businessSlug/change-requests/preview` | হ্যাঁ | `change.request` বা `change.approve` | 200 |
+| POST | `/b/:businessSlug/change-requests` | হ্যাঁ | `change.request` (+ রেকর্ড দেখার অনুমতি) | 201 (একই `Idempotency-Key` আবার: 200) |
+| GET | `/b/:businessSlug/change-requests/mine?status=&page=` | হ্যাঁ | `change.view.own` | 200 |
+| GET | `/b/:businessSlug/change-requests?status=&entityType=&entityId=&requestedBy=&from=&to=&page=` | হ্যাঁ | `change.view.all` | 200 |
+| GET | `/b/:businessSlug/change-requests/pending-count` | হ্যাঁ | `change.view.all` | 200 |
+| GET | `/b/:businessSlug/change-requests/:id` | হ্যাঁ | নিজের হলে `change.view.own`, নইলে `change.view.all` | 200 |
+| POST | `/b/:businessSlug/change-requests/:id/approve` | হ্যাঁ | `change.approve` + সংশ্লিষ্ট সরাসরি-অনুমতি; নিজের নয় | 200 |
+| POST | `/b/:businessSlug/change-requests/:id/reject` | হ্যাঁ | `change.approve`; নিজের নয় | 200 |
+| POST | `/b/:businessSlug/change-requests/:id/cancel` | হ্যাঁ | `change.view.own`; শুধু নিজের | 200 |
 
 `/b/:businessSlug/...` পথে আগে যাচাই হয় ইউজার ওই ব্যবসায় ঢুকতে পারেন কি না, তারপর অনুমতি। অজানা ব্যবসা আর ঢোকার অনুমতি নেই, দুটোই একই 403।
 
@@ -221,7 +231,7 @@ Response 200 (সাথে দুটো `Set-Cookie`, অংশ ২ দেখু
 ```
 
 - পরপর ৫ বার ভুল পাসওয়ার্ডে অ্যাকাউন্ট ১৫ মিনিট লক; লক অবস্থায় সঠিক পাসওয়ার্ডেও ওই একই 401। frontend কারণ জানতে পারে না, তাই বার্তা হিসেবে "ইমেইল/ফোন বা পাসওয়ার্ড ভুল, অথবা অ্যাকাউন্ট সাময়িকভাবে বন্ধ" দেখানো ভালো।
-- এক IP থেকে প্রতি মিনিটে ১০টার বেশি চেষ্টায় **429** (অংশ ৯)।
+- এক IP থেকে প্রতি মিনিটে ১০টার বেশি চেষ্টায় **429** (অংশ ১১)।
 - লগইনের পর ব্যবসা ও অনুমতি পেতে `GET /auth/me` ডাকুন।
 
 ### `POST /auth/refresh`
@@ -275,6 +285,10 @@ Response: **204**, body নেই।
       },
       "permissions": [
         "audit.view",
+        "change.approve",
+        "change.request",
+        "change.view.all",
+        "change.view.own",
         "collection.create",
         "commission.manage",
         "commission.view",
@@ -342,6 +356,8 @@ Response: **204**, body নেই।
         "nameBn": "ম্যানেজার"
       },
       "permissions": [
+        "change.request",
+        "change.view.own",
         "collection.create",
         "customer.due.view",
         "customer.manage",
@@ -396,7 +412,7 @@ Response: **204**, body নেই।
 - `roles`: চারটা রোল, Settings-এর কলামের ক্রমে। প্রতিটায় চালু অনুমতির তালিকা।
 - `locked: true` (শুধু `owner` রোলে): এই রোলের অনুমতি বদলানো যায় না; সবসময় সব owner-only-বহির্ভূত অনুমতি।
 
-Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৩৬টা, অংশ ১১-এর টেবিলে সব):
+Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৪০টা, অংশ ১২-এর টেবিলে সব):
 
 ```json
 {
@@ -800,7 +816,192 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 ---
 
-## ১০. ত্রুটির রূপ ও কোড
+## ১০. সংশোধনের অনুরোধ ও অনুমোদন
+
+স্টাফ সংবেদনশীল কিছু (দাম, বাকি, ক্রেডিট সীমা, নিষ্ক্রিয়; Step 5-এ বিক্রি ও কেনার সংশোধন ও বাতিল) সরাসরি বদলাতে পারেন না। তাঁরা কারণসহ **অনুরোধ** পাঠান; `change.approve` আছে এমন কেউ (সাধারণত মালিক) প্রভাব দেখে অনুমোদন বা প্রত্যাখ্যান করেন। অনুমোদন হলে বদল এক transaction-এ প্রয়োগ হয়। মালিক-স্তর আগের মতোই সরাসরি `PATCH` (কারণসহ) করতে পারেন।
+
+সব পথ `/api/v1/b/:businessSlug/change-requests`-এর নিচে।
+
+### মূল ধারণা
+
+- **`entityType`**: কোন ধরনের রেকর্ড। এখন: `product`, `customer`, `product_category`। Step 5-এ `sale`, `purchase` আসবে, API একই থাকবে।
+- **`kind`**: `edit` (মান বদল, `proposedChange` লাগে) বা `void` (বাতিল, `proposedChange` নয়)। মাস্টার ডেটা বাতিল হয় না, নিষ্ক্রিয় হয় (`isActive: false` দিয়ে `edit`); তাতে `void` দিলে 400।
+- **`status`**: `pending` → `approved` / `rejected` / `cancelled` / `stale`। শুধু `pending` বদলানো যায়।
+- **`stale`**: অনুরোধের পরে রেকর্ডটা অন্যভাবে বদলেছে (যেমন মালিক সরাসরি বদলেছেন)। অনুমোদনের চেষ্টায় অনুরোধ `stale` হয়ে যায় আর 409 আসে; দরকার হলে নতুন অনুরোধ করুন।
+- একটা রেকর্ডে একসাথে একটাই `pending` অনুরোধ (দ্বিতীয়টায় 409)।
+- **নিজের অনুরোধ নিজে অনুমোদন বা প্রত্যাখ্যান করা যায় না**, মালিক হলেও (403)।
+- অনুমোদনকারী শুধু `change.approve` দিয়ে হয় না: যে বদল তিনি নিজে সরাসরি করতে পারেন না (যেমন `product.price.edit` নেই), তা অনুমোদনও করতে পারেন না (403)।
+- অনুমোদনকারী প্রস্তাবিত মান বদলাতে পারেন না। অন্য মান চাইলে প্রত্যাখ্যান (নোটসহ) করে নিজে সরাসরি বদলান।
+
+### কোন ফিল্ড অনুরোধে বদলানো যায়
+
+| `entityType` | ফিল্ড | দেখতে লাগে | অনুমোদনে (সরাসরি) লাগে |
+|---|---|---|---|
+| `product` | `purchasePrice` | `product.cost.view` | `product.price.edit` |
+| `product` | `defaultSalePrice` | - | `product.price.edit` |
+| `product` | `isActive` | - | `product.deactivate` |
+| `customer` | `openingBalance`, `creditLimit` | `customer.due.view` | `customer.balance.edit` |
+| `customer` | `isActive` | - | `customer.deactivate` |
+| `product_category` | `isActive` | - | `product.deactivate` |
+
+- টাকা স্ট্রিং বা সংখ্যা হিসেবে পাঠানো যায় (`"565"`), উত্তরে সবসময় দুই দশমিকের স্ট্রিং (`"565.00"`)। `creditLimit: null` মানে সীমা নেই।
+- নাম, ঠিকানা, ফোনের মতো সাধারণ বদল অনুরোধ ছাড়াই সরাসরি `PATCH`-এ (অংশ ৯)।
+- অনুরোধকারী যে ফিল্ড দেখতে পারেন না, তার অনুরোধও করতে পারেন না (403)। তালিকার বাইরের ফিল্ড বা আগের মানের সমান মানে 400।
+- অনুরোধ করতে রেকর্ড দেখার অনুমতিও লাগে (`product.view` / `customer.view`)।
+
+### `POST preview`: জমার আগে প্রভাব দেখা
+
+অনুমতি: `change.request` বা `change.approve`। কিছু লেখে না।
+
+```json
+{
+  "entityType": "customer",
+  "entityId": "01a1ed61-301f-7464-9a0f-2b4bfcba90aa",
+  "kind": "edit",
+  "proposedChange": { "openingBalance": "13000" }
+}
+```
+
+উত্তর 200:
+
+```json
+{
+  "entityLabel": "C-00002 Sample Store Two",
+  "impact": [
+    {
+      "key": "customer.openingBalance",
+      "label": "Opening balance",
+      "before": "12500.00",
+      "after": "13000.00"
+    },
+    {
+      "key": "customer.currentBalance",
+      "label": "Current balance",
+      "before": "12500.00",
+      "after": "13000.00",
+      "delta": "+500.00"
+    }
+  ]
+}
+```
+
+**প্রভাবের লাইন (`impact[]`)**: `key` (স্থির, অনুবাদের জন্য ব্যবহার করুন), `label` (ইংরেজি), আর ঐচ্ছিক `before`, `after`, `delta` (চিহ্নসহ, যেমন `"+500.00"`, `"-50"`), `unit` (যেমন `bag`), `note` (যেমন নিষ্ক্রিয়ে "While inactive it cannot be chosen for new entries; existing records stay.")। দর্শকের যে লাইন দেখার অনুমতি নেই, তা পাঠানোই হয় না।
+
+### `POST /`: অনুরোধ পাঠানো
+
+অনুমতি: `change.request`। ঐচ্ছিক header `Idempotency-Key` (৮–৬৪ অক্ষর, `A-Z a-z 0-9 _ -`): ফর্ম খোলার সময় একটা নতুন key বানান (যেমন `crypto.randomUUID()`), একই ফর্মের প্রতিটা চেষ্টায় সেটাই পাঠান। একই ইউজার একই key আবার পাঠালে নতুন অনুরোধ হয় না, আগেরটাই 200-এ ফেরত আসে (double-click বা নেটওয়ার্ক retry নিরাপদ)।
+
+```json
+{
+  "entityType": "product",
+  "entityId": "01a1ed61-301a-75e8-a675-1fc7defd7876",
+  "kind": "edit",
+  "reason": "Akij changed the rate from today",
+  "proposedChange": { "defaultSalePrice": "565", "purchasePrice": "545" }
+}
+```
+
+`reason` বাধ্যতামূলক, ৩–৫০০ অক্ষর। `void`-এ `proposedChange` দেবেন না।
+
+উত্তর 201 (বিস্তারিত রূপ, নিচে `GET /:id`-এর মতো):
+
+```json
+{
+  "id": "01a1ed61-41df-702d-9558-ca7cc56f02e7",
+  "entityType": "product",
+  "entityId": "01a1ed61-301a-75e8-a675-1fc7defd7876",
+  "entityLabel": "P-0001 Sample OPC 50kg",
+  "kind": "edit",
+  "summary": "Purchase price: 540.00 → 545.00; Default sale price: 560.00 → 565.00",
+  "status": "pending",
+  "requestedBy": { "id": "01a1ed61-40e3-71f7-b8f9-67299cfb0785", "name": "Rahim Uddin" },
+  "requestedAt": "2026-11-18T06:38:56.479Z",
+  "decidedBy": null,
+  "decidedAt": null,
+  "reason": "Akij changed the rate from today",
+  "snapshot": { "purchasePrice": "540.00", "defaultSalePrice": "560.00" },
+  "proposedChange": { "purchasePrice": "545.00", "defaultSalePrice": "565.00" },
+  "impact": [
+    { "key": "product.purchasePrice", "label": "Purchase price", "before": "540.00", "after": "545.00" },
+    { "key": "product.defaultSalePrice", "label": "Default sale price", "before": "560.00", "after": "565.00" }
+  ],
+  "isStale": false,
+  "decisionNote": null,
+  "appliedAt": null
+}
+```
+
+### `GET mine?status=&page=` ও `GET ?status=&entityType=&entityId=&requestedBy=&from=&to=&page=`
+
+`mine` (অনুমতি `change.view.own`): নিজের অনুরোধ। `/` (অনুমতি `change.view.all`): সবার, মালিকের ইনবক্স। দুটোই প্রতি পাতায় ১০টা, নতুন আগে। `from`/`to` হলো `requestedAt`-এর ISO তারিখ। তালিকায় শুধু সারাংশ; `snapshot`, `impact` ইত্যাদি `GET /:id`-এ।
+
+```json
+{
+  "items": [
+    {
+      "id": "01a1ed61-41df-702d-9558-ca7cc56f02e7",
+      "entityType": "product",
+      "entityId": "01a1ed61-301a-75e8-a675-1fc7defd7876",
+      "entityLabel": "P-0001 Sample OPC 50kg",
+      "kind": "edit",
+      "summary": "Purchase price: 540.00 → 545.00; Default sale price: 560.00 → 565.00",
+      "status": "pending",
+      "requestedBy": { "id": "01a1ed61-40e3-71f7-b8f9-67299cfb0785", "name": "Rahim Uddin" },
+      "requestedAt": "2026-11-18T06:38:56.479Z",
+      "decidedBy": null,
+      "decidedAt": null
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 1
+}
+```
+
+`summary` দর্শক অনুযায়ী তৈরি হয়: যে ফিল্ড দেখার অনুমতি নেই, তার মান থাকে না, শুধু `"Purchase price changed"`। বাতিলের অনুরোধে সারাংশ হলো handler-এর বাতিলের লেবেল (Step 5-এ যেমন বিক্রি বাতিল)।
+
+### `GET pending-count`
+
+অনুমতি: `change.view.all`। ব্যাজের জন্য: `{ "count": 1 }`।
+
+### `GET :id`
+
+নিজের অনুরোধ হলে `change.view.own`, অন্যের হলে `change.view.all` লাগে; না থাকলে (বা অন্য ব্যবসার id হলে) 404। উত্তর উপরের 201-এর রূপ।
+
+- `snapshot`: অনুরোধের সময়ের মান (শুধু প্রস্তাবিত ফিল্ডগুলোর)। `proposedChange`: প্রস্তাবিত মান (`void`-এ `null`)। দর্শকের দেখার অনুমতি না থাকা ফিল্ড দুটোতেই বাদ।
+- `impact`: শুধু `pending`-এ, **এখনকার** মান থেকে হিসাব করা; অন্য status-এ `null`।
+- `isStale`: `pending` হলেও রেকর্ড এর মধ্যে বদলে গেলে `true` (অনুমোদনে 409 আসবে), আর `status: "stale"` হলেও `true`। মালিকের পর্দায় সতর্কবার্তা দেখান।
+
+### `POST :id/approve`
+
+অনুমতি: `change.approve` + প্রতিটা ফিল্ডের সরাসরি-অনুমতি (বাতিলে সংশ্লিষ্ট `*.void`); নিজের নয়। body ঐচ্ছিক: `{ "note": "Confirmed with Akij" }`। উত্তর 200, বিস্তারিত রূপ, যেমন `"status": "approved"`, `"decidedBy": { "id": "...", "name": "Jesan Owner" }`, `"appliedAt": "2026-11-18T06:38:56.640Z"`, `"impact": null`।
+
+দুজন একসাথে অনুমোদন দিলে একজনই সফল, অন্যজন 409। প্রয়োগে কোনো ত্রুটি হলে কিছুই বদলায় না, অনুরোধ `pending` থাকে।
+
+### `POST :id/reject`
+
+অনুমতি: `change.approve`; নিজের নয়। `{ "note": "The new rate starts next month" }`, নোট বাধ্যতামূলক (৩–৫০০)। রেকর্ড অপরিবর্তিত। উত্তর 200, `"status": "rejected"`।
+
+### `POST :id/cancel`
+
+অনুমতি: `change.view.own`; শুধু নিজের `pending` অনুরোধ (অন্যের হলে 404)। উত্তর 200, `"status": "cancelled"`।
+
+### ত্রুটি
+
+| Status | `message` | কখন |
+|---|---|---|
+| 400 | validation তালিকা, `Nothing to change`, `Field "name" cannot be changed by request`, `proposedChange must name at least one field`, `A void request has no proposedChange`, `This kind of record cannot be voided; deactivate it instead`, `Unknown record type: …`, টাকার ভুল রূপ | ভুল অনুরোধ |
+| 403 | `Access denied` | অনুমতি নেই, বা লুকানো ফিল্ডের অনুরোধ, বা অনুমোদনকারীর সরাসরি-অনুমতি নেই |
+| 403 | `You cannot decide your own change request` | নিজের অনুরোধ অনুমোদন/প্রত্যাখ্যান |
+| 404 | `Change request not found`, `Record not found` | নেই, অন্য ব্যবসার, বা দেখার অনুমতি নেই |
+| 409 | `This record already has a pending change request` | একই রেকর্ডে আরেকটা pending |
+| 409 | `This change request is already approved` (`rejected`, `cancelled`, `stale`) | আগেই সিদ্ধান্ত হয়েছে |
+| 409 | `This kind of record can no longer be changed here` | রেকর্ডের ধরন আর সমর্থিত নয় (module সরানো হয়েছে) |
+| 409 | `The record changed after this request was made; the request is now stale` | stale |
+
+---
+
+## ১১. ত্রুটির রূপ ও কোড
 
 সব ত্রুটির রূপ একই:
 
@@ -826,12 +1027,12 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 | Status | কখন | উদাহরণ `message` | frontend কী করবে |
 |---|---|---|---|
-| 400 | ফর্মের ভুল, নিয়ম ভাঙা | তালিকা (উপরে), `Password must be at least 10 characters`, `Current password is incorrect`, `"commission.view" is owner-only and cannot be given to a role`, `A reason is required for this change`, `Nothing to change` | ফর্মে ত্রুটি দেখান |
+| 400 | ফর্মের ভুল, নিয়ম ভাঙা | তালিকা (উপরে), `Password must be at least 10 characters`, `Current password is incorrect`, `"commission.view" is owner-only and cannot be given to a role`, `A reason is required for this change`, `Nothing to change` (অনুরোধের ত্রুটি অংশ ১০-এ) | ফর্মে ত্রুটি দেখান |
 | 401 | লগইন নেই বা token শেষ | `Unauthorized`; লগইনে `Invalid credentials` | একবার refresh (অংশ ৩); লগইনের 401-এ শুধু বার্তা |
 | 403 | অনুমতি বা ব্যবসার অ্যাক্সেস নেই | `Access denied` | "অনুমতি নেই" দেখান; refresh নয় |
 | 403 | অবিশ্বস্ত origin থেকে বদলানোর অনুরোধ | `Origin not allowed` | কনফিগারেশনের ভুল (`CORS_ORIGIN`) |
 | 404 | জিনিসটা নেই (অথবা অন্য ব্যবসার) | `User not found`, `Unknown role`, `Product not found`, `Customer not found` | "পাওয়া যায়নি" |
-| 409 | আগে থেকে আছে | `A user with this email or phone already exists; grant them access instead`, `A customer with this phone number already exists`, `A product with this name already exists` | কোন ফিল্ড ডুপ্লিকেট তা দেখান |
+| 409 | আগে থেকে আছে, বা অবস্থার সংঘাত (অনুরোধ আগেই সিদ্ধান্ত হয়েছে, stale; অংশ ১০) | `A user with this email or phone already exists; grant them access instead`, `A customer with this phone number already exists`, `A product with this name already exists` | কোন ফিল্ড ডুপ্লিকেট তা দেখান |
 | 429 | এক IP থেকে প্রতি মিনিটে বেশি লগইন চেষ্টা, অথবা এক ইউজারের প্রতি মিনিটে ২০টার বেশি ইউজার-খোঁজ | `ThrottlerException: Too Many Requests` | `Retry-After` header-এর সেকেন্ড পর্যন্ত অপেক্ষা |
 | 503 | ডাটাবেস কনফিগার করা নেই বা পাওয়া যায় না | `Database is not configured: set DATABASE_URL` | "সার্ভার সাময়িকভাবে বন্ধ" |
 | 500 | অপ্রত্যাশিত | `Internal server error` | সাধারণ ত্রুটি |
@@ -847,7 +1048,7 @@ Retry-After: 60
 
 ---
 
-## ১১. রোল ও অনুমতি
+## ১২. রোল ও অনুমতি
 
 ### রোল
 
@@ -874,6 +1075,10 @@ Retry-After: 60
 | `users.manage` | core | **হ্যাঁ** | | | | ইউজার তৈরি, রোল বদল, নিষ্ক্রিয়, রিসেট |
 | `roles.manage` | core | **হ্যাঁ** | | | | রোলের অনুমতি দেখা ও বদলানো |
 | `audit.view` | core | **হ্যাঁ** | | | | audit log দেখা (API পরে) |
+| `change.request` | core | | ✓ | ✓ | ✓ | সংশোধন/বাতিলের অনুরোধ পাঠানো |
+| `change.view.own` | core | | ✓ | ✓ | ✓ | নিজের অনুরোধ দেখা ও তুলে নেওয়া |
+| `change.view.all` | core | | | | | সবার অনুরোধ দেখা, ব্যাজ |
+| `change.approve` | core | | | | | অনুরোধ অনুমোদন ও প্রত্যাখ্যান (+ সংশ্লিষ্ট সরাসরি-অনুমতি) |
 | `product.view` | dealership | | ✓ | | ✓ | পণ্য ও category দেখা |
 | `product.manage` | dealership | | ✓ | | | পণ্য ও category বানানো, বদলানো |
 | `product.cost.view` | dealership | | ✓ | | | কেনা-দাম দেখা |
@@ -907,7 +1112,7 @@ Retry-After: 60
 
 `dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা (পণ্য, গ্রাহক, সরবরাহকারী) তৈরি হয়েছে; কেনা, বিক্রি, স্টক, খাতা ও কমিশনের অনুমতি আগে থেকে ঘোষণা করা আছে, যাতে Settings-এর ছক এখনই তৈরি করা যায়।
 
-তৈরির পরে দাম, বাকি বা সীমা বদল আর নিষ্ক্রিয় করার চারটা অনুমতি কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)।
+তৈরির পরে দাম, বাকি বা সীমা বদল আর নিষ্ক্রিয় করার চারটা অনুমতি, আর `change.view.all` ও `change.approve`, কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)। স্টাফ এসব বদল অনুরোধের মাধ্যমে করেন (অংশ ১০)।
 
 ### frontend-এ কীভাবে ব্যবহার করবেন
 

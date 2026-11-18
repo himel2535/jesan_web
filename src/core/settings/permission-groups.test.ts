@@ -18,6 +18,7 @@ describe('groupPermissions', () => {
       'users',
       'roles',
       'audit',
+      'change',
     ]);
     const sale = modules[1]!.groups.find((g) => g.subject === 'sale')!;
     expect(sale.items.map((p) => p.key)).toEqual([
