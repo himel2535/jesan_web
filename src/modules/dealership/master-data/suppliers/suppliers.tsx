@@ -12,6 +12,7 @@ import { DetailList } from '../shared/detail-list';
 import { StatusBadge, useNameOf } from '../shared/display';
 import { useListParams, useSetListParams } from '../shared/list-params';
 import { ListToolbar } from '../shared/list-toolbar';
+import { DetailsLink } from '../shared/row-actions';
 import { ListEmpty, ListSkeleton, LoadError } from '../shared/states';
 
 function PrincipalBadge() {
@@ -52,12 +53,11 @@ export function SuppliersList({ slug, businessId }: { slug: string; businessId: 
         <>
           <ul className={cn('space-y-2', query.isPlaceholderData && 'opacity-60')}>
             {items.map((s) => (
-              <li key={s.id}>
-                <Link
-                  href={`${base}/${s.id}`}
-                  prefetch={false}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-border bg-surface p-4 hover:bg-surface-muted"
-                >
+              <li
+                key={s.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-border bg-surface p-4"
+              >
+                <Link href={`${base}/${s.id}`} prefetch={false} className="hover:underline">
                   <span>
                     <span className="flex flex-wrap items-center gap-2 font-medium">
                       {nameOf(s)}
@@ -68,8 +68,11 @@ export function SuppliersList({ slug, businessId }: { slug: string; businessId: 
                       {s.phone ? ` · ${s.phone}` : ''}
                     </span>
                   </span>
-                  <StatusBadge active={s.isActive} />
                 </Link>
+                <span className="flex items-center gap-2">
+                  <StatusBadge active={s.isActive} />
+                  <DetailsLink href={`${base}/${s.id}`} name={nameOf(s)} />
+                </span>
               </li>
             ))}
           </ul>

@@ -313,6 +313,19 @@ http
             : err(res, 404, 'Product not found'))
         );
       }
+      if (r && req.method === 'PATCH') {
+        const p = products.find((x) => x.id === r[1]);
+        if (!p) return err(res, 404, 'Product not found');
+        if ('isActive' in body) {
+          if (!need('product.deactivate')) return;
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required');
+          p.isActive = body.isActive;
+        } else if (!need('product.manage')) return;
+        for (const k of ['nameEn', 'nameBn']) if (k in body) p[k] = body[k];
+        p.updatedAt = new Date().toISOString();
+        return send(res, 200, hide(perms, p, ['purchasePrice'], 'product.cost.view'));
+      }
       const dueFields = ['openingBalance', 'currentBalance', 'creditLimit'];
       if (rest === 'customers' && req.method === 'GET') {
         if (!need('customer.view')) return;

@@ -3,6 +3,10 @@ import type { Me, MeBusiness } from '@/core/auth/types';
 // Shapes from docs/API.md §7 (example values only).
 export const OWNER_PERMISSIONS = [
   'audit.view',
+  'change.approve',
+  'change.request',
+  'change.view.all',
+  'change.view.own',
   'collection.create',
   'commission.manage',
   'commission.view',

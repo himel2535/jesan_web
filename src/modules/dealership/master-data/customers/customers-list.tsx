@@ -3,16 +3,18 @@
 import { Plus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { useCan } from '@/core/auth/can';
 import { cn } from '@/core/ui/cn';
 import { Pagination } from '@/core/ui/pagination';
 import { PAGE_SIZE } from '@/core/ui/pagination-logic';
 import { useIsDesktop } from '@/core/ui/use-media-query';
-import { useCustomers } from '../api';
+import { useCustomers, useSaveCustomer } from '../api';
 import { Balance, Money, StatusBadge, useNameOf } from '../shared/display';
 import { useListParams, useSetListParams } from '../shared/list-params';
 import { ListToolbar } from '../shared/list-toolbar';
-import { ListEmpty, ListSkeleton, LoadError } from '../shared/states';
+import { DetailsLink, RowActions } from '../shared/row-actions';
+import { ListEmpty, ListSkeleton, LoadError, Notice } from '../shared/states';
 import type { Customer } from '../types';
 
 const buttonLink =
@@ -34,6 +36,9 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
   const isDesktop = useIsDesktop();
   const canManage = useCan('customer.manage');
   const canSeeDue = useCan('customer.due.view');
+  const canDeactivate = useCan('customer.deactivate');
+  const save = useSaveCustomer(slug, businessId);
+  const [notice, setNotice] = useState<string | null>(null);
   const params = useListParams();
   const setParams = useSetListParams();
   const query = useCustomers(slug, businessId, params);
@@ -41,6 +46,21 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
   const items = query.data?.items ?? [];
   const showDue = canSeeDue && items.some(hasDueFields);
   const filtered = Boolean(params.search || params.active !== 'true');
+  const actions = (c: Customer) => (
+    <>
+      <DetailsLink href={`${base}/${c.id}`} name={nameOf(c)} />
+      <RowActions
+        name={nameOf(c)}
+        isActive={c.isActive}
+        editHref={canManage ? `${base}/${c.id}/edit` : undefined}
+        canDeactivate={canDeactivate}
+        onToggleActive={async (reason) => {
+          await save.mutateAsync({ id: c.id, body: { isActive: !c.isActive, reason } });
+          setNotice(t('common.statusChanged'));
+        }}
+      />
+    </>
+  );
 
   return (
     <div className="space-y-4">
@@ -56,6 +76,7 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
         ) : null}
       </div>
 
+      <Notice>{notice}</Notice>
       {query.isPending ? (
         <ListSkeleton />
       ) : query.isError ? (
@@ -101,6 +122,9 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
                       <th scope="col" className="px-4 py-3 font-medium">
                         {t('common.status')}
                       </th>
+                      <th scope="col" className="px-4 py-3 text-right font-medium">
+                        {t('common.actions')}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -139,6 +163,9 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
                         <td className="px-4 py-3">
                           <StatusBadge active={c.isActive} />
                         </td>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center justify-end gap-1">{actions(c)}</div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -147,11 +174,11 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
             ) : (
               <ul className="space-y-2">
                 {items.map((c) => (
-                  <li key={c.id}>
+                  <li key={c.id} className="rounded-card border border-border bg-surface p-4">
                     <Link
                       href={`${base}/${c.id}`}
                       prefetch={false}
-                      className="block rounded-card border border-border bg-surface p-4 hover:bg-surface-muted"
+                      className="block hover:underline"
                     >
                       <span className="flex items-start justify-between gap-3">
                         <span className="font-medium">{nameOf(c)}</span>
@@ -168,6 +195,7 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
                         </span>
                       ) : null}
                     </Link>
+                    <div className="mt-3 flex items-center justify-end gap-1">{actions(c)}</div>
                   </li>
                 ))}
               </ul>

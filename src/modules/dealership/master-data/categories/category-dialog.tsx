@@ -23,7 +23,8 @@ export function CategoryDialog({
 }: {
   category: Category | null;
   onClose: () => void;
-  onSaved: (message: string) => void;
+  /** Gets the saved category too, so a caller (the product form) can select a new one at once. */
+  onSaved: (message: string, saved: Category) => void;
   slug: string;
   businessId: string;
 }) {
@@ -65,8 +66,8 @@ export function CategoryDialog({
 
     inFlight.current = true;
     try {
-      await save.mutateAsync({ id: category?.id, body });
-      onSaved(category ? t('common.saved') : t('common.created'));
+      const saved = await save.mutateAsync({ id: category?.id, body });
+      onSaved(category ? t('common.saved') : t('common.created'), saved);
       onClose();
     } catch (error) {
       const kind = apiErrorKind(error);

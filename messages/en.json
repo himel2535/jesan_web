@@ -217,7 +217,10 @@
         "notFound": "This record was not found; it may have been changed elsewhere.",
         "unavailable": "The server is not reachable right now. Please try again shortly.",
         "unknown": "Something went wrong. Please try again."
-      }
+      },
+      "detailsFor": "Details of {name}",
+      "actions": "Actions",
+      "actionsFor": "Actions for {name}"
     },
     "products": {
       "title": "Products",
@@ -254,7 +257,11 @@
       "emptyTitle": "No categories yet",
       "emptyDescription": "Create a category to start adding products.",
       "duplicate": "A category with this name already exists.",
-      "actionsFor": "Edit {name}"
+      "actionsFor": "Edit {name}",
+      "productsInCategory": "Products in this category",
+      "sortOrderLabel": "Display order",
+      "newInline": "New category",
+      "detailTitle": "Category"
     },
     "customers": {
       "title": "Customers",
@@ -444,7 +451,8 @@
       "summary": "Summary",
       "reports": "Reports",
       "commission": "Commission",
-      "profit": "Profit"
+      "profit": "Profit",
+      "change": "Correction requests"
     },
     "items": {
       "settings_view": "View settings",
@@ -482,7 +490,11 @@
       "product_price_edit": "Change prices after creation (with reason)",
       "product_deactivate": "Deactivate or activate products and categories (with reason)",
       "customer_balance_edit": "Change opening due and credit limit after creation (with reason)",
-      "customer_deactivate": "Deactivate or activate customers (with reason)"
+      "customer_deactivate": "Deactivate or activate customers (with reason)",
+      "change_request": "Send correction requests",
+      "change_view_own": "See and withdraw own requests",
+      "change_view_all": "See all requests (inbox badge)",
+      "change_approve": "Approve or reject requests"
     }
   }
 }
