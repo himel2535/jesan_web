@@ -9,7 +9,7 @@ import {
   business,
   managerMe,
 } from '../../../../../test/fixtures/me';
-import { json, mockApi, renderInBusiness } from '../../../../../test/settings-utils';
+import { apiError, json, mockApi, renderInBusiness } from '../../../../../test/settings-utils';
 import { expectNoA11yViolations } from '../../../../../test/utils';
 import type { Customer } from '../types';
 import { CustomerDetail } from './customer-detail';
@@ -152,8 +152,7 @@ describe('<CustomerForm> create', () => {
 
   it('phone required and checked; duplicate phone (409) shown on the phone field', async () => {
     const { calls } = mockApi({
-      [`POST ${B}/customers`]: () =>
-        json(409, { message: 'A customer with this phone number already exists', statusCode: 409 }),
+      [`POST ${B}/customers`]: () => apiError(409, 'PHONE_DUPLICATE', 'phone'),
     });
     renderInBusiness(<CustomerForm slug="example-cement" businessId={BID} />, { me: managerMe });
     await userEvent.type(screen.getByLabelText('Name (English)'), 'Karim Store');
@@ -353,5 +352,22 @@ describe('row Details and Actions (customers)', () => {
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['dealership', BID, 'customers'] });
     await expectNoA11yViolations(container);
+  });
+});
+
+describe('API error codes in the customer form', () => {
+  it('server-side invalid phone shows under the phone field', async () => {
+    mockApi({ [`POST ${B}/customers`]: () => apiError(400, 'PHONE_INVALID', 'phone') });
+    renderInBusiness(<CustomerForm slug="example-cement" businessId={BID} />, {
+      me: managerMe,
+      locale: 'bn',
+    });
+    await userEvent.type(screen.getByLabelText('নাম (ইংরেজি)'), 'Karim Store');
+    await userEvent.type(screen.getByLabelText('ফোন'), '01000000009');
+    await userEvent.click(screen.getByRole('button', { name: 'তৈরি করুন' }));
+    expect(
+      await screen.findByText('সঠিক বাংলাদেশি মোবাইল নম্বর দিন, যেমন 01712345678।'),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('ফোন')).toHaveAttribute('aria-invalid', 'true');
   });
 });

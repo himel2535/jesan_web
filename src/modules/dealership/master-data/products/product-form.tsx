@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { apiErrorKind } from '@/core/api/error-kind';
+import { useErrorMessage } from '@/core/api/field-errors';
 import { useCan } from '@/core/auth/can';
 import { localizedName } from '@/core/auth/types';
 import { MONEY_PATTERN, cleanMoneyInput, sameMoney } from '@/core/lib/money';
@@ -21,7 +21,8 @@ import { CategoryDialog } from '../categories/category-dialog';
 import { FormError, ListSkeleton } from '../shared/states';
 import { LIMITS, type Category, type Product } from '../types';
 
-type FieldName = 'categoryId' | 'nameEn' | 'nameBn' | 'purchasePrice' | 'reason';
+const FIELDS = ['categoryId', 'nameEn', 'nameBn', 'unitKey', 'purchasePrice', 'reason'] as const;
+type FieldName = (typeof FIELDS)[number];
 
 /**
  * Create (no `product`) or edit a product. Rules from jesan-api DTOs: names 1–120 characters,
@@ -38,6 +39,7 @@ export function ProductForm({
   product?: Product;
 }) {
   const t = useTranslations('dealership');
+  const errorMessage = useErrorMessage();
   const locale = useLocale();
   const router = useRouter();
   const id = useId();
@@ -150,9 +152,11 @@ export function ProductForm({
         `/b/${encodeURIComponent(slug)}/products/${saved.id}?saved=${product ? 'updated' : 'created'}`,
       );
     } catch (error) {
-      const kind = apiErrorKind(error);
-      if (kind === 'duplicate') setErrors({ nameEn: t('products.duplicate') });
-      else setServerError(t(`common.error.${kind}`));
+      // By the API's stable code (docs/API.md §11): duplicate name, inactive category, unknown
+      // unit and the like appear under their own field; anything else above the form.
+      const split = errorMessage.split(error, FIELDS);
+      setErrors(split.fields);
+      setServerError(split.form);
       inFlight.current = false;
     }
   };
@@ -220,11 +224,13 @@ export function ProductForm({
           />
         </div>
 
-        <Field id={`${id}-unit`} label={t('products.unit')}>
+        <Field id={`${id}-unit`} label={t('products.unit')} error={errors.unitKey}>
           <select
             id={`${id}-unit`}
             value={unitKey}
             onChange={(e) => set('unitKey')(e.target.value)}
+            aria-invalid={Boolean(errors.unitKey) || undefined}
+            aria-describedby={errors.unitKey ? `${id}-unit-error` : undefined}
             className={inputClass}
           >
             {(units.data?.items ?? []).map((u) => (

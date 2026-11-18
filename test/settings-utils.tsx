@@ -155,3 +155,20 @@ export function rolesMatrix(): RolesMatrix {
 }
 
 export const ALL_PERMISSION_KEYS = ALL.map(([key]) => key);
+
+/** An error response in the API's §11 shape: stable `code`, optional `field` and `errors[]`. */
+export const apiError = (
+  status: number,
+  code: string,
+  field?: string,
+  errors?: { field: string; code: string }[],
+) =>
+  json(status, {
+    statusCode: status,
+    message: 'English developer text that the UI must not show',
+    code,
+    ...(field ? { field } : {}),
+    ...(errors || field
+      ? { errors: (errors ?? [{ field: field!, code }]).map((e) => ({ ...e, message: 'x' })) }
+      : {}),
+  });

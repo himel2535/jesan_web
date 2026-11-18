@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useId, useRef, useState } from 'react';
-import { apiErrorKind } from '@/core/api/error-kind';
+import { useErrorMessage } from '@/core/api/field-errors';
 import { ConfirmDialog } from '@/core/ui/confirm-dialog';
 import { ReasonInput, reasonError } from './fields';
 
@@ -25,6 +25,8 @@ export function DeactivateDialog({
   const [reason, setReason] = useState('');
   const [showReasonError, setShowReasonError] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reasonServerError, setReasonServerError] = useState<string | null>(null);
+  const errorMessage = useErrorMessage();
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
 
@@ -32,6 +34,7 @@ export function DeactivateDialog({
     setReason('');
     setShowReasonError(false);
     setError(null);
+    setReasonServerError(null);
     onCancel();
   };
 
@@ -41,12 +44,15 @@ export function DeactivateDialog({
     inFlight.current = true;
     setPending(true);
     setError(null);
+    setReasonServerError(null);
     try {
       await onConfirm(reason.trim());
       setReason('');
       setShowReasonError(false);
     } catch (cause) {
-      setError(t(`error.${apiErrorKind(cause)}`));
+      const split = errorMessage.split(cause, ['reason'] as const);
+      setReasonServerError(split.fields.reason ?? null);
+      setError(split.form);
     } finally {
       inFlight.current = false;
       setPending(false);
@@ -72,7 +78,11 @@ export function DeactivateDialog({
           id={`${id}-reason`}
           value={reason}
           onChange={setReason}
-          error={showReasonError && reasonError(reason) ? t('reasonRequired') : undefined}
+          error={
+            showReasonError && reasonError(reason)
+              ? t('reasonRequired')
+              : (reasonServerError ?? undefined)
+          }
         />
       </div>
     </ConfirmDialog>

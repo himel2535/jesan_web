@@ -38,6 +38,18 @@ export interface SettingsUser {
   lastLoginAt?: string | null;
   /** Role key in this business. */
   role: string;
+  /** A platform owner's account cannot be changed here (actions hidden; the API refuses). */
+  isPlatformOwner?: boolean;
+}
+
+/** `POST users/lookup` (§8): no email, phone or other businesses, by design. */
+export interface UserLookup {
+  id: string;
+  name: string;
+  isActive: boolean;
+  isPlatformOwner: boolean;
+  hasAccess: boolean;
+  role: string | null;
 }
 
 export interface UsersPage {

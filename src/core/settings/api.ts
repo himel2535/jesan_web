@@ -4,7 +4,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiFetch } from '@/core/api/client';
 import { ApiError } from '@/core/api/errors';
 import { createModuleKeys } from '@/core/api/query-keys';
-import type { CreateUserInput, RoleUpdateResult, RolesMatrix, UsersPage } from './types';
+import type {
+  CreateUserInput,
+  RoleUpdateResult,
+  RolesMatrix,
+  UserLookup,
+  UsersPage,
+} from './types';
 
 /**
  * Query keys: ['settings', businessId, entity, …] (CLAUDE.md). A change invalidates only its own
@@ -99,5 +105,29 @@ export function useResetPassword(slug: string, businessId: string) {
         body: { newPassword: input.newPassword },
       }),
     { invalidate: false },
+  );
+}
+
+/**
+ * `POST users/lookup`: find an existing user by email or phone (in the body, never the URL).
+ * A plain call, not a query or mutation, so the identifier never sits in TanStack's caches.
+ */
+export function lookupUser(slug: string, identifier: string) {
+  return apiFetch<UserLookup>(`${base(slug)}/users/lookup`, {
+    method: 'POST',
+    body: { identifier },
+  });
+}
+
+/** `POST users/:id/access`: give an existing user a role in this business. */
+export function useGrantAccess(slug: string, businessId: string) {
+  return useUsersMutation(slug, businessId, (b, input: { userId: string; roleKey: string }) =>
+    apiFetch<{ id: string; role: string }>(
+      `${b}/users/${encodeURIComponent(input.userId)}/access`,
+      {
+        method: 'POST',
+        body: { roleKey: input.roleKey },
+      },
+    ),
   );
 }

@@ -9,7 +9,7 @@ import {
   business,
   managerMe,
 } from '../../../../../test/fixtures/me';
-import { json, mockApi, renderInBusiness } from '../../../../../test/settings-utils';
+import { apiError, json, mockApi, renderInBusiness } from '../../../../../test/settings-utils';
 import { expectNoA11yViolations } from '../../../../../test/utils';
 import { CategoriesPanel } from '../categories/categories-panel';
 import { CategoryDetail } from '../categories/category-detail';
@@ -260,10 +260,13 @@ describe('<ProductForm> create', () => {
     await userEvent.type(screen.getByLabelText('Purchase price'), '500');
     await userEvent.dblClick(screen.getByRole('button', { name: 'Create' }));
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
-    await act(async () =>
-      resolve(json(409, { message: 'A product with this name already exists', statusCode: 409 })),
+    await act(async () => resolve(apiError(409, 'NAME_EN_DUPLICATE', 'nameEn')));
+    expect(
+      await screen.findByText('This English name is already used in this business.'),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Name (English)')).toHaveAccessibleDescription(
+      'This English name is already used in this business.',
     );
-    expect(await screen.findByText('A product with this name already exists.')).toBeInTheDocument();
   });
 });
 
@@ -381,8 +384,7 @@ describe('<CategoriesPanel>', () => {
       ...baseRoutes,
       [`POST ${B}/product-categories`]: () =>
         first
-          ? ((first = false),
-            json(409, { message: 'A category with this name already exists', statusCode: 409 }))
+          ? ((first = false), apiError(409, 'NAME_EN_DUPLICATE', 'nameEn'))
           : json(201, { ...opc, id: 'c3' }),
     });
     const { invalidate } = renderInBusiness(
@@ -396,7 +398,7 @@ describe('<CategoriesPanel>', () => {
     await userEvent.type(within(dialog).getByLabelText('Display order'), '৩');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
     expect(
-      await within(dialog).findByText('A category with this name already exists.'),
+      await within(dialog).findByText('This English name is already used in this business.'),
     ).toBeInTheDocument();
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({
       nameEn: 'OPC',
@@ -622,5 +624,63 @@ describe('<ProductForm> without cost permission (edit)', () => {
     expect(
       screen.queryByText('Changing these needs owner-level permission.'),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('API error codes in the product form (docs/API.md §11)', () => {
+  const fill = async () => {
+    await userEvent.selectOptions(await screen.findByLabelText('Category'), 'c1');
+    await userEvent.type(screen.getByLabelText('Name (English)'), 'New');
+    await userEvent.type(screen.getByLabelText('Name (Bangla)'), 'নতুন');
+  };
+
+  it('inactive category and unknown unit appear under their own fields (Bengali)', async () => {
+    mockApi({
+      ...baseRoutes,
+      [`POST ${B}/products`]: () =>
+        apiError(400, 'VALIDATION_FAILED', undefined, [
+          { field: 'categoryId', code: 'CATEGORY_NOT_FOUND_OR_INACTIVE' },
+          { field: 'unitKey', code: 'UNIT_UNKNOWN' },
+        ]),
+    });
+    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} />, {
+      me: managerMe,
+      locale: 'bn',
+    });
+    await userEvent.selectOptions(await screen.findByLabelText('ক্যাটাগরি'), 'c1');
+    await userEvent.type(screen.getByLabelText('নাম (ইংরেজি)'), 'New');
+    await userEvent.type(screen.getByLabelText('নাম (বাংলা)'), 'নতুন');
+    await userEvent.click(screen.getByRole('button', { name: 'তৈরি করুন' }));
+    expect(await screen.findByLabelText('ক্যাটাগরি')).toHaveAccessibleDescription(
+      'এই ক্যাটাগরি নেই বা নিষ্ক্রিয়। অন্য একটা বাছাই করুন।',
+    );
+    expect(screen.getByLabelText('একক')).toHaveAccessibleDescription('এই একক ব্যবসার সেটিংসে নেই।');
+  });
+
+  it('an unknown code falls back to the general message for its status, above the form', async () => {
+    mockApi({ ...baseRoutes, [`POST ${B}/products`]: () => apiError(409, 'SOMETHING_NEW') });
+    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} />, { me: managerMe });
+    await fill();
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('This already exists.');
+    expect(screen.queryByText(/English developer text/)).not.toBeInTheDocument();
+  });
+
+  it('a reason rejected by the server shows under the reason field when deactivating', async () => {
+    mockApi({
+      ...baseRoutes,
+      [`GET ${B}/products/p1`]: () => json(200, product()),
+      [`PATCH ${B}/products/p1`]: () => apiError(400, 'REASON_TOO_SHORT', 'reason'),
+    });
+    renderInBusiness(<ProductDetail slug="example-cement" businessId={BID} id="p1" />, {
+      me: ownerMe,
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Deactivate' }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.type(within(dialog).getByLabelText('Reason for the change'), 'abc');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    expect(
+      await within(dialog).findByText('The reason needs at least 3 characters.'),
+    ).toBeInTheDocument();
   });
 });
