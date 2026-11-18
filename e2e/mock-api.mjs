@@ -37,7 +37,6 @@ const SALESMAN = [
 ];
 const OWNER = [
   ...MANAGER,
-  'product.price.edit',
   'product.deactivate',
   'customer.balance.edit',
   'customer.deactivate',
@@ -132,7 +131,9 @@ const products = Array.from({ length: 12 }, (_, i) => {
     nameEn: `Sample ${cat.nameEn} ${String(n).padStart(2, '0')}`,
     nameBn: `নমুনা ${cat.nameBn} ${n}`,
     unitKey: 'bag',
-    purchasePrice: `${500 + n}.00`,
+    // Read-only, from purchases: the first few were bought, the rest not yet (null).
+    lastPurchasePrice: n <= 6 ? `${500 + n}.00` : null,
+    lastPurchasedAt: n <= 6 ? '2026-11-16T10:00:00.000Z' : null,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -235,14 +236,10 @@ const invalid = (res, list) =>
  * direct permission applies them. Values hidden from a viewer are left out of every answer.
  */
 const changeRequests = [];
+const COST_FIELDS = ['lastPurchasePrice', 'lastPurchasedAt'];
 const idempotency = new Map();
 const CHANGE_FIELDS = {
   product: {
-    purchasePrice: {
-      see: 'product.cost.view',
-      apply: 'product.price.edit',
-      label: 'Purchase price',
-    },
     isActive: { see: null, apply: 'product.deactivate', label: 'Active' },
   },
   customer: {
@@ -384,7 +381,7 @@ http
         return send(res, 200, {
           ...pageOf(list, page),
           items: pageOf(list, page).items.map((p) =>
-            hide(perms, p, ['purchasePrice'], 'product.cost.view'),
+            hide(perms, p, COST_FIELDS, 'product.cost.view'),
           ),
         });
       }
@@ -398,6 +395,11 @@ http
               message: 'property defaultSalePrice should not exist',
             },
           ]);
+        for (const [field, code] of [
+          ['purchasePrice', 'PURCHASE_PRICE_NOT_ALLOWED'],
+          ['lastPurchasePrice', 'LAST_PURCHASE_PRICE_NOT_ALLOWED'],
+        ])
+          if (field in body) return err(res, 400, `${field} cannot be set`, code, field);
         const cat = categories.find((c) => c.id === body.categoryId && c.isActive);
         if (!cat)
           return err(
@@ -424,17 +426,14 @@ http
           nameEn: name,
           nameBn: body.nameBn,
           unitKey: body.unitKey ?? 'bag',
-          purchasePrice: body.purchasePrice
-            ? `${body.purchasePrice}`.includes('.')
-              ? body.purchasePrice
-              : `${body.purchasePrice}.00`
-            : '0.00',
+          lastPurchasePrice: null,
+          lastPurchasedAt: null,
           isActive: true,
           createdAt: now,
           updatedAt: now,
         };
         products.push(p);
-        return send(res, 201, hide(perms, p, ['purchasePrice'], 'product.cost.view'));
+        return send(res, 201, hide(perms, p, COST_FIELDS, 'product.cost.view'));
       }
       if (rest === 'change-requests' || rest.startsWith('change-requests/')) {
         const sub = rest.slice('change-requests'.length).replace(/^\//, '');
@@ -565,13 +564,20 @@ http
             );
           const [ok] = readBody();
           if (!ok) return;
-          if (changeRequests.some((c) => c.entityId === ok.rec.id && c.status === 'pending'))
-            return err(
-              res,
-              409,
-              'This record already has a pending change request',
-              'CHANGE_REQUEST_PENDING_EXISTS',
-            );
+          const pending = changeRequests.find(
+            (c) => c.entityId === ok.rec.id && c.status === 'pending',
+          );
+          if (pending) {
+            // The id only when the requester may open it (own, or change.view.all).
+            const visibleToMe =
+              pending.requestedBy.id === me.user.id || perms.includes('change.view.all');
+            return send(res, 409, {
+              statusCode: 409,
+              message: 'This record already has a pending change request',
+              code: 'CHANGE_REQUEST_PENDING_EXISTS',
+              ...(visibleToMe ? { changeRequestId: pending.id } : {}),
+            });
+          }
           const cr = {
             id: `cr${changeRequests.length + 1}`,
             entityType: ok.type,
@@ -735,13 +741,18 @@ http
         return (
           need('product.view') &&
           (p
-            ? send(res, 200, hide(perms, p, ['purchasePrice'], 'product.cost.view'))
+            ? send(res, 200, hide(perms, p, COST_FIELDS, 'product.cost.view'))
             : err(res, 404, 'Product not found', 'PRODUCT_NOT_FOUND'))
         );
       }
       if (r && req.method === 'PATCH') {
         const p = products.find((x) => x.id === r[1]);
         if (!p) return err(res, 404, 'Product not found', 'PRODUCT_NOT_FOUND');
+        for (const [field, code] of [
+          ['purchasePrice', 'PURCHASE_PRICE_NOT_ALLOWED'],
+          ['lastPurchasePrice', 'LAST_PURCHASE_PRICE_NOT_ALLOWED'],
+        ])
+          if (field in body) return err(res, 400, `${field} cannot be set`, code, field);
         if ('isActive' in body) {
           if (!need('product.deactivate')) return;
           if (!body.reason || body.reason.trim().length < 3)
@@ -750,7 +761,7 @@ http
         } else if (!need('product.manage')) return;
         for (const k of ['nameEn', 'nameBn']) if (k in body) p[k] = body[k];
         p.updatedAt = new Date().toISOString();
-        return send(res, 200, hide(perms, p, ['purchasePrice'], 'product.cost.view'));
+        return send(res, 200, hide(perms, p, COST_FIELDS, 'product.cost.view'));
       }
       const dueFields = ['openingBalance', 'currentBalance', 'creditLimit'];
       if (rest === 'customers' && req.method === 'GET') {

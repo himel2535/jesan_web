@@ -12,6 +12,8 @@ export class ApiError extends Error {
   readonly retryAfterSeconds?: number;
   /** Errors of single form fields (docs/API.md §11 `errors[]`, or `field` + `code`). */
   readonly fieldErrors: readonly FieldError[];
+  /** The parsed error body, for documented extra fields (e.g. 409 `changeRequestId`). */
+  readonly body?: Readonly<Record<string, unknown>>;
 
   constructor(init: {
     kind: ApiErrorKind;
@@ -21,6 +23,7 @@ export class ApiError extends Error {
     details?: unknown;
     retryAfterSeconds?: number;
     fieldErrors?: readonly FieldError[];
+    body?: Readonly<Record<string, unknown>>;
   }) {
     super(init.message);
     this.name = 'ApiError';
@@ -30,6 +33,7 @@ export class ApiError extends Error {
     this.details = init.details;
     this.retryAfterSeconds = init.retryAfterSeconds;
     this.fieldErrors = init.fieldErrors ?? [];
+    this.body = init.body;
   }
 
   get isUnauthorized(): boolean {
@@ -104,6 +108,7 @@ export function apiErrorFromResponse(status: number, body: unknown, headers?: He
       details: list ?? (typeof error === 'string' ? error : undefined),
       retryAfterSeconds,
       fieldErrors: parseFieldErrors(body),
+      body,
     });
   }
 

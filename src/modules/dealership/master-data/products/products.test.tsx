@@ -69,13 +69,18 @@ function product(overrides: Partial<Product> = {}, withCost = true): Product {
     nameEn: 'Sample OPC 50kg',
     nameBn: 'নমুনা ওপিসি ৫০ কেজি',
     unitKey: 'bag',
-    purchasePrice: '540.00',
+    lastPurchasePrice: '540.00',
+    lastPurchasedAt: '2026-11-16T10:00:00.000Z',
     isActive: true,
     createdAt: '2026-11-17T08:38:04.236Z',
     updatedAt: '2026-11-17T08:38:04.236Z',
     ...overrides,
   };
-  if (!withCost) delete p.purchasePrice; // the API leaves the field out entirely
+  if (!withCost) {
+    // The API leaves both fields out entirely without product.cost.view.
+    delete p.lastPurchasePrice;
+    delete p.lastPurchasedAt;
+  }
   return p;
 }
 
@@ -90,10 +95,30 @@ const baseRoutes = {
 };
 
 describe('<ProductsList>', () => {
-  it('manager (product.cost.view): purchase-price column, ৳ with lakh grouping', async () => {
-    mockApi({ ...baseRoutes, [`GET ${B}/products`]: () => json(200, page([product()])) });
+  it('manager (product.cost.view): last-purchase-price column; never purchased → —', async () => {
+    mockApi({
+      ...baseRoutes,
+      [`GET ${B}/products`]: () =>
+        json(
+          200,
+          page([
+            product(),
+            product({
+              id: 'p2',
+              nameEn: 'Never Bought',
+              lastPurchasePrice: null,
+              lastPurchasedAt: null,
+            }),
+          ]),
+        ),
+    });
     renderInBusiness(<ProductsList slug="example-cement" businessId={BID} />, { me: managerMe });
-    expect(await screen.findByRole('columnheader', { name: 'Purchase price' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('columnheader', { name: 'Last purchase price' }),
+    ).toBeInTheDocument();
+    const never = screen.getByRole('rowheader', { name: /Never Bought/ }).closest('tr')!;
+    expect(never).toHaveTextContent('—');
+    expect(never).not.toHaveTextContent('৳');
     const row = screen.getByRole('rowheader', { name: /Sample OPC 50kg/ }).closest('tr')!;
     expect(row).toHaveTextContent('৳540.00');
     // Products have no sale price any more (set per sale on the invoice).
@@ -108,8 +133,10 @@ describe('<ProductsList>', () => {
       { me: salesmanMe },
     );
     await screen.findByRole('rowheader', { name: /Sample OPC 50kg/ });
-    expect(screen.queryByRole('columnheader', { name: 'Purchase price' })).not.toBeInTheDocument();
-    expect(container).not.toHaveTextContent('Purchase price');
+    expect(
+      screen.queryByRole('columnheader', { name: 'Last purchase price' }),
+    ).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent('Last purchase price');
     expect(container).not.toHaveTextContent('540');
     expect(screen.queryByRole('link', { name: 'New product' })).not.toBeInTheDocument();
   });
@@ -177,7 +204,7 @@ describe('<ProductsList>', () => {
     }));
     mockApi({
       ...baseRoutes,
-      [`GET ${B}/products`]: () => json(200, page([product({ purchasePrice: '1234567.50' })])),
+      [`GET ${B}/products`]: () => json(200, page([product({ lastPurchasePrice: '1234567.50' })])),
     });
     const { container } = renderInBusiness(
       <ProductsList slug="example-cement" businessId={BID} />,
@@ -197,45 +224,28 @@ describe('<ProductsList>', () => {
 });
 
 describe('<ProductForm> create', () => {
-  it('sends money as strings, only filled fields, default unit; then opens the product', async () => {
+  it('sends only names, category and the default unit; no price field at all; then opens it', async () => {
     const { calls } = mockApi({
       ...baseRoutes,
       [`POST ${B}/products`]: () => json(201, product({ id: 'p9' })),
     });
-    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} />, { me: managerMe });
+    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} />, { me: ownerMe });
     await userEvent.selectOptions(await screen.findByLabelText('Category'), 'c1');
     await userEvent.type(screen.getByLabelText('Name (English)'), 'Sample OPC 40kg');
     await userEvent.type(screen.getByLabelText('Name (Bangla)'), 'নমুনা ওপিসি ৪০ কেজি');
-    await userEvent.type(screen.getByLabelText('Purchase price'), '৪৫০');
-    expect(screen.queryByLabelText(/sale price/i)).not.toBeInTheDocument();
+    // Prices come only from purchases: nothing to type, nothing sent.
+    expect(screen.queryByLabelText(/price/i)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
-    const post = calls.find((c) => c.method === 'POST')!;
-    expect(post.body).toEqual({
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({
       categoryId: 'c1',
       nameEn: 'Sample OPC 40kg',
       nameBn: 'নমুনা ওপিসি ৪০ কেজি',
       unitKey: 'bag',
-      purchasePrice: '450',
     });
     expect(nav.push).toHaveBeenCalledWith('/b/example-cement/products/p9?saved=created');
   });
 
-  it('salesman-like (no cost permission): no purchase-price field, none sent', async () => {
-    const perms = [...MANAGER_PERMISSIONS.filter((p) => p !== 'product.cost.view')];
-    const { calls } = mockApi({
-      ...baseRoutes,
-      [`POST ${B}/products`]: () => json(201, product({}, false)),
-    });
-    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} />, { me: meWith(perms) });
-    await userEvent.selectOptions(await screen.findByLabelText('Category'), 'c1');
-    expect(screen.queryByLabelText('Purchase price')).not.toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText('Name (English)'), 'X');
-    await userEvent.type(screen.getByLabelText('Name (Bangla)'), 'এক্স');
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(calls.find((c) => c.method === 'POST')!.body).not.toHaveProperty('purchasePrice');
-  });
-
-  it('validates required fields and money format; 409 marks the name; one request on double click', async () => {
+  it('validates required fields; 409 marks the name; one request on double click', async () => {
     let resolve: (r: Response) => void = () => {};
     const { calls } = mockApi({
       ...baseRoutes,
@@ -246,106 +256,96 @@ describe('<ProductForm> create', () => {
     expect(screen.getByLabelText('Name (English)')).toHaveAccessibleDescription(
       'This field is required.',
     );
-    await userEvent.type(screen.getByLabelText('Purchase price'), '12.345');
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(screen.getByLabelText('Purchase price')).toHaveAccessibleDescription(
-      /Enter an amount like 570/,
-    );
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
 
     await userEvent.selectOptions(screen.getByLabelText('Category'), 'c1');
     await userEvent.type(screen.getByLabelText('Name (English)'), 'Dup');
     await userEvent.type(screen.getByLabelText('Name (Bangla)'), 'ডুপ');
-    await userEvent.clear(screen.getByLabelText('Purchase price'));
-    await userEvent.type(screen.getByLabelText('Purchase price'), '500');
     await userEvent.dblClick(screen.getByRole('button', { name: 'Create' }));
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
     await act(async () => resolve(apiError(409, 'NAME_EN_DUPLICATE', 'nameEn')));
-    expect(
-      await screen.findByText('This English name is already used in this business.'),
-    ).toBeInTheDocument();
     expect(screen.getByLabelText('Name (English)')).toHaveAccessibleDescription(
       'This English name is already used in this business.',
     );
   });
+
+  it('PURCHASE_PRICE_NOT_ALLOWED from the server shows its own message (Bengali)', async () => {
+    mockApi({
+      ...baseRoutes,
+      [`POST ${B}/products`]: () => apiError(400, 'PURCHASE_PRICE_NOT_ALLOWED', 'purchasePrice'),
+    });
+    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} />, {
+      me: managerMe,
+      locale: 'bn',
+    });
+    await userEvent.selectOptions(await screen.findByLabelText('ক্যাটাগরি'), 'c1');
+    await userEvent.type(screen.getByLabelText('নাম (ইংরেজি)'), 'X');
+    await userEvent.type(screen.getByLabelText('নাম (বাংলা)'), 'এক্স');
+    await userEvent.click(screen.getByRole('button', { name: 'তৈরি করুন' }));
+    expect(
+      await screen.findByText('কেনা-দাম এখানে বসানো যায় না; এটা কেনা থেকে আসে।'),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('<ProductForm> edit', () => {
-  it('manager (no product.price.edit): prices read-only, only changed names sent', async () => {
+  it('only changed names are sent; no price or reason field; owner sees no request button', async () => {
     const { calls } = mockApi({
       ...baseRoutes,
       [`PATCH ${B}/products/p1`]: () => json(200, product({ nameEn: 'Renamed' })),
     });
     renderInBusiness(<ProductForm slug="example-cement" businessId={BID} product={product()} />, {
-      me: managerMe,
+      me: ownerMe,
     });
-    expect(
-      await screen.findByText('Changing these needs owner-level permission.'),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText('Purchase price')).toHaveAttribute('readonly');
+    await userEvent.clear(await screen.findByLabelText('Name (English)'));
+    expect(screen.queryByLabelText(/price/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Reason for the change')).not.toBeInTheDocument();
-    await userEvent.clear(screen.getByLabelText('Name (English)'));
+    expect(screen.queryByRole('button', { name: 'Request a correction' })).not.toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Name (English)'), 'Renamed');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ nameEn: 'Renamed' });
   });
 
-  it('owner: changing a price needs a reason; only the price and reason are sent', async () => {
-    const { calls } = mockApi({
-      ...baseRoutes,
-      [`PATCH ${B}/products/p1`]: () => json(200, product()),
-    });
-    renderInBusiness(
-      <ProductForm
-        slug="example-cement"
-        businessId={BID}
-        product={product({ purchasePrice: '560.00' })}
-      />,
-      { me: ownerMe },
-    );
-    const cost = await screen.findByLabelText('Purchase price');
-    await userEvent.clear(cost);
-    await userEvent.type(cost, '565');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
-    const reason = screen.getByLabelText('Reason for the change');
-    expect(reason).toHaveAccessibleDescription(/Write why this is being changed/);
-    expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
-    await userEvent.type(reason, 'new rate from the supplier');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({
-      purchasePrice: '565',
-      reason: 'new rate from the supplier',
-    });
-  });
-
-  it('"570" vs "570.00" is not a change; nothing changed → no request', async () => {
+  it('nothing changed → no request', async () => {
     const { calls } = mockApi(baseRoutes);
-    renderInBusiness(
-      <ProductForm
-        slug="example-cement"
-        businessId={BID}
-        product={product({ purchasePrice: '570.00' })}
-      />,
-      { me: ownerMe },
-    );
-    const cost = await screen.findByLabelText('Purchase price');
-    await userEvent.clear(cost);
-    await userEvent.type(cost, '570');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} product={product()} />, {
+      me: managerMe,
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Save' }));
     expect(screen.getByText('Nothing has changed.')).toBeInTheDocument();
     expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
   });
 });
 
 describe('<ProductDetail>', () => {
-  it('salesman: no purchase-price row; no edit or deactivate buttons', async () => {
+  it('manager: last purchase price and date (read-only); never purchased → "Not purchased yet"', async () => {
+    let p = product();
+    mockApi({ ...baseRoutes, [`GET ${B}/products/p1`]: () => json(200, p) });
+    const { unmount } = renderInBusiness(
+      <ProductDetail slug="example-cement" businessId={BID} id="p1" />,
+      { me: managerMe },
+    );
+    await screen.findByRole('heading', { name: 'Sample OPC 50kg' });
+    expect(screen.getByText('Last purchase price').nextElementSibling).toHaveTextContent('৳540.00');
+    expect(screen.getByText('Last purchased')).toBeInTheDocument();
+    unmount();
+    p = product({ lastPurchasePrice: null, lastPurchasedAt: null });
+    renderInBusiness(<ProductDetail slug="example-cement" businessId={BID} id="p1" />, {
+      me: managerMe,
+      locale: 'bn',
+    });
+    expect(await screen.findByText('এখনো কেনা হয়নি')).toBeInTheDocument();
+    expect(screen.queryByText('শেষ কেনার তারিখ')).not.toBeInTheDocument();
+  });
+
+  it('salesman: no last-purchase-price row; no edit or deactivate buttons', async () => {
     mockApi({ ...baseRoutes, [`GET ${B}/products/p1`]: () => json(200, product({}, false)) });
     const { container } = renderInBusiness(
       <ProductDetail slug="example-cement" businessId={BID} id="p1" />,
       { me: salesmanMe },
     );
     await screen.findByRole('heading', { name: 'Sample OPC 50kg' });
-    expect(container).not.toHaveTextContent('Purchase price');
+    expect(container).not.toHaveTextContent('Last purchase price');
     expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument();
   });
@@ -612,21 +612,6 @@ describe('<ProductForm> inline new category', () => {
   });
 });
 
-describe('<ProductForm> without cost permission (edit)', () => {
-  it('no price section at all when the API sent no purchase price', async () => {
-    mockApi(baseRoutes);
-    renderInBusiness(
-      <ProductForm slug="example-cement" businessId={BID} product={product({}, false)} />,
-      { me: salesmanMe },
-    );
-    await screen.findByLabelText('Name (English)');
-    expect(screen.queryByLabelText('Purchase price')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('Changing these needs owner-level permission.'),
-    ).not.toBeInTheDocument();
-  });
-});
-
 describe('API error codes in the product form (docs/API.md §11)', () => {
   const fill = async () => {
     await userEvent.selectOptions(await screen.findByLabelText('Category'), 'c1');
@@ -688,14 +673,15 @@ describe('API error codes in the product form (docs/API.md §11)', () => {
 describe('"Request a correction" (docs/API.md §10)', () => {
   const staff = meWith([...MANAGER_PERMISSIONS, 'change.request', 'change.view.own']);
 
-  it('staff with change.request but no direct permission: button on the detail page', async () => {
+  it('staff with change.request but no deactivate permission: only the status request', async () => {
     mockApi({ ...baseRoutes, [`GET ${B}/products/p1`]: () => json(200, product()) });
     renderInBusiness(<ProductDetail slug="example-cement" businessId={BID} id="p1" />, {
       me: staff,
     });
     await userEvent.click(await screen.findByRole('button', { name: 'Request a correction' }));
     const dialog = screen.getByRole('dialog', { name: 'Request a correction: Sample OPC 50kg' });
-    expect(within(dialog).getByLabelText(/Change Purchase price/)).toBeInTheDocument();
+    // Prices are not requestable any more (they come from purchases).
+    expect(within(dialog).queryByText(/price/i)).not.toBeInTheDocument();
     expect(within(dialog).getByText('Ask to deactivate')).toBeInTheDocument();
   });
 
@@ -715,14 +701,14 @@ describe('"Request a correction" (docs/API.md §10)', () => {
     expect(screen.queryByRole('button', { name: 'Request a correction' })).not.toBeInTheDocument();
   });
 
-  it('staff without the cost permission: only the status request (no price field)', async () => {
+  it('salesman with change.request: the same status-only request', async () => {
     mockApi({ ...baseRoutes, [`GET ${B}/products/p1`]: () => json(200, product({}, false)) });
     renderInBusiness(<ProductDetail slug="example-cement" businessId={BID} id="p1" />, {
       me: meWith([...SALESMAN_PERMISSIONS, 'change.request']),
     });
     await userEvent.click(await screen.findByRole('button', { name: 'Request a correction' }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).queryByText(/Purchase price/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/price/i)).not.toBeInTheDocument();
     expect(within(dialog).getByText('Ask to deactivate')).toBeInTheDocument();
   });
 

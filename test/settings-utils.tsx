@@ -84,7 +84,6 @@ const ALL: [string, string, boolean][] = [
   ['product.view', 'dealership', false],
   ['product.manage', 'dealership', false],
   ['product.cost.view', 'dealership', false],
-  ['product.price.edit', 'dealership', false],
   ['product.deactivate', 'dealership', false],
   ['customer.view', 'dealership', false],
   ['customer.manage', 'dealership', false],

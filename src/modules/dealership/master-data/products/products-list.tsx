@@ -25,7 +25,7 @@ const buttonLink =
 /**
  * Products of one business, 10 per page, searchable by English/Bangla name and code.
  * The purchase-price column exists only with `product.cost.view` — without it the API sends no
- * `purchasePrice` and the UI keeps no space for it.
+ * `lastPurchasePrice` and the UI keeps no space for it.
  */
 export function ProductsList({ slug, businessId }: { slug: string; businessId: string }) {
   const t = useTranslations('dealership');
@@ -52,7 +52,7 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
   const items = query.data?.items ?? [];
   const filtered = Boolean(params.search || params.categoryId || params.active !== 'true');
   // Belt and braces: the column needs the permission AND the field in the data.
-  const showCost = canSeeCost && items.some((p) => 'purchasePrice' in p);
+  const showCost = canSeeCost && items.some((p) => 'lastPurchasePrice' in p);
   const actions = (p: Product) => (
     <>
       <DetailsLink href={`${base}/${p.id}`} name={nameOf(p)} />
@@ -140,7 +140,7 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                       </th>
                       {showCost ? (
                         <th scope="col" className="px-4 py-3 text-right font-medium">
-                          {t('products.purchasePrice')}
+                          {t('products.lastPurchasePrice')}
                         </th>
                       ) : null}
                       <th scope="col" className="px-4 py-3 font-medium">
@@ -174,9 +174,7 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                         <td className="px-4 py-3">{unitName(p.unitKey)}</td>
                         {showCost ? (
                           <td className="px-4 py-3 text-right">
-                            {p.purchasePrice !== undefined ? (
-                              <Money value={p.purchasePrice} />
-                            ) : null}
+                            <LastPrice value={p.lastPurchasePrice} />
                           </td>
                         ) : null}
                         <td className="px-4 py-3">
@@ -238,10 +236,10 @@ function ProductCard({
           {product.code} · {nameOf(product.category)}
         </span>
         <span className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          {showCost && product.purchasePrice !== undefined ? (
+          {showCost && 'lastPurchasePrice' in product ? (
             <span>
-              <span className="text-fg-muted">{t('products.purchasePrice')}: </span>
-              <Money value={product.purchasePrice} />
+              <span className="text-fg-muted">{t('products.lastPurchasePrice')}: </span>
+              <LastPrice value={product.lastPurchasePrice} />
             </span>
           ) : null}
           <span>
@@ -253,4 +251,9 @@ function ProductCard({
       <div className="mt-3 flex items-center justify-end gap-1">{actions}</div>
     </li>
   );
+}
+
+/** Last purchase price, read-only (from purchases); "—" until the first purchase. */
+function LastPrice({ value }: { value: string | null | undefined }) {
+  return value ? <Money value={value} /> : <span className="text-fg-muted">—</span>;
 }

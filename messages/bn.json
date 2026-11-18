@@ -88,7 +88,6 @@
       "PROPOSED_CHANGE_EMPTY": "বদলানোর জন্য অন্তত একটা মান বাছাই করুন।",
       "PROPOSED_CHANGE_NOT_ALLOWED": "বাতিলের অনুরোধে নতুন মান দেওয়া যায় না।",
       "FIELD_NOT_CHANGEABLE": "এই ঘর অনুরোধে বদলানো যায় না; সরাসরি সম্পাদনা করুন।",
-      "PURCHASE_PRICE_INVALID": "কেনা-দাম লিখুন যেমন 570 বা 570.50।",
       "OPENING_BALANCE_INVALID": "প্রারম্ভিক বাকি লিখুন যেমন 570 বা -570.50।",
       "CREDIT_LIMIT_INVALID": "ঋণসীমা লিখুন যেমন 50000, বা সীমা না থাকলে খালি রাখুন।",
       "IS_ACTIVE_INVALID": "সক্রিয় অবস্থার মান সঠিক নয়।",
@@ -112,7 +111,9 @@
       "NOTE_TOO_LONG": "নোট সর্বোচ্চ ৫০০ অক্ষরের হতে পারে।",
       "SORT_ORDER_TOO_LARGE": "দেখানোর ক্রম সর্বোচ্চ ১০০০০ হতে পারে।",
       "CATEGORY_ID_INVALID": "একটা ক্যাটাগরি বাছাই করুন।",
-      "DEFAULT_SALE_PRICE_NOT_ALLOWED": "পণ্যে বিক্রয়মূল্য নেই; দাম প্রতিটা বিক্রিতে বসে।"
+      "DEFAULT_SALE_PRICE_NOT_ALLOWED": "পণ্যে বিক্রয়মূল্য নেই; দাম প্রতিটা বিক্রিতে বসে।",
+      "PURCHASE_PRICE_NOT_ALLOWED": "কেনা-দাম এখানে বসানো যায় না; এটা কেনা থেকে আসে।",
+      "LAST_PURCHASE_PRICE_NOT_ALLOWED": "শেষ কেনা-দাম শুধু দেখা যায়; এটা কেনা থেকে আসে।"
     },
     "problems": {
       "REQUIRED": "এই ঘরটা পূরণ করুন।",
@@ -324,11 +325,13 @@
       "editTitle": "{name} সম্পাদনা",
       "category": "ক্যাটাগরি",
       "unit": "একক",
-      "purchasePrice": "কেনা-দাম",
       "emptyTitle": "এখনো কোনো পণ্য নেই",
       "emptyDescription": "আপনি যে পণ্য যোগ করবেন তা এখানে দেখাবে।",
       "noActiveCategory": "আগে একটি সক্রিয় ক্যাটাগরি তৈরি করুন।",
-      "perUnit": "প্রতি {unit}"
+      "perUnit": "প্রতি {unit}",
+      "lastPurchasePrice": "শেষ কেনা-দাম",
+      "lastPurchasedAt": "শেষ কেনার তারিখ",
+      "neverPurchased": "এখনো কেনা হয়নি"
     },
     "categories": {
       "title": "ক্যাটাগরি",
@@ -589,7 +592,6 @@
       "commission_view": "কমিশন দেখা",
       "commission_manage": "কমিশন scheme ব্যবস্থাপনা",
       "profit_view": "লাভ দেখা",
-      "product_price_edit": "তৈরির পরে কেনা-দাম ও বিক্রয়মূল্য বদল (কারণসহ)",
       "product_deactivate": "পণ্য ও ক্যাটাগরি নিষ্ক্রিয়/সক্রিয় (কারণসহ)",
       "customer_balance_edit": "তৈরির পরে শুরুর বাকি ও ক্রেডিট সীমা বদল (কারণসহ)",
       "customer_deactivate": "গ্রাহক নিষ্ক্রিয়/সক্রিয় (কারণসহ)",
@@ -671,7 +673,6 @@
       "noValues": "আপনার দেখার মতো কোনো মান নেই।"
     },
     "fields": {
-      "purchasePrice": "কেনা-দাম",
       "openingBalance": "প্রারম্ভিক বাকি",
       "creditLimit": "ঋণসীমা",
       "isActive": "অবস্থা"
@@ -683,7 +684,6 @@
       "empty": "—"
     },
     "impact": {
-      "product_purchasePrice": "কেনা-দাম",
       "product_isActive": "পণ্যের অবস্থা",
       "customer_openingBalance": "প্রারম্ভিক বাকি",
       "customer_currentBalance": "বর্তমান বাকি",

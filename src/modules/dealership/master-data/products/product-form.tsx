@@ -6,30 +6,23 @@ import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useErrorMessage } from '@/core/api/field-errors';
 import { useCan } from '@/core/auth/can';
 import { localizedName } from '@/core/auth/types';
-import { MONEY_PATTERN, cleanMoneyInput, sameMoney } from '@/core/lib/money';
 import { Button } from '@/core/ui/button';
 import { Field, inputClass } from '@/core/ui/text-field';
 import { useCategories, useSaveProduct, useUnits, type ProductInput } from '../api';
-import {
-  MoneyInput,
-  ReasonInput,
-  SensitiveSection,
-  TextInput,
-  reasonError,
-} from '../shared/fields';
+import { SensitiveSection, TextInput } from '../shared/fields';
 import { CategoryDialog } from '../categories/category-dialog';
 import { FormError, ListSkeleton, Notice } from '../shared/states';
 import { useProductRequestTarget } from '../shared/correction';
 import { RequestChangeButton } from '@/core/approvals/request-dialog';
 import { LIMITS, type Category, type Product } from '../types';
 
-const FIELDS = ['categoryId', 'nameEn', 'nameBn', 'unitKey', 'purchasePrice', 'reason'] as const;
+const FIELDS = ['categoryId', 'nameEn', 'nameBn', 'unitKey'] as const;
 type FieldName = (typeof FIELDS)[number];
 
 /**
  * Create (no `product`) or edit a product. Rules from jesan-api DTOs: names 1–120 characters,
- * money up to 12 digits and 2 decimals as a string. On edit only changed fields are sent; price
- * changes need `product.price.edit` and a reason (owner level), otherwise prices are read-only.
+ * on edit only changed fields are sent. Products carry no hand-set price: the last purchase price
+ * is read-only and comes from purchases. Deactivating lives on the detail page and the list.
  */
 export function ProductForm({
   slug,
@@ -45,8 +38,6 @@ export function ProductForm({
   const locale = useLocale();
   const router = useRouter();
   const id = useId();
-  const canSeeCost = useCan('product.cost.view');
-  const canEditPrice = useCan('product.price.edit');
   const canManage = useCan('product.manage');
   const [creatingCategory, setCreatingCategory] = useState(false);
   // A category made from this form is shown at once, before the refreshed list arrives.
@@ -55,17 +46,12 @@ export function ProductForm({
   const units = useUnits(slug, businessId);
   const save = useSaveProduct(slug, businessId);
   const isEdit = Boolean(product);
-  const pricesEditable = !isEdit || canEditPrice;
-  // Purchase price: only with cost permission, and only if the API sent it (edit).
-  const showCost = canSeeCost && (!product || 'purchasePrice' in product);
 
   const [values, setValues] = useState({
     categoryId: product?.category.id ?? '',
     nameEn: product?.nameEn ?? '',
     nameBn: product?.nameBn ?? '',
     unitKey: product?.unitKey ?? '',
-    purchasePrice: product?.purchasePrice ?? '',
-    reason: '',
   });
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -86,15 +72,10 @@ export function ProductForm({
     return list;
   }, [categories.data, madeHere, product]);
 
-  // Products have no sale price (set per sale on the invoice); the only price is the purchase price.
-  const priceChanged =
-    isEdit && showCost && !sameMoney(cleanMoneyInput(values.purchasePrice), product?.purchasePrice);
-
   /** The body to send: everything on create; only real changes on edit. */
   const buildBody = (): ProductInput => {
     const nameEn = values.nameEn.trim();
     const nameBn = values.nameBn.trim();
-    const cost = cleanMoneyInput(values.purchasePrice);
     if (!product) {
       const body: ProductInput = {
         categoryId: values.categoryId,
@@ -102,7 +83,6 @@ export function ProductForm({
         nameBn,
       };
       if (unitKey) body.unitKey = unitKey;
-      if (showCost && cost) body.purchasePrice = cost;
       return body;
     }
     const body: ProductInput = {};
@@ -110,12 +90,6 @@ export function ProductForm({
     if (nameEn !== product.nameEn) body.nameEn = nameEn;
     if (nameBn !== product.nameBn) body.nameBn = nameBn;
     if (unitKey && unitKey !== product.unitKey) body.unitKey = unitKey;
-    if (canEditPrice) {
-      if (showCost && !sameMoney(cost, product.purchasePrice)) {
-        body.purchasePrice = cost;
-        body.reason = values.reason.trim();
-      }
-    }
     return body;
   };
 
@@ -124,15 +98,6 @@ export function ProductForm({
     if (!values.categoryId) found.categoryId = t('common.required');
     if (!values.nameEn.trim()) found.nameEn = t('common.required');
     if (!values.nameBn.trim()) found.nameBn = t('common.required');
-    if (pricesEditable) {
-      const cost = cleanMoneyInput(values.purchasePrice);
-      if (showCost && cost && !MONEY_PATTERN.test(cost))
-        found.purchasePrice = t('common.moneyInvalid');
-      if (showCost && isEdit && !cost) found.purchasePrice = t('common.required');
-    }
-    if (priceChanged && canEditPrice && reasonError(values.reason)) {
-      found.reason = t('common.reasonRequired');
-    }
     return found;
   };
 
@@ -246,45 +211,17 @@ export function ProductForm({
           </select>
         </Field>
 
-        {!showCost ? (
-          isEdit && requestTarget ? (
-            <SensitiveSection
-              editable={false}
-              requestSlot={
-                <RequestChangeButton slug={slug} target={requestTarget} onSent={setSent} />
-              }
-            >
-              {null}
-            </SensitiveSection>
-          ) : null
-        ) : isEdit ? (
+        {/* Staff who may only ASK to deactivate get the request button here (owner-level box). */}
+        {isEdit && requestTarget ? (
           <SensitiveSection
-            editable={canEditPrice}
+            editable={false}
             requestSlot={
-              requestTarget ? (
-                <RequestChangeButton slug={slug} target={requestTarget} onSent={setSent} />
-              ) : null
+              <RequestChangeButton slug={slug} target={requestTarget} onSent={setSent} />
             }
           >
-            <PriceFields
-              id={id}
-              values={values}
-              set={set}
-              errors={errors}
-              readOnly={!canEditPrice}
-            />
-            {canEditPrice && priceChanged ? (
-              <ReasonInput
-                id={`${id}-reason`}
-                value={values.reason}
-                onChange={set('reason')}
-                error={errors.reason}
-              />
-            ) : null}
+            {null}
           </SensitiveSection>
-        ) : (
-          <PriceFields id={id} values={values} set={set} errors={errors} readOnly={false} />
-        )}
+        ) : null}
 
         <div className="flex flex-wrap gap-2 pt-2">
           <Button
@@ -319,34 +256,5 @@ export function ProductForm({
         />
       ) : null}
     </>
-  );
-}
-
-/** Only the purchase price (shown only with `product.cost.view` and when the API sent it). */
-function PriceFields({
-  id,
-  values,
-  set,
-  errors,
-  readOnly,
-}: {
-  id: string;
-  values: { purchasePrice: string };
-  set: (field: 'purchasePrice') => (value: string) => void;
-  errors: Partial<Record<FieldName, string>>;
-  readOnly: boolean;
-}) {
-  const t = useTranslations('dealership');
-  return (
-    <div className="grid gap-5 sm:grid-cols-2">
-      <MoneyInput
-        id={`${id}-cost`}
-        label={t('products.purchasePrice')}
-        value={values.purchasePrice}
-        onChange={set('purchasePrice')}
-        error={errors.purchasePrice}
-        readOnly={readOnly}
-      />
-    </div>
   );
 }

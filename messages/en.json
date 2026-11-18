@@ -88,7 +88,6 @@
       "PROPOSED_CHANGE_EMPTY": "Choose at least one value to change.",
       "PROPOSED_CHANGE_NOT_ALLOWED": "A void request cannot propose new values.",
       "FIELD_NOT_CHANGEABLE": "This field cannot be changed by request; edit it directly.",
-      "PURCHASE_PRICE_INVALID": "Enter the purchase price like 570 or 570.50.",
       "OPENING_BALANCE_INVALID": "Enter the opening due like 570 or -570.50.",
       "CREDIT_LIMIT_INVALID": "Enter the credit limit like 50000, or leave it empty for no limit.",
       "IS_ACTIVE_INVALID": "The active status is not valid.",
@@ -112,7 +111,9 @@
       "NOTE_TOO_LONG": "The note can have at most 500 characters.",
       "SORT_ORDER_TOO_LARGE": "The display order can be at most 10000.",
       "CATEGORY_ID_INVALID": "Choose a category.",
-      "DEFAULT_SALE_PRICE_NOT_ALLOWED": "Products have no sale price; the price is set on each sale."
+      "DEFAULT_SALE_PRICE_NOT_ALLOWED": "Products have no sale price; the price is set on each sale.",
+      "PURCHASE_PRICE_NOT_ALLOWED": "The purchase price cannot be set here; it comes from purchases.",
+      "LAST_PURCHASE_PRICE_NOT_ALLOWED": "The last purchase price is read-only; it comes from purchases."
     },
     "problems": {
       "REQUIRED": "This field is required.",
@@ -324,11 +325,13 @@
       "editTitle": "Edit {name}",
       "category": "Category",
       "unit": "Unit",
-      "purchasePrice": "Purchase price",
       "emptyTitle": "No products yet",
       "emptyDescription": "Products you add will appear here.",
       "noActiveCategory": "Create an active category first.",
-      "perUnit": "per {unit}"
+      "perUnit": "per {unit}",
+      "lastPurchasePrice": "Last purchase price",
+      "lastPurchasedAt": "Last purchased",
+      "neverPurchased": "Not purchased yet"
     },
     "categories": {
       "title": "Categories",
@@ -589,7 +592,6 @@
       "commission_view": "View commission",
       "commission_manage": "Manage commission schemes",
       "profit_view": "View profit",
-      "product_price_edit": "Change prices after creation (with reason)",
       "product_deactivate": "Deactivate or activate products and categories (with reason)",
       "customer_balance_edit": "Change opening due and credit limit after creation (with reason)",
       "customer_deactivate": "Deactivate or activate customers (with reason)",
@@ -671,7 +673,6 @@
       "noValues": "No values you may see."
     },
     "fields": {
-      "purchasePrice": "Purchase price",
       "openingBalance": "Opening due",
       "creditLimit": "Credit limit",
       "isActive": "Status"
@@ -683,7 +684,6 @@
       "empty": "—"
     },
     "impact": {
-      "product_purchasePrice": "Purchase price",
       "product_isActive": "Product status",
       "customer_openingBalance": "Opening due",
       "customer_currentBalance": "Current due",
