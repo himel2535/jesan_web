@@ -33,6 +33,7 @@ export function ProductDetail({
   const saved = useSearchParams().get('saved');
   const canManage = useCan('product.manage');
   const canDeactivate = useCan('product.deactivate');
+  const canSeeCost = useCan('product.cost.view');
   const query = useProduct(slug, businessId, id);
   const units = useUnits(slug, businessId);
   const save = useSaveProduct(slug, businessId);
@@ -55,8 +56,19 @@ export function ProductDetail({
     { label: t('products.category'), value: nameOf(p.category) },
     { label: t('products.unit'), value: unit ? localizedName(unit, locale) : p.unitKey },
     // Only when the API sent it (product.cost.view); otherwise the row does not exist at all.
-    ...('purchasePrice' in p && p.purchasePrice !== undefined
-      ? [{ label: t('products.purchasePrice'), value: <Money value={p.purchasePrice} /> }]
+    // Only with product.cost.view AND when the API sent it; read-only, set by purchases.
+    ...(canSeeCost && 'lastPurchasePrice' in p
+      ? p.lastPurchasePrice
+        ? [
+            {
+              label: t('products.lastPurchasePrice'),
+              value: <Money value={p.lastPurchasePrice} />,
+            },
+            ...(p.lastPurchasedAt
+              ? [{ label: t('products.lastPurchasedAt'), value: format.date(p.lastPurchasedAt) }]
+              : []),
+          ]
+        : [{ label: t('products.lastPurchasePrice'), value: t('products.neverPurchased') }]
       : []),
     { label: t('common.status'), value: <StatusBadge active={p.isActive} /> },
     { label: t('common.createdAt'), value: format.date(p.createdAt) },

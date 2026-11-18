@@ -52,28 +52,28 @@ const render = (ui: ReactElement, me: Me, locale: 'en' | 'bn' = 'en') =>
 function request(overrides: Partial<ChangeRequest> = {}): ChangeRequest {
   return {
     id: 'cr1',
-    entityType: 'product',
-    entityId: 'p1',
-    entityLabel: 'P-0001 Sample OPC 50kg',
+    entityType: 'customer',
+    entityId: 'cu1',
+    entityLabel: 'C-00002 Sample Store Two',
     kind: 'edit',
-    summary: 'Active: true → false; Purchase price: 540.00 → 545.00',
+    summary: 'Active: true → false; Credit limit: 50000.00 → 60000.00',
     status: 'pending',
     requestedBy: { id: managerMe.user.id, name: 'Rahim Uddin' },
     requestedAt: '2026-11-18T06:38:56.479Z',
     decidedBy: null,
     decidedAt: null,
     reason: 'Supplier changed the rate',
-    snapshot: { isActive: true, purchasePrice: '540.00' },
-    proposedChange: { isActive: false, purchasePrice: '545.00' },
+    snapshot: { isActive: true, creditLimit: '50000.00' },
+    proposedChange: { isActive: false, creditLimit: '60000.00' },
     impact: [
       {
-        key: 'product.isActive',
+        key: 'customer.isActive',
         label: 'Active',
         before: true,
         after: false,
         note: 'While inactive it cannot be chosen for new entries; existing records stay.',
       },
-      { key: 'product.purchasePrice', label: 'Purchase price', before: '540.00', after: '545.00' },
+      { key: 'customer.creditLimit', label: 'Credit limit', before: '50000.00', after: '60000.00' },
     ],
     isStale: false,
     decisionNote: null,
@@ -89,39 +89,41 @@ describe('<ApprovalsList>', () => {
       const api = mockApi({ [`GET ${BASE}`]: () => json(200, page([request()])) });
       return { ...api, ...render(<ApprovalsList slug="example-cement" scope="all" />, owner) };
     })();
-    const row = (await screen.findByRole('rowheader', { name: /P-0001 Sample OPC 50kg/ })).closest(
-      'tr',
-    )!;
-    expect(row).toHaveTextContent('Product · P-0001 Sample OPC 50kg');
-    expect(row).toHaveTextContent('Purchase price: 540.00 → 545.00');
+    const row = (
+      await screen.findByRole('rowheader', { name: /C-00002 Sample Store Two/ })
+    ).closest('tr')!;
+    expect(row).toHaveTextContent('Customer · C-00002 Sample Store Two');
+    expect(row).toHaveTextContent('Credit limit: 50000.00 → 60000.00');
     expect(row).toHaveTextContent('Rahim Uddin');
     expect(row).toHaveTextContent('Pending');
     expect(container).not.toHaveTextContent('Supplier changed the rate');
     expect(
-      within(row).getByRole('link', { name: 'Details of the request for P-0001 Sample OPC 50kg' }),
+      within(row).getByRole('link', {
+        name: 'Details of the request for C-00002 Sample Store Two',
+      }),
     ).toHaveAttribute('href', '/b/example-cement/approvals/cr1');
     expect(calls[0]!.url).toBe('/api/v1/b/example-cement/change-requests?page=1');
     await expectNoA11yViolations(container);
   });
 
   it('filters come from and go to the URL; mine has only the status filter', async () => {
-    nav.search = 'status=pending&entityType=product&entityId=p1&page=2';
+    nav.search = 'status=pending&entityType=customer&entityId=cu1&page=2';
     const { calls } = mockApi({ [`GET ${BASE}`]: () => json(200, page([request()])) });
     render(<ApprovalsList slug="example-cement" scope="all" />, owner);
     expect(
-      await screen.findByText('Only requests for: P-0001 Sample OPC 50kg'),
+      await screen.findByText('Only requests for: C-00002 Sample Store Two'),
     ).toBeInTheDocument();
     expect(calls[0]!.url).toBe(
-      '/api/v1/b/example-cement/change-requests?status=pending&entityType=product&entityId=p1&page=2',
+      '/api/v1/b/example-cement/change-requests?status=pending&entityType=customer&entityId=cu1&page=2',
     );
     await userEvent.selectOptions(screen.getByLabelText('Status'), 'approved');
     expect(nav.replace).toHaveBeenLastCalledWith(
-      '/b/example-cement/approvals/all?status=approved&entityType=product&entityId=p1',
+      '/b/example-cement/approvals/all?status=approved&entityType=customer&entityId=cu1',
       { scroll: false },
     );
     await userEvent.click(screen.getByRole('button', { name: 'Show all records' }));
     expect(nav.replace).toHaveBeenLastCalledWith(
-      '/b/example-cement/approvals/all?status=pending&entityType=product',
+      '/b/example-cement/approvals/all?status=pending&entityType=customer',
       { scroll: false },
     );
   });
@@ -167,13 +169,13 @@ describe('<ApprovalDetail>', () => {
       owner,
     );
     expect(
-      await screen.findByRole('heading', { name: 'P-0001 Sample OPC 50kg' }),
+      await screen.findByRole('heading', { name: 'C-00002 Sample Store Two' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Supplier changed the rate')).toBeInTheDocument();
-    const values = screen.getByRole('rowheader', { name: 'Purchase price' }).closest('tr')!;
-    expect(values).toHaveTextContent('৳540.00');
-    expect(values).toHaveTextContent('৳545.00');
-    expect(screen.getByText('Product status')).toBeInTheDocument();
+    const values = screen.getByRole('rowheader', { name: 'Credit limit' }).closest('tr')!;
+    expect(values).toHaveTextContent('৳50,000.00');
+    expect(values).toHaveTextContent('৳60,000.00');
+    expect(screen.getByText('Customer status')).toBeInTheDocument();
     expect(
       screen.getByText(
         'While inactive it cannot be chosen for new entries; existing records stay.',
@@ -192,7 +194,7 @@ describe('<ApprovalDetail>', () => {
     const keys = invalidate.mock.calls.map(([f]) => JSON.stringify(f?.queryKey));
     expect(keys).toEqual([
       JSON.stringify(['dealership', 'b1', 'change-requests']),
-      JSON.stringify(['dealership', 'b1', 'products']),
+      JSON.stringify(['dealership', 'b1', 'customers']),
     ]);
   });
 
@@ -243,7 +245,7 @@ describe('<ApprovalDetail>', () => {
   it('staff without change.approve: no decision buttons on someone else’s request', async () => {
     mockApi(detail(request({ requestedBy: { id: 'u77', name: 'Other' } })));
     render(<ApprovalDetail slug="example-cement" id="cr1" />, staffMe);
-    await screen.findByRole('heading', { name: 'P-0001 Sample OPC 50kg' });
+    await screen.findByRole('heading', { name: 'C-00002 Sample Store Two' });
     expect(
       screen.queryByRole('button', { name: /Approve|Reject|Withdraw/ }),
     ).not.toBeInTheDocument();
@@ -255,7 +257,7 @@ describe('<ApprovalDetail>', () => {
     expect(await screen.findByText('This request is out of date')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open the record to request again' })).toHaveAttribute(
       'href',
-      '/b/example-cement/products/p1',
+      '/b/example-cement/customers/cu1',
     );
     expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument();
@@ -293,10 +295,10 @@ describe('<ApprovalDetail>', () => {
     mockApi(
       detail(
         request({
-          summary: 'Purchase price changed',
+          summary: 'Credit limit changed',
           snapshot: { isActive: true },
           proposedChange: { isActive: false },
-          impact: [{ key: 'product.isActive', label: 'Active', before: true, after: false }],
+          impact: [{ key: 'customer.isActive', label: 'Active', before: true, after: false }],
         }),
       ),
     );
@@ -306,7 +308,7 @@ describe('<ApprovalDetail>', () => {
       'bn',
     );
     expect(await screen.findByRole('rowheader', { name: 'অবস্থা' })).toBeInTheDocument();
-    expect(container).not.toHaveTextContent('কেনা-দাম');
+    expect(container).not.toHaveTextContent('ঋণসীমা');
     expect(container).not.toHaveTextContent('৳');
     unmount();
     mockApi({ [`GET ${BASE}/cr1`]: () => apiError(404, 'CHANGE_REQUEST_NOT_FOUND') });

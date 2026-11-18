@@ -22,7 +22,6 @@ export const OWNER_PERMISSIONS = [
   'product.cost.view',
   'product.deactivate',
   'product.manage',
-  'product.price.edit',
   'product.view',
   'profit.view',
   'purchase.create',

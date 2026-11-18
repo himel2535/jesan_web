@@ -38,8 +38,12 @@ export interface Product {
   nameEn: string;
   nameBn: string;
   unitKey: string;
-  /** Absent (not null) without `product.cost.view`. */
-  purchasePrice?: string;
+  /**
+   * Read-only: price and time of the last valid purchase (set by purchases, never by hand).
+   * Both null until the first purchase; both absent (not null) without `product.cost.view`.
+   */
+  lastPurchasePrice?: string | null;
+  lastPurchasedAt?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

@@ -118,7 +118,7 @@ export function ChangeRequestDialog({
   const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [pendingLink, setPendingLink] = useState<string | null>(null);
+  const [pendingLink, setPendingLink] = useState<{ href: string; one: boolean } | null>(null);
   const [reviewed, setReviewed] = useState<{ key: string; result: ChangePreview } | null>(null);
   const base = `/b/${encodeURIComponent(slug)}/approvals`;
 
@@ -183,9 +183,17 @@ export function ChangeRequestDialog({
     }
   };
 
-  const findPendingLink = async () => {
+  const findPendingLink = async (cause: ApiError) => {
+    // The API names the pending request when the user may open it (own, or change.view.all).
+    const pendingId = cause.body?.changeRequestId;
+    if (typeof pendingId === 'string' && pendingId) {
+      return { href: `${base}/${encodeURIComponent(pendingId)}`, one: true };
+    }
     if (canViewAll) {
-      return `${base}/all?entityId=${encodeURIComponent(target.entityId)}&status=pending`;
+      return {
+        href: `${base}/all?entityId=${encodeURIComponent(target.entityId)}&status=pending`,
+        one: false,
+      };
     }
     if (!canViewOwn) return null;
     try {
@@ -194,7 +202,7 @@ export function ChangeRequestDialog({
         { query: { status: 'pending', page: 1 } },
       );
       const own = mine.items.find((r) => r.entityId === target.entityId);
-      return own ? `${base}/${encodeURIComponent(own.id)}` : null;
+      return own ? { href: `${base}/${encodeURIComponent(own.id)}`, one: true } : null;
     } catch {
       return null;
     }
@@ -215,7 +223,7 @@ export function ChangeRequestDialog({
       // Typed values and the reason stay; only the message changes.
       showError(cause);
       if (cause instanceof ApiError && cause.code === 'CHANGE_REQUEST_PENDING_EXISTS') {
-        setPendingLink(await findPendingLink());
+        setPendingLink(await findPendingLink(cause));
       }
     } finally {
       inFlight.current = false;
@@ -238,8 +246,8 @@ export function ChangeRequestDialog({
             <div className="space-y-1 rounded-lg border border-danger px-3 py-2 text-sm font-medium text-danger">
               <p>{formError}</p>
               {pendingLink ? (
-                <Link href={pendingLink} prefetch={false} className="text-fg underline">
-                  {canViewAll ? t('viewPendingList') : t('viewPending')}
+                <Link href={pendingLink.href} prefetch={false} className="text-fg underline">
+                  {pendingLink.one ? t('viewPending') : t('viewPendingList')}
                 </Link>
               ) : null}
             </div>

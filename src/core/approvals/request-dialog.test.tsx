@@ -14,7 +14,7 @@ import { RequestChangeButton, type RequestTarget } from './request-dialog';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), prefetch: vi.fn() }),
-  usePathname: () => '/b/example-cement/products/p1',
+  usePathname: () => '/b/example-cement/customers/cu1',
   useSearchParams: () => new URLSearchParams(),
 }));
 afterEach(() => vi.unstubAllGlobals());
@@ -27,16 +27,16 @@ const staffMe: Me = {
   ],
 };
 const target: RequestTarget = {
-  entityType: 'product',
-  entityId: 'p1',
-  name: 'Sample OPC 50kg',
-  fields: [{ key: 'purchasePrice', type: 'money', current: '540.00' }],
+  entityType: 'customer',
+  entityId: 'cu1',
+  name: 'Sample Store Two',
+  fields: [{ key: 'creditLimit', type: 'moneyOrNone', current: '50000.00' }],
   status: { currentlyActive: true },
 };
 const preview = {
-  entityLabel: 'P-0001 Sample OPC 50kg',
+  entityLabel: 'C-00002 Sample Store Two',
   impact: [
-    { key: 'product.purchasePrice', label: 'Purchase price', before: '540.00', after: '545.00' },
+    { key: 'customer.creditLimit', label: 'Credit limit', before: '50000.00', after: '60000.00' },
   ],
 };
 
@@ -50,12 +50,12 @@ function setup(me: Me = staffMe, routes = {}, locale: 'en' | 'bn' = 'en') {
   return { ...api, ...view, onSent };
 }
 
-async function fillAndReview(price = '545') {
+async function fillAndReview(price = '60000') {
   await userEvent.click(screen.getByRole('button', { name: 'Request a correction' }));
-  const dialog = screen.getByRole('dialog', { name: 'Request a correction: Sample OPC 50kg' });
-  await userEvent.click(within(dialog).getByLabelText(/Change Purchase price/));
-  await userEvent.clear(within(dialog).getByLabelText('New Purchase price'));
-  await userEvent.type(within(dialog).getByLabelText('New Purchase price'), price);
+  const dialog = screen.getByRole('dialog', { name: 'Request a correction: Sample Store Two' });
+  await userEvent.click(within(dialog).getByLabelText(/Change Credit limit/));
+  await userEvent.clear(within(dialog).getByLabelText('New Credit limit'));
+  await userEvent.type(within(dialog).getByLabelText('New Credit limit'), price);
   await userEvent.type(within(dialog).getByLabelText('Reason for the request'), 'Supplier rate');
   await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
   return dialog;
@@ -70,10 +70,10 @@ describe('<RequestChangeButton> / dialog', () => {
     const dialog = await fillAndReview();
     expect(await within(dialog).findByText('Effect if approved')).toBeInTheDocument();
     expect(calls.find((c) => c.url.endsWith('/preview'))!.body).toEqual({
-      entityType: 'product',
-      entityId: 'p1',
+      entityType: 'customer',
+      entityId: 'cu1',
       kind: 'edit',
-      proposedChange: { purchasePrice: '545' },
+      proposedChange: { creditLimit: '60000' },
     });
     await expectNoA11yViolations(container);
 
@@ -81,11 +81,11 @@ describe('<RequestChangeButton> / dialog', () => {
     const sends = calls.filter((c) => c.method === 'POST' && c.path === BASE);
     expect(sends).toHaveLength(1);
     expect(sends[0]!.body).toEqual({
-      entityType: 'product',
-      entityId: 'p1',
+      entityType: 'customer',
+      entityId: 'cu1',
       kind: 'edit',
       reason: 'Supplier rate',
-      proposedChange: { purchasePrice: '545' },
+      proposedChange: { creditLimit: '60000' },
     });
     expect(sends[0]!.headers.get('Idempotency-Key')).toMatch(/^[\w-]{8,64}$/);
     await act(async () => resolve(json(201, { id: 'cr1' })));
@@ -98,11 +98,11 @@ describe('<RequestChangeButton> / dialog', () => {
     const { calls } = setup();
     const dialog = await fillAndReview();
     await within(dialog).findByText('Effect if approved');
-    await userEvent.type(within(dialog).getByLabelText('New Purchase price'), '0');
+    await userEvent.type(within(dialog).getByLabelText('New Credit limit'), '0');
     expect(within(dialog).queryByRole('button', { name: 'Send request' })).not.toBeInTheDocument();
     expect(within(dialog).getByText('Review the effect before sending.')).toBeInTheDocument();
 
-    await userEvent.click(within(dialog).getByLabelText(/Change Purchase price/));
+    await userEvent.click(within(dialog).getByLabelText(/Change Credit limit/));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
     expect(within(dialog).getByText('Choose at least one change.')).toBeInTheDocument();
     expect(calls.filter((c) => c.url.endsWith('/preview'))).toHaveLength(1);
@@ -119,7 +119,7 @@ describe('<RequestChangeButton> / dialog', () => {
     expect(
       await within(dialog).findByText('The server is not available right now. Try again soon.'),
     ).toBeInTheDocument();
-    expect(within(dialog).getByLabelText('New Purchase price')).toHaveValue('545');
+    expect(within(dialog).getByLabelText('New Credit limit')).toHaveValue('60000');
     expect(within(dialog).getByLabelText('Reason for the request')).toHaveValue('Supplier rate');
     fail = false;
     await userEvent.click(within(dialog).getByRole('button', { name: 'Send request' }));
@@ -131,11 +131,30 @@ describe('<RequestChangeButton> / dialog', () => {
     expect(keys[0]).toBe(keys[1]);
   });
 
-  it('409 pending exists (staff): links to their own pending request', async () => {
+  it('409 pending exists with changeRequestId: a direct link to that request', async () => {
+    const { calls } = setup(staffMe, {
+      [`POST ${BASE}`]: () =>
+        json(409, {
+          statusCode: 409,
+          message: 'x',
+          code: 'CHANGE_REQUEST_PENDING_EXISTS',
+          changeRequestId: 'cr42',
+        }),
+    });
+    const dialog = await fillAndReview();
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Send request' }));
+    expect(
+      await within(dialog).findByRole('link', { name: 'See the pending request' }),
+    ).toHaveAttribute('href', '/b/example-cement/approvals/cr42');
+    // No need to search "mine" when the API names the request.
+    expect(calls.some((c) => c.path.endsWith('/mine'))).toBe(false);
+  });
+
+  it('409 pending exists without an id (staff): finds their own pending request', async () => {
     setup(staffMe, {
       [`POST ${BASE}`]: () => apiError(409, 'CHANGE_REQUEST_PENDING_EXISTS'),
       [`GET ${BASE}/mine`]: () =>
-        json(200, { items: [{ id: 'cr9', entityId: 'p1' }], page: 1, pageSize: 10, total: 1 }),
+        json(200, { items: [{ id: 'cr9', entityId: 'cu1' }], page: 1, pageSize: 10, total: 1 }),
     });
     const dialog = await fillAndReview();
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Send request' }));
@@ -159,7 +178,7 @@ describe('<RequestChangeButton> / dialog', () => {
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Send request' }));
     expect(
       await within(dialog).findByRole('link', { name: 'See pending requests for this record' }),
-    ).toHaveAttribute('href', '/b/example-cement/approvals/all?entityId=p1&status=pending');
+    ).toHaveAttribute('href', '/b/example-cement/approvals/all?entityId=cu1&status=pending');
   });
 
   it('server field error under its field; status request; Bengali', async () => {
@@ -167,20 +186,20 @@ describe('<RequestChangeButton> / dialog', () => {
       staffMe,
       {
         [`POST ${BASE}/preview`]: () =>
-          apiError(400, 'PURCHASE_PRICE_INVALID', 'proposedChange.purchasePrice'),
+          apiError(400, 'CREDIT_LIMIT_INVALID', 'proposedChange.creditLimit'),
       },
       'bn',
     );
     await userEvent.click(screen.getByRole('button', { name: 'সংশোধনের অনুরোধ' }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('নিষ্ক্রিয় করার অনুরোধ')).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByLabelText(/কেনা-দাম বদলান/));
-    await userEvent.clear(within(dialog).getByLabelText('নতুন কেনা-দাম'));
-    await userEvent.type(within(dialog).getByLabelText('নতুন কেনা-দাম'), '1');
+    await userEvent.click(within(dialog).getByLabelText(/ঋণসীমা বদলান/));
+    await userEvent.clear(within(dialog).getByLabelText('নতুন ঋণসীমা'));
+    await userEvent.type(within(dialog).getByLabelText('নতুন ঋণসীমা'), '1');
     await userEvent.click(within(dialog).getByRole('button', { name: 'পর্যালোচনা' }));
     await vi.waitFor(() =>
-      expect(within(dialog).getByLabelText('নতুন কেনা-দাম')).toHaveAccessibleDescription(
-        'কেনা-দাম লিখুন যেমন 570 বা 570.50।',
+      expect(within(dialog).getByLabelText('নতুন ঋণসীমা')).toHaveAccessibleDescription(
+        /ঋণসীমা লিখুন যেমন 50000, বা সীমা না থাকলে খালি রাখুন।/,
       ),
     );
   });

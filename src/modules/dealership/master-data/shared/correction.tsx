@@ -23,18 +23,14 @@ function finish(
 export function useProductRequestTarget(p: Product | undefined): RequestTarget | null {
   const nameOf = useNameOf();
   const canRequest = useCan('change.request');
-  const canSeeCost = useCan('product.cost.view');
-  const canEditPrice = useCan('product.price.edit');
   const canDeactivate = useCan('product.deactivate');
   if (!p) return null;
   return finish(canRequest, {
     entityType: 'product',
     entityId: p.id,
     name: nameOf(p),
-    fields:
-      canSeeCost && !canEditPrice && p.purchasePrice !== undefined
-        ? [{ key: 'purchasePrice', type: 'money', current: p.purchasePrice }]
-        : [],
+    // Products have no hand-set price any more; only (de)activation can be requested.
+    fields: [],
     status: canDeactivate ? undefined : { currentlyActive: p.isActive },
   });
 }
