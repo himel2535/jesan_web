@@ -28,4 +28,11 @@ export const dealershipManifest = {
     { key: 'reports', path: 'reports', icon: 'chart', permission: 'reports.finance.view' },
     { key: 'settings', path: 'settings', icon: 'settings', permission: 'settings.view' },
   ],
+  // Change requests (core approvals inbox): record page + what an approval refreshes.
+  changeEntities: {
+    product: { path: 'products/:id', invalidate: ['products'] },
+    customer: { path: 'customers/:id', invalidate: ['customers'] },
+    // A category's status shows in every product row too.
+    product_category: { path: 'products/categories/:id', invalidate: ['categories', 'products'] },
+  },
 } as const satisfies ModuleManifest;

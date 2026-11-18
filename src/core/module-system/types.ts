@@ -25,4 +25,17 @@ export interface ModuleManifest {
    */
   namespace: string;
   nav: readonly ModuleNavEntry[];
+  /**
+   * Records that change requests (docs/API.md §10) can be about, by API `entityType`: where the
+   * record's page is, and which entity query keys to refresh after an approval. Plain data, so
+   * the server can hand it to client components.
+   */
+  changeEntities?: Readonly<Record<string, ChangeEntityConfig>>;
+}
+
+export interface ChangeEntityConfig {
+  /** Page of one record inside the business, with `:id`, e.g. 'products/:id'. */
+  path: string;
+  /** Entity keys of the module to refresh after an approval, e.g. ['products']. */
+  invalidate: readonly string[];
 }

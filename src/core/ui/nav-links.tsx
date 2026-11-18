@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/core/navigation/types';
 import { cn } from './cn';
 import { navIcons } from './icons';
+import { PendingApprovalsBadge } from '@/core/approvals/pending-badge';
 
 export function isActive(pathname: string, href: string, exact = false): boolean {
   if (href === '/' || exact) return pathname === href;
@@ -45,13 +46,16 @@ export function NavLinks({
               aria-current={active ? 'page' : undefined}
               title={collapsed ? item.label : undefined}
               className={cn(
-                'flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium',
+                'relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium',
                 active ? 'bg-primary text-primary-fg' : 'text-fg hover:bg-surface-muted',
                 collapsed && 'justify-center px-0',
               )}
             >
               <Icon aria-hidden className="size-5 shrink-0" />
               <span className={cn(collapsed && 'sr-only')}>{item.label}</span>
+              {item.badge === 'pendingApprovals' ? (
+                <PendingApprovalsBadge collapsed={collapsed} />
+              ) : null}
             </Link>
           </li>
         );
