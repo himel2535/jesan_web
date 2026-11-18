@@ -17,8 +17,9 @@ import {
   TextInput,
   reasonError,
 } from '../shared/fields';
+import { CategoryDialog } from '../categories/category-dialog';
 import { FormError, ListSkeleton } from '../shared/states';
-import { LIMITS, type Product } from '../types';
+import { LIMITS, type Category, type Product } from '../types';
 
 type FieldName =
   'categoryId' | 'nameEn' | 'nameBn' | 'purchasePrice' | 'defaultSalePrice' | 'reason';
@@ -43,6 +44,10 @@ export function ProductForm({
   const id = useId();
   const canSeeCost = useCan('product.cost.view');
   const canEditPrice = useCan('product.price.edit');
+  const canManage = useCan('product.manage');
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  // A category made from this form is shown at once, before the refreshed list arrives.
+  const [madeHere, setMadeHere] = useState<Category[]>([]);
   const categories = useCategories(slug, businessId, 'true');
   const units = useUnits(slug, businessId);
   const save = useSaveProduct(slug, businessId);
@@ -69,12 +74,13 @@ export function ProductForm({
   const unitKey = values.unitKey || units.data?.defaultUnitKey || '';
   // On edit the current category stays selectable even if it has been deactivated since.
   const categoryOptions = useMemo(() => {
-    const list = categories.data ?? [];
+    const fetched = categories.data ?? [];
+    const list = [...fetched, ...madeHere.filter((m) => !fetched.some((c) => c.id === m.id))];
     if (product && !list.some((c) => c.id === product.category.id)) {
       return [{ ...product.category, id: product.category.id }, ...list];
     }
     return list;
-  }, [categories.data, product]);
+  }, [categories.data, madeHere, product]);
 
   const priceChanged =
     isEdit &&
@@ -164,115 +170,143 @@ export function ProductForm({
   const noCategory = !product && categoryOptions.length === 0;
 
   return (
-    <form noValidate onSubmit={onSubmit} className="max-w-2xl space-y-5">
-      <FormError message={serverError ?? (noCategory ? t('products.noActiveCategory') : null)} />
-
-      <Field id={`${id}-category`} label={t('products.category')} error={errors.categoryId}>
-        <select
-          id={`${id}-category`}
-          value={values.categoryId}
-          onChange={(e) => set('categoryId')(e.target.value)}
-          required
-          aria-invalid={Boolean(errors.categoryId) || undefined}
-          aria-describedby={errors.categoryId ? `${id}-category-error` : undefined}
-          className={inputClass}
-        >
-          <option value="" disabled>
-            {t('products.category')}
-          </option>
-          {categoryOptions.map((c) => (
-            <option key={c.id} value={c.id}>
-              {localizedName(c, locale)}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <TextInput
-          id={`${id}-en`}
-          label={t('common.nameEn')}
-          value={values.nameEn}
-          onChange={set('nameEn')}
-          error={errors.nameEn}
-          maxLength={LIMITS.name}
-          required
+    <>
+      <form noValidate onSubmit={onSubmit} className="max-w-2xl space-y-5">
+        <FormError
+          message={
+            serverError ?? (noCategory && !canManage ? t('products.noActiveCategory') : null)
+          }
         />
-        <TextInput
-          id={`${id}-bn`}
-          label={t('common.nameBn')}
-          value={values.nameBn}
-          onChange={set('nameBn')}
-          error={errors.nameBn}
-          maxLength={LIMITS.name}
-          required
-        />
-      </div>
 
-      <Field id={`${id}-unit`} label={t('products.unit')}>
-        <select
-          id={`${id}-unit`}
-          value={unitKey}
-          onChange={(e) => set('unitKey')(e.target.value)}
-          className={inputClass}
-        >
-          {(units.data?.items ?? []).map((u) => (
-            <option key={u.key} value={u.key}>
-              {localizedName(u, locale)}
-            </option>
-          ))}
-        </select>
-      </Field>
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <Field id={`${id}-category`} label={t('products.category')} error={errors.categoryId}>
+              <select
+                id={`${id}-category`}
+                value={values.categoryId}
+                onChange={(e) => set('categoryId')(e.target.value)}
+                required
+                aria-invalid={Boolean(errors.categoryId) || undefined}
+                aria-describedby={errors.categoryId ? `${id}-category-error` : undefined}
+                className={inputClass}
+              >
+                <option value="" disabled>
+                  {t('products.category')}
+                </option>
+                {categoryOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {localizedName(c, locale)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          {canManage ? (
+            <Button variant="secondary" onClick={() => setCreatingCategory(true)} className="mt-7">
+              {t('categories.newInline')}
+            </Button>
+          ) : null}
+        </div>
 
-      {isEdit ? (
-        <SensitiveSection editable={canEditPrice}>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <TextInput
+            id={`${id}-en`}
+            label={t('common.nameEn')}
+            value={values.nameEn}
+            onChange={set('nameEn')}
+            error={errors.nameEn}
+            maxLength={LIMITS.name}
+            required
+          />
+          <TextInput
+            id={`${id}-bn`}
+            label={t('common.nameBn')}
+            value={values.nameBn}
+            onChange={set('nameBn')}
+            error={errors.nameBn}
+            maxLength={LIMITS.name}
+            required
+          />
+        </div>
+
+        <Field id={`${id}-unit`} label={t('products.unit')}>
+          <select
+            id={`${id}-unit`}
+            value={unitKey}
+            onChange={(e) => set('unitKey')(e.target.value)}
+            className={inputClass}
+          >
+            {(units.data?.items ?? []).map((u) => (
+              <option key={u.key} value={u.key}>
+                {localizedName(u, locale)}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        {isEdit ? (
+          <SensitiveSection editable={canEditPrice}>
+            <PriceFields
+              id={id}
+              values={values}
+              set={set}
+              errors={errors}
+              showCost={showCost}
+              readOnly={!canEditPrice}
+            />
+            {canEditPrice && priceChanged ? (
+              <ReasonInput
+                id={`${id}-reason`}
+                value={values.reason}
+                onChange={set('reason')}
+                error={errors.reason}
+              />
+            ) : null}
+          </SensitiveSection>
+        ) : (
           <PriceFields
             id={id}
             values={values}
             set={set}
             errors={errors}
             showCost={showCost}
-            readOnly={!canEditPrice}
+            readOnly={false}
           />
-          {canEditPrice && priceChanged ? (
-            <ReasonInput
-              id={`${id}-reason`}
-              value={values.reason}
-              onChange={set('reason')}
-              error={errors.reason}
-            />
-          ) : null}
-        </SensitiveSection>
-      ) : (
-        <PriceFields
-          id={id}
-          values={values}
-          set={set}
-          errors={errors}
-          showCost={showCost}
-          readOnly={false}
-        />
-      )}
+        )}
 
-      <div className="flex flex-wrap gap-2 pt-2">
-        <Button
-          type="submit"
-          size="lg"
-          disabled={save.isPending || noCategory}
-          aria-busy={save.isPending}
-        >
-          {save.isPending ? t('common.saving') : isEdit ? t('common.save') : t('common.create')}
-        </Button>
-        <Button
-          variant="secondary"
-          size="lg"
-          onClick={() => router.back()}
-          disabled={save.isPending}
-        >
-          {t('common.cancel')}
-        </Button>
-      </div>
-    </form>
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={save.isPending || noCategory}
+            aria-busy={save.isPending}
+          >
+            {save.isPending ? t('common.saving') : isEdit ? t('common.save') : t('common.create')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => router.back()}
+            disabled={save.isPending}
+          >
+            {t('common.cancel')}
+          </Button>
+        </div>
+      </form>
+      {creatingCategory ? (
+        <CategoryDialog
+          category={null}
+          onClose={() => setCreatingCategory(false)}
+          onSaved={(_message, created) => {
+            setMadeHere((list) => [...list, created]);
+            setValues((v) => ({ ...v, categoryId: created.id }));
+            setErrors((e) => ({ ...e, categoryId: undefined }));
+          }}
+          slug={slug}
+          businessId={businessId}
+        />
+      ) : null}
+    </>
   );
 }
 

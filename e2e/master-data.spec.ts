@@ -37,7 +37,7 @@ test('manager sees purchase prices; salesman never does (column, cells, detail)'
   await expect(salesman.getByRole('columnheader', { name: 'Purchase price' })).toHaveCount(0);
   await expect(salesman.locator('main')).not.toContainText('Purchase price');
   await expect(salesman.locator('main')).not.toContainText('৳501.00');
-  await salesman.getByRole('link', { name: 'Sample PCC 01' }).click();
+  await salesman.getByRole('link', { name: 'Sample PCC 01', exact: true }).click();
   await expect(salesman.getByRole('heading', { name: 'Sample PCC 01' })).toBeVisible();
   await expect(salesman.locator('main')).not.toContainText('Purchase price');
 });
@@ -90,7 +90,7 @@ test('keyboard only: reach search, type, open a product', async ({ page }) => {
   await search.focus();
   await page.keyboard.type('Sample OPC 02');
   await expect(page).toHaveURL(/search=Sample/);
-  const link = page.getByRole('link', { name: 'Sample OPC 02' });
+  const link = page.getByRole('link', { name: 'Sample OPC 02', exact: true });
   await link.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Sample OPC 02' })).toBeVisible();
@@ -115,4 +115,44 @@ test('Bengali and dark theme render the same data without errors', async ({ page
   await page.goto('/b/example-cement/suppliers');
   await expect(page.getByText('প্রধান সরবরাহকারী')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('Details button opens the record; owner deactivates from the Actions menu with a reason', async ({
+  page,
+}) => {
+  await signIn(page, 'owner', '/b/example-cement/products');
+  await page.getByRole('link', { name: 'Details of Sample OPC 02' }).click();
+  await expect(page.getByRole('heading', { name: 'Sample OPC 02' })).toBeVisible();
+  await page.goBack();
+
+  await page.getByRole('button', { name: 'Actions for Sample OPC 02' }).click();
+  await expect(page.getByRole('link', { name: 'Edit' })).toBeVisible();
+  await expect(page.getByText('Delete', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Deactivate' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Deactivate Sample OPC 02?' });
+  await dialog.getByRole('button', { name: 'Deactivate' }).click();
+  await expect(dialog.getByText(/at least 3 characters/)).toBeVisible();
+  await dialog.getByLabel('Reason for the change').fill('e2e check');
+  await dialog.getByRole('button', { name: 'Deactivate' }).click();
+  await expect(page.getByText('Status saved.')).toBeVisible();
+  // Active-only list: the row is gone; nothing else was reloaded by hand.
+  await expect(page.getByRole('rowheader', { name: /Sample OPC 02/ })).toHaveCount(0);
+
+  // Put it back so the other tests see the same data.
+  await page.getByLabel('Status').selectOption('all');
+  await page.getByRole('button', { name: 'Actions for Sample OPC 02' }).click();
+  await page.getByRole('button', { name: 'Activate' }).click();
+  const again = page.getByRole('dialog', { name: 'Activate Sample OPC 02?' });
+  await again.getByLabel('Reason for the change').fill('e2e restore');
+  await again.getByRole('button', { name: 'Activate' }).click();
+  await expect(page.getByText('Status saved.')).toBeVisible();
+});
+
+test('category detail page links to its products', async ({ page }) => {
+  await signIn(page, 'manager', '/b/example-cement/products/categories');
+  await page.getByRole('link', { name: 'Details of OPC' }).click();
+  await expect(page.getByRole('heading', { name: 'OPC', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Products in this category' }).click();
+  await expect(page).toHaveURL(/category=c1/);
+  await expect(page.getByRole('rowheader', { name: /Sample PCC/ })).toHaveCount(0);
 });

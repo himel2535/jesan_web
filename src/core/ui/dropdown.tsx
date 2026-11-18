@@ -72,9 +72,10 @@ export function Dropdown({
         id={panelId}
         hidden={!open}
         className={cn(
-          'absolute top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-card border border-border bg-surface p-2 text-fg shadow-glass',
+          'absolute top-full z-30 mt-2 max-w-[calc(100vw-2rem)] rounded-card border border-border bg-surface p-2 text-fg shadow-glass',
           align === 'end' ? 'right-0' : 'left-0',
-          panelClassName,
+          // No class merging (clsx), so the width default applies only when none is given.
+          panelClassName ?? 'w-72',
         )}
       >
         {open ? children(() => setOpen(false)) : null}

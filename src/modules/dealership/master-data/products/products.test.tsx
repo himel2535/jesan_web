@@ -573,3 +573,38 @@ describe('categories: Details, Actions and the detail page', () => {
     expect(await screen.findByRole('heading', { name: 'Not found' })).toBeInTheDocument();
   });
 });
+
+describe('<ProductForm> inline new category', () => {
+  it('creates a category from the form and selects it at once; categories refreshed', async () => {
+    const { calls } = mockApi({
+      ...baseRoutes,
+      [`POST ${B}/product-categories`]: () =>
+        json(201, { ...opc, id: 'c3', nameEn: 'White cement', nameBn: 'সাদা সিমেন্ট' }),
+    });
+    const { invalidate } = renderInBusiness(
+      <ProductForm slug="example-cement" businessId={BID} />,
+      { me: managerMe },
+    );
+    const select = await screen.findByLabelText('Category');
+    await userEvent.click(screen.getByRole('button', { name: 'New category' }));
+    const dialog = screen.getByRole('dialog', { name: 'New category' });
+    await userEvent.type(within(dialog).getByLabelText('Name (English)'), 'White cement');
+    await userEvent.type(within(dialog).getByLabelText('Name (Bangla)'), 'সাদা সিমেন্ট');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+    expect(await screen.findByRole('option', { name: 'White cement' })).toBeInTheDocument();
+    expect(select).toHaveValue('c3');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['dealership', BID, 'categories'] });
+  });
+
+  it('without product.manage there is no New category button', async () => {
+    mockApi(baseRoutes);
+    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} />, {
+      me: salesmanMe,
+      locale: 'bn',
+    });
+    await screen.findByLabelText('ক্যাটাগরি');
+    expect(screen.queryByRole('button', { name: 'নতুন ক্যাটাগরি' })).not.toBeInTheDocument();
+  });
+});
