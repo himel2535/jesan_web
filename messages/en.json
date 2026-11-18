@@ -237,8 +237,6 @@
       "category": "Category",
       "unit": "Unit",
       "purchasePrice": "Purchase price",
-      "salePrice": "Default sale price",
-      "salePriceHint": "Only a default: each sale can use its own price.",
       "emptyTitle": "No products yet",
       "emptyDescription": "Products you add will appear here.",
       "duplicate": "A product with this name already exists.",

@@ -127,7 +127,6 @@ const products = Array.from({ length: 12 }, (_, i) => {
     nameBn: `নমুনা ${cat.nameBn} ${n}`,
     unitKey: 'bag',
     purchasePrice: `${500 + n}.00`,
-    defaultSalePrice: `${520 + n}.00`,
     isActive: true,
     createdAt: now,
     updatedAt: now,

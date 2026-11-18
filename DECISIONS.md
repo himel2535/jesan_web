@@ -279,18 +279,9 @@
 - ক্যাটাগরির নতুন বিস্তারিত পাতা `/b/[slug]/products/categories/[id]` (মালিকের সিদ্ধান্ত): ছোট তালিকা, তাই `active=all` তালিকার cache থেকে পড়ে (আলাদা `GET :id` নেই); "এই ক্যাটাগরির পণ্য" → `/products?category=<id>`; সম্পাদনা ও নিষ্ক্রিয় সেখানেও।
 - পণ্যের ফর্মে ক্যাটাগরির পাশে **"নতুন ক্যাটাগরি"** (`product.manage`): ডায়ালগে তৈরি হলে সাথে সাথে বাছাই হয়, তালিকায় দেখায় (নতুন তালিকা আসার আগেও); `categories` (+ `products`) key refresh। ডায়ালগ `<form>`-এর বাইরে রাখা (form-এর ভেতর form বৈধ HTML নয়)। `CategoryDialog`-এর `onSaved` এখন তৈরি/সম্পাদিত ক্যাটাগরিও দেয়।
 
-### বিক্রয়মূল্য (মালিকের সিদ্ধান্ত: এখন যেমন আছে)
+### বিক্রয়মূল্য
 
-- backend-এ `defaultSalePrice` এখনো আছে (তৈরিতে বাধ্যতামূলক, সম্পাদনায় ঐচ্ছিক), তাই UI-তেও থাকছে।
-- **TODO — backend থেকে সরানোর PR merge হলে আলাদা ছোট PR-এ বদলাতে হবে:**
-  - `src/modules/dealership/master-data/types.ts` — `Product.defaultSalePrice` সরানো।
-  - `src/modules/dealership/master-data/api.ts` — `ProductInput.defaultSalePrice` সরানো।
-  - `products/product-form.tsx` — `PriceFields`-এর বিক্রয়মূল্যের ঘর, `values`, validate (বাধ্যতামূলক/`MONEY_PATTERN`), `priceChanged`, body বানানো (create ও PATCH)।
-  - `products/products-list.tsx` — টেবিলের কলাম ও ফোনের কার্ডের লাইন।
-  - `products/product-detail.tsx` — বিস্তারিতের সারি।
-  - `products/products.test.tsx` — fixture ও প্রত্যাশিত body; `e2e/mock-api.mjs` ও `e2e/master-data.spec.ts`।
-  - `messages/en.json`, `messages/bn.json` — `dealership.products.salePrice` (আর কোথাও না লাগলে)।
-  - `docs/API.md` হুবহু কপি।
+- (বন্ধ, Step 4e) backend থেকে `defaultSalePrice` সরেছে; frontend থেকেও সরানো হয়েছে।
 
 ### ভবিষ্যতের গ্রাহক ও পণ্যের প্রোফাইল (খসড়া নকশা, এখন কোড নয়)
 
@@ -317,3 +308,14 @@
 
 - Vitest: বিস্তারিত লিংক, অনুমতি অনুযায়ী কাজ মেনু (salesman/manager/owner), মেনু থেকে নিষ্ক্রিয়ে কারণ বাধ্যতামূলক, কীবোর্ড (Enter/Esc, ফোকাস ফেরে), ইনলাইন ক্যাটাগরি ও স্বয়ংক্রিয় বাছাই, ক্যাটাগরির বিস্তারিত পাতা, দুই ভাষা, axe।
 - Playwright: তালিকা → বিস্তারিত, কাজ মেনু থেকে কারণসহ নিষ্ক্রিয়।
+
+## ২০২৬-১১-১৮ — Step 4e: backend-এর ত্রুটি-code, বিক্রয়মূল্য সরানো, Settings-এর বাকি TODO
+
+### API চুক্তি
+
+- `docs/API.md` jesan_api `main` (`881d4a9`) থেকে হুবহু কপি।
+- **backend-এ ঠিক করতে হবে (মালিক জানাচ্ছেন):** অংশ ১০-এর "ত্রুটি" টেবিলের পরে পুরনো টেবিলের ৯টা সারি ভুল করে রয়ে গেছে। শুরু `---|---|---|` (হেডার ছাড়া বিভাজক), তারপর `400 | validation তালিকা, Nothing to change, …`, `403 | Access denied`, `403 | You cannot decide your own change request`, `404 | Change request not found, Record not found`, `409 | This record already has a pending change request`, `409 | This change request is already approved …`, `409 | This kind of record can no longer be changed here`, `409 | The record changed after this request was made …`। নতুন code-ভিত্তিক টেবিলই ঠিক; এই সারিগুলো মুছতে হবে। নিয়ম অনুযায়ী এখানে হুবহু কপি রাখা হয়েছে।
+
+### বিক্রয়মূল্য
+
+- পণ্যের তালিকা (কলাম ও ফোনের কার্ড), ফর্ম, বিস্তারিত, মালিক-স্তরের অংশ, নকল API ও টেস্ট থেকে সরানো; অনুবাদের `products.salePrice*` key মুছে ফেলা। মালিক-স্তরের অংশে এখন শুধু ক্রয়মূল্য; ক্রয়মূল্য দেখার অনুমতি (বা response-এ ঘর) না থাকলে অংশটাই নেই। নতুন পণ্য তৈরিতে শুধু ক্যাটাগরি, দুই নাম, একক, (অনুমতি থাকলে) ক্রয়মূল্য।

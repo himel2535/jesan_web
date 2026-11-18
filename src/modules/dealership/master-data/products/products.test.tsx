@@ -70,7 +70,6 @@ function product(overrides: Partial<Product> = {}, withCost = true): Product {
     nameBn: 'নমুনা ওপিসি ৫০ কেজি',
     unitKey: 'bag',
     purchasePrice: '540.00',
-    defaultSalePrice: '1234567.50',
     isActive: true,
     createdAt: '2026-11-17T08:38:04.236Z',
     updatedAt: '2026-11-17T08:38:04.236Z',
@@ -97,7 +96,8 @@ describe('<ProductsList>', () => {
     expect(await screen.findByRole('columnheader', { name: 'Purchase price' })).toBeInTheDocument();
     const row = screen.getByRole('rowheader', { name: /Sample OPC 50kg/ }).closest('tr')!;
     expect(row).toHaveTextContent('৳540.00');
-    expect(row).toHaveTextContent('৳12,34,567.50');
+    // Products have no sale price any more (set per sale on the invoice).
+    expect(screen.queryByRole('columnheader', { name: /sale price/i })).not.toBeInTheDocument();
     expect(row).toHaveTextContent('Bag');
   });
 
@@ -175,7 +175,10 @@ describe('<ProductsList>', () => {
       addEventListener: () => {},
       removeEventListener: () => {},
     }));
-    mockApi({ ...baseRoutes, [`GET ${B}/products`]: () => json(200, page([product()])) });
+    mockApi({
+      ...baseRoutes,
+      [`GET ${B}/products`]: () => json(200, page([product({ purchasePrice: '1234567.50' })])),
+    });
     const { container } = renderInBusiness(
       <ProductsList slug="example-cement" businessId={BID} />,
       { me: managerMe, locale: 'bn' },
@@ -204,7 +207,7 @@ describe('<ProductForm> create', () => {
     await userEvent.type(screen.getByLabelText('Name (English)'), 'Sample OPC 40kg');
     await userEvent.type(screen.getByLabelText('Name (Bangla)'), 'নমুনা ওপিসি ৪০ কেজি');
     await userEvent.type(screen.getByLabelText('Purchase price'), '৪৫০');
-    await userEvent.type(screen.getByLabelText('Default sale price'), '1,470.5');
+    expect(screen.queryByLabelText(/sale price/i)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
     const post = calls.find((c) => c.method === 'POST')!;
     expect(post.body).toEqual({
@@ -213,7 +216,6 @@ describe('<ProductForm> create', () => {
       nameBn: 'নমুনা ওপিসি ৪০ কেজি',
       unitKey: 'bag',
       purchasePrice: '450',
-      defaultSalePrice: '1470.5',
     });
     expect(nav.push).toHaveBeenCalledWith('/b/example-cement/products/p9?saved=created');
   });
@@ -229,7 +231,6 @@ describe('<ProductForm> create', () => {
     expect(screen.queryByLabelText('Purchase price')).not.toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Name (English)'), 'X');
     await userEvent.type(screen.getByLabelText('Name (Bangla)'), 'এক্স');
-    await userEvent.type(screen.getByLabelText('Default sale price'), '470');
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
     expect(calls.find((c) => c.method === 'POST')!.body).not.toHaveProperty('purchasePrice');
   });
@@ -245,9 +246,9 @@ describe('<ProductForm> create', () => {
     expect(screen.getByLabelText('Name (English)')).toHaveAccessibleDescription(
       'This field is required.',
     );
-    await userEvent.type(screen.getByLabelText('Default sale price'), '12.345');
+    await userEvent.type(screen.getByLabelText('Purchase price'), '12.345');
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(screen.getByLabelText('Default sale price')).toHaveAccessibleDescription(
+    expect(screen.getByLabelText('Purchase price')).toHaveAccessibleDescription(
       /Enter an amount like 570/,
     );
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
@@ -255,8 +256,8 @@ describe('<ProductForm> create', () => {
     await userEvent.selectOptions(screen.getByLabelText('Category'), 'c1');
     await userEvent.type(screen.getByLabelText('Name (English)'), 'Dup');
     await userEvent.type(screen.getByLabelText('Name (Bangla)'), 'ডুপ');
-    await userEvent.clear(screen.getByLabelText('Default sale price'));
-    await userEvent.type(screen.getByLabelText('Default sale price'), '500');
+    await userEvent.clear(screen.getByLabelText('Purchase price'));
+    await userEvent.type(screen.getByLabelText('Purchase price'), '500');
     await userEvent.dblClick(screen.getByRole('button', { name: 'Create' }));
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
     await act(async () =>
@@ -278,7 +279,7 @@ describe('<ProductForm> edit', () => {
     expect(
       await screen.findByText('Changing these needs owner-level permission.'),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('Default sale price')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Purchase price')).toHaveAttribute('readonly');
     expect(screen.queryByLabelText('Reason for the change')).not.toBeInTheDocument();
     await userEvent.clear(screen.getByLabelText('Name (English)'));
     await userEvent.type(screen.getByLabelText('Name (English)'), 'Renamed');
@@ -295,13 +296,13 @@ describe('<ProductForm> edit', () => {
       <ProductForm
         slug="example-cement"
         businessId={BID}
-        product={product({ defaultSalePrice: '560.00' })}
+        product={product({ purchasePrice: '560.00' })}
       />,
       { me: ownerMe },
     );
-    const sale = await screen.findByLabelText('Default sale price');
-    await userEvent.clear(sale);
-    await userEvent.type(sale, '565');
+    const cost = await screen.findByLabelText('Purchase price');
+    await userEvent.clear(cost);
+    await userEvent.type(cost, '565');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     const reason = screen.getByLabelText('Reason for the change');
     expect(reason).toHaveAccessibleDescription(/Write why this is being changed/);
@@ -309,7 +310,7 @@ describe('<ProductForm> edit', () => {
     await userEvent.type(reason, 'new rate from the supplier');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({
-      defaultSalePrice: '565',
+      purchasePrice: '565',
       reason: 'new rate from the supplier',
     });
   });
@@ -320,13 +321,13 @@ describe('<ProductForm> edit', () => {
       <ProductForm
         slug="example-cement"
         businessId={BID}
-        product={product({ defaultSalePrice: '570.00' })}
+        product={product({ purchasePrice: '570.00' })}
       />,
       { me: ownerMe },
     );
-    const sale = await screen.findByLabelText('Default sale price');
-    await userEvent.clear(sale);
-    await userEvent.type(sale, '570');
+    const cost = await screen.findByLabelText('Purchase price');
+    await userEvent.clear(cost);
+    await userEvent.type(cost, '570');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(screen.getByText('Nothing has changed.')).toBeInTheDocument();
     expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
@@ -606,5 +607,20 @@ describe('<ProductForm> inline new category', () => {
     });
     await screen.findByLabelText('ক্যাটাগরি');
     expect(screen.queryByRole('button', { name: 'নতুন ক্যাটাগরি' })).not.toBeInTheDocument();
+  });
+});
+
+describe('<ProductForm> without cost permission (edit)', () => {
+  it('no price section at all when the API sent no purchase price', async () => {
+    mockApi(baseRoutes);
+    renderInBusiness(
+      <ProductForm slug="example-cement" businessId={BID} product={product({}, false)} />,
+      { me: salesmanMe },
+    );
+    await screen.findByLabelText('Name (English)');
+    expect(screen.queryByLabelText('Purchase price')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Changing these needs owner-level permission.'),
+    ).not.toBeInTheDocument();
   });
 });
