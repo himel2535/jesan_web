@@ -86,7 +86,7 @@ npm run test:e2e     # Playwright (build-এর পরে); নতুন প্�
 
 - ছক শুধু `roles.manage`; ইউজারের তালিকা `users.view`, বাটন `users.manage`। এগুলো UI সুবিধা, আসল সুরক্ষা API-তে।
 - পাসওয়ার্ডের নিয়ম শুধু `src/core/auth/password-rules.ts` থেকে। পাসওয়ার্ড কখনো URL, log, query cache বা storage-এ নয়; পাঠানোর পর মুছে ফেলো।
-- ত্রুটির বার্তা status দেখে (`settingsErrorKind`), API-র `message` লেখা দেখে নয়।
+- ত্রুটির বার্তা API-র স্থির `code` দেখে, `useErrorMessage()` / `fieldErrorsOf` (`src/core/api/field-errors.ts`) দিয়ে: ঘরের ত্রুটি ঘরের নিচে, বাকিটা form-এর উপরে; অচেনা code হলে status-এর সাধারণ বার্তা। API-র ইংরেজি `message` কখনো দেখানো নয়। নতুন code → `error-codes.ts` + দুই অনুবাদ ফাইল (`apiErrors`)।
 - ঝুঁকির কাজে (মোছা, নিষ্ক্রিয়, রিসেট) `ConfirmDialog`।
 - API-র ঘাটতির TODO-গুলো DECISIONS.md-তে; backend ঠিক হলে সেখানে লেখা জায়গায় বদলাও।
 
