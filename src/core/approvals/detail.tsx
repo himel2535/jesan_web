@@ -362,14 +362,20 @@ function DecisionDialog({
 }
 
 /** Effect if approved (pending only); translated by stable key, values formatted, money as text. */
-function ImpactList({ impact }: { impact: NonNullable<ChangeRequest['impact']> }) {
+export function ImpactList({
+  impact,
+  title,
+}: {
+  impact: NonNullable<ChangeRequest['impact']>;
+  title?: string;
+}) {
   const t = useTranslations('approvals');
   const labels = useChangeLabels();
   const valueText = useValueText();
   const deltaText = useDeltaText();
   return (
     <section className="space-y-2">
-      <h2 className="text-base font-semibold">{t('detail.impact')}</h2>
+      <h2 className="text-base font-semibold">{title ?? t('detail.impact')}</h2>
       <ul className="divide-y divide-border rounded-card border border-border bg-surface">
         {impact.map((line) => {
           const field = fieldOfImpact(line.key);

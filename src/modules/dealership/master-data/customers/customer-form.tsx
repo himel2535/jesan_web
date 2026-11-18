@@ -23,7 +23,9 @@ import {
   TextInput,
   reasonError,
 } from '../shared/fields';
-import { FormError } from '../shared/states';
+import { FormError, Notice } from '../shared/states';
+import { useCustomerRequestTarget } from '../shared/correction';
+import { RequestChangeButton } from '@/core/approvals/request-dialog';
 import { LIMITS, type Customer } from '../types';
 
 const FIELDS = [
@@ -76,6 +78,8 @@ export function CustomerForm({
   });
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+  const requestTarget = useCustomerRequestTarget(customer);
   const inFlight = useRef(false);
   const set = (field: keyof typeof values) => (value: string) =>
     setValues((v) => ({ ...v, [field]: value }));
@@ -190,6 +194,7 @@ export function CustomerForm({
   return (
     <form noValidate onSubmit={onSubmit} className="max-w-2xl space-y-5">
       <FormError message={serverError} />
+      <Notice>{sent}</Notice>
       <div className="grid gap-5 sm:grid-cols-2">
         <TextInput
           id={`${id}-en`}
@@ -240,7 +245,14 @@ export function CustomerForm({
 
       {showDue ? (
         isEdit ? (
-          <SensitiveSection editable={canEditBalance}>
+          <SensitiveSection
+            editable={canEditBalance}
+            requestSlot={
+              requestTarget ? (
+                <RequestChangeButton slug={slug} target={requestTarget} onSent={setSent} />
+              ) : null
+            }
+          >
             {dueFields(!canEditBalance)}
             {canEditBalance && balanceChanged ? (
               <ReasonInput
@@ -254,6 +266,13 @@ export function CustomerForm({
         ) : (
           dueFields(false)
         )
+      ) : isEdit && requestTarget ? (
+        <SensitiveSection
+          editable={false}
+          requestSlot={<RequestChangeButton slug={slug} target={requestTarget} onSent={setSent} />}
+        >
+          {null}
+        </SensitiveSection>
       ) : null}
 
       <div className="flex flex-wrap gap-2 pt-2">

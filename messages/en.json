@@ -748,7 +748,8 @@
       "pendingExists": "This record already has a pending request.",
       "viewPending": "See the pending request",
       "viewPendingList": "See pending requests for this record",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "moneyInvalid": "Enter an amount like 570 or 570.50."
     }
   }
 }

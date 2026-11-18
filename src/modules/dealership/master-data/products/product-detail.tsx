@@ -11,6 +11,7 @@ import { useFormat } from '@/core/i18n/use-format';
 import { Button } from '@/core/ui/button';
 import { PageHeader } from '@/core/ui/page-header';
 import { useProduct, useSaveProduct, useUnits } from '../api';
+import { CorrectionSection, useProductRequestTarget } from '../shared/correction';
 import { DeactivateDialog } from '../shared/deactivate-dialog';
 import { DetailList, type DetailRow } from '../shared/detail-list';
 import { Money, StatusBadge, useNameOf } from '../shared/display';
@@ -35,6 +36,7 @@ export function ProductDetail({
   const query = useProduct(slug, businessId, id);
   const units = useUnits(slug, businessId);
   const save = useSaveProduct(slug, businessId);
+  const requestTarget = useProductRequestTarget(query.data);
   const [confirming, setConfirming] = useState(false);
   const [notice, setNotice] = useState<string | null>(
     saved === 'created' ? t('common.created') : saved === 'updated' ? t('common.saved') : null,
@@ -95,6 +97,7 @@ export function ProductDetail({
       <div className="space-y-4">
         <Notice>{notice}</Notice>
         <DetailList rows={rows} />
+        <CorrectionSection slug={slug} target={requestTarget} onSent={setNotice} />
         <Link
           href={base}
           prefetch={false}

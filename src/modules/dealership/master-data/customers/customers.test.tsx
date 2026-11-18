@@ -371,3 +371,25 @@ describe('API error codes in the customer form', () => {
     expect(screen.getByLabelText('ফোন')).toHaveAttribute('aria-invalid', 'true');
   });
 });
+
+describe('customer "Request a correction"', () => {
+  it('manager with change.request: due fields and status may be requested; owner sees no button', async () => {
+    mockApi({ [`GET ${B}/customers/cu1`]: () => json(200, customer()) });
+    const staff = meWith([...MANAGER_PERMISSIONS, 'change.request']);
+    const { unmount } = renderInBusiness(
+      <CustomerDetail slug="example-cement" businessId={BID} id="cu1" />,
+      { me: staff },
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Request a correction' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByLabelText(/Change Opening due/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Change Credit limit/)).toBeInTheDocument();
+    expect(within(dialog).getByText('Ask to deactivate')).toBeInTheDocument();
+    unmount();
+    renderInBusiness(<CustomerDetail slug="example-cement" businessId={BID} id="cu1" />, {
+      me: ownerMe,
+    });
+    await screen.findByRole('heading', { name: 'Sample Store Two' });
+    expect(screen.queryByRole('button', { name: 'Request a correction' })).not.toBeInTheDocument();
+  });
+});

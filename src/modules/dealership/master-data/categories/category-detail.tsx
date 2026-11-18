@@ -9,6 +9,7 @@ import { useFormat } from '@/core/i18n/use-format';
 import { Button } from '@/core/ui/button';
 import { PageHeader } from '@/core/ui/page-header';
 import { useCategories, useSaveCategory } from '../api';
+import { CorrectionSection, useCategoryRequestTarget } from '../shared/correction';
 import { DeactivateDialog } from '../shared/deactivate-dialog';
 import { DetailList, type DetailRow } from '../shared/detail-list';
 import { StatusBadge, useNameOf } from '../shared/display';
@@ -38,6 +39,7 @@ export function CategoryDetail({
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const requestTargetOf = useCategoryRequestTarget();
   const base = `/b/${encodeURIComponent(slug)}/products`;
 
   if (query.isPending) return <ListSkeleton rows={4} />;
@@ -100,6 +102,7 @@ export function CategoryDetail({
       <div className="space-y-4">
         <Notice>{notice}</Notice>
         <DetailList rows={rows} />
+        <CorrectionSection slug={slug} target={requestTargetOf(category)} onSent={setNotice} />
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <Link
             href={`${base}?category=${encodeURIComponent(category.id)}`}

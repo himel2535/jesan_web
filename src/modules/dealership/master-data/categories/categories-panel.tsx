@@ -12,6 +12,7 @@ import { inputClass } from '@/core/ui/text-field';
 import { useIsDesktop } from '@/core/ui/use-media-query';
 import { useCategories, useSaveCategory } from '../api';
 import { StatusBadge, useNameOf } from '../shared/display';
+import { useCategoryRequestTarget } from '../shared/correction';
 import { DetailsLink, RowActions } from '../shared/row-actions';
 import { ListSkeleton, LoadError, Notice } from '../shared/states';
 import type { ActiveFilter, Category } from '../types';
@@ -33,6 +34,7 @@ export function CategoriesPanel({ slug, businessId }: { slug: string; businessId
   const save = useSaveCategory(slug, businessId);
   const [editing, setEditing] = useState<Category | 'new' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const requestTargetOf = useCategoryRequestTarget();
   const base = `/b/${encodeURIComponent(slug)}/products/categories`;
 
   const actions = (category: Category) => (
@@ -50,6 +52,8 @@ export function CategoriesPanel({ slug, businessId }: { slug: string; businessId
           });
           setNotice(t('common.statusChanged'));
         }}
+        requestTarget={requestTargetOf(category)}
+        onRequestSent={setNotice}
       />
     </>
   );

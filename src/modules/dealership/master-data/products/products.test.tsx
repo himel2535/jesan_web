@@ -684,3 +684,78 @@ describe('API error codes in the product form (docs/API.md §11)', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('"Request a correction" (docs/API.md §10)', () => {
+  const staff = meWith([...MANAGER_PERMISSIONS, 'change.request', 'change.view.own']);
+
+  it('staff with change.request but no direct permission: button on the detail page', async () => {
+    mockApi({ ...baseRoutes, [`GET ${B}/products/p1`]: () => json(200, product()) });
+    renderInBusiness(<ProductDetail slug="example-cement" businessId={BID} id="p1" />, {
+      me: staff,
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Request a correction' }));
+    const dialog = screen.getByRole('dialog', { name: 'Request a correction: Sample OPC 50kg' });
+    expect(within(dialog).getByLabelText(/Change Purchase price/)).toBeInTheDocument();
+    expect(within(dialog).getByText('Ask to deactivate')).toBeInTheDocument();
+  });
+
+  it('owner (direct permissions) never sees it; no change.request → none either', async () => {
+    mockApi({ ...baseRoutes, [`GET ${B}/products/p1`]: () => json(200, product()) });
+    const { unmount } = renderInBusiness(
+      <ProductDetail slug="example-cement" businessId={BID} id="p1" />,
+      { me: ownerMe },
+    );
+    await screen.findByRole('heading', { name: 'Sample OPC 50kg' });
+    expect(screen.queryByRole('button', { name: 'Request a correction' })).not.toBeInTheDocument();
+    unmount();
+    renderInBusiness(<ProductDetail slug="example-cement" businessId={BID} id="p1" />, {
+      me: managerMe,
+    });
+    await screen.findByRole('heading', { name: 'Sample OPC 50kg' });
+    expect(screen.queryByRole('button', { name: 'Request a correction' })).not.toBeInTheDocument();
+  });
+
+  it('staff without the cost permission: only the status request (no price field)', async () => {
+    mockApi({ ...baseRoutes, [`GET ${B}/products/p1`]: () => json(200, product({}, false)) });
+    renderInBusiness(<ProductDetail slug="example-cement" businessId={BID} id="p1" />, {
+      me: meWith([...SALESMAN_PERMISSIONS, 'change.request']),
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Request a correction' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByText(/Purchase price/)).not.toBeInTheDocument();
+    expect(within(dialog).getByText('Ask to deactivate')).toBeInTheDocument();
+  });
+
+  it('edit page: button in the owner-level section; its submit never saves the product', async () => {
+    const { calls } = mockApi({
+      ...baseRoutes,
+      [`POST ${B}/change-requests/preview`]: () => json(200, { entityLabel: 'x', impact: [] }),
+      [`POST ${B}/change-requests`]: () => json(201, { id: 'cr1' }),
+    });
+    renderInBusiness(<ProductForm slug="example-cement" businessId={BID} product={product()} />, {
+      me: staff,
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Request a correction' }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.click(within(dialog).getByText('Ask to deactivate'));
+    await userEvent.type(within(dialog).getByLabelText('Reason for the request'), 'Discontinued');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Send request' }));
+    expect(
+      await screen.findByText('Request sent. It takes effect when the owner approves it.'),
+    ).toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
+    expect(calls.find((c) => c.path === `${B}/change-requests`)!.body).toMatchObject({
+      proposedChange: { isActive: false },
+    });
+  });
+
+  it('categories: staff get "Request a correction" in the Actions menu, not Deactivate', async () => {
+    mockApi(baseRoutes);
+    renderInBusiness(<CategoriesPanel slug="example-cement" businessId={BID} />, { me: staff });
+    await userEvent.click(await screen.findByRole('button', { name: 'Actions for OPC' }));
+    expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Request a correction' }));
+    expect(screen.getByRole('dialog', { name: 'Request a correction: OPC' })).toBeInTheDocument();
+  });
+});
