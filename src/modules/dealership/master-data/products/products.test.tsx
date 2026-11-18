@@ -12,6 +12,7 @@ import {
 import { json, mockApi, renderInBusiness } from '../../../../../test/settings-utils';
 import { expectNoA11yViolations } from '../../../../../test/utils';
 import { CategoriesPanel } from '../categories/categories-panel';
+import { CategoryDetail } from '../categories/category-detail';
 import type { Category, Product } from '../types';
 import { ProductDetail } from './product-detail';
 import { ProductForm } from './product-form';
@@ -179,7 +180,12 @@ describe('<ProductsList>', () => {
       <ProductsList slug="example-cement" businessId={BID} />,
       { me: managerMe, locale: 'bn' },
     );
-    const card = await screen.findByRole('link', { name: /নমুনা ওপিসি ৫০ কেজি/ });
+    const card = await screen.findByRole('link', { name: /^নমুনা ওপিসি ৫০ কেজি(?!-এর)/ });
+    // Every card also has a visible Details link that names the record.
+    expect(screen.getByRole('link', { name: 'নমুনা ওপিসি ৫০ কেজি-এর বিস্তারিত' })).toHaveAttribute(
+      'href',
+      `${B}/products/p1`,
+    );
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(card).toHaveTextContent('৳১২,৩৪,৫৬৭.৫০');
     expect(card).toHaveTextContent('বস্তা');
@@ -420,5 +426,150 @@ describe('<CategoriesPanel>', () => {
     expect(await screen.findByRole('rowheader', { name: 'OPC' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New category' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument();
+  });
+});
+
+describe('row Details and Actions (products)', () => {
+  const listRoutes = {
+    ...baseRoutes,
+    [`GET ${B}/products`]: () => json(200, page([product()])),
+  };
+
+  it('salesman: a visible Details link, no Actions menu at all', async () => {
+    mockApi(listRoutes);
+    renderInBusiness(<ProductsList slug="example-cement" businessId={BID} />, { me: salesmanMe });
+    expect(await screen.findByRole('link', { name: 'Details of Sample OPC 50kg' })).toHaveAttribute(
+      'href',
+      `${B}/products/p1`,
+    );
+    expect(screen.getByRole('link', { name: 'Details of Sample OPC 50kg' })).toHaveTextContent(
+      'Details',
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Actions for Sample OPC 50kg' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('manager: Actions has Edit only (no deactivate permission); no Delete anywhere', async () => {
+    mockApi(listRoutes);
+    renderInBusiness(<ProductsList slug="example-cement" businessId={BID} />, { me: managerMe });
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Actions for Sample OPC 50kg' }),
+    );
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute(
+      'href',
+      `${B}/products/p1/edit`,
+    );
+    expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Delete/)).not.toBeInTheDocument();
+  });
+
+  it('owner: deactivate from the menu needs a reason; keyboard works; a11y clean', async () => {
+    const { calls } = mockApi({
+      ...listRoutes,
+      [`PATCH ${B}/products/p1`]: () => json(200, product({ isActive: false })),
+    });
+    const { container, invalidate } = renderInBusiness(
+      <ProductsList slug="example-cement" businessId={BID} />,
+      { me: ownerMe },
+    );
+    const trigger = await screen.findByRole('button', { name: 'Actions for Sample OPC 50kg' });
+    trigger.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expectNoA11yViolations(container);
+    await userEvent.keyboard('{Escape}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
+    const dialog = screen.getByRole('dialog', { name: 'Deactivate Sample OPC 50kg?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    expect(
+      within(dialog).getByText('Write why this is being changed (at least 3 characters).'),
+    ).toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
+    await userEvent.type(within(dialog).getByLabelText('Reason for the change'), 'discontinued');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    expect(await screen.findByText('Status saved.')).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({
+      isActive: false,
+      reason: 'discontinued',
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['dealership', BID, 'products'] });
+  });
+
+  it('Bengali labels on the row', async () => {
+    mockApi(listRoutes);
+    renderInBusiness(<ProductsList slug="example-cement" businessId={BID} />, {
+      me: ownerMe,
+      locale: 'bn',
+    });
+    expect(
+      await screen.findByRole('link', { name: 'নমুনা ওপিসি ৫০ কেজি-এর বিস্তারিত' }),
+    ).toHaveTextContent('বিস্তারিত');
+    await userEvent.click(screen.getByRole('button', { name: 'নমুনা ওপিসি ৫০ কেজি-এর কাজ' }));
+    expect(screen.getByRole('link', { name: 'সম্পাদনা' })).toBeInTheDocument();
+  });
+});
+
+describe('categories: Details, Actions and the detail page', () => {
+  it('rows link to the category page; owner deactivates from the menu with a reason', async () => {
+    const { calls } = mockApi({
+      ...baseRoutes,
+      [`PATCH ${B}/product-categories/c1`]: () => json(200, { ...opc, isActive: false }),
+    });
+    renderInBusiness(<CategoriesPanel slug="example-cement" businessId={BID} />, { me: ownerMe });
+    expect(await screen.findByRole('link', { name: 'Details of OPC' })).toHaveAttribute(
+      'href',
+      `${B}/products/categories/c1`,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for OPC' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByRole('dialog', { name: 'Edit OPC' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for OPC' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
+    const dialog = screen.getByRole('dialog', { name: 'Deactivate OPC?' });
+    await userEvent.type(within(dialog).getByLabelText('Reason for the change'), 'merged');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
+    expect(await screen.findByText('Status saved.')).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({
+      isActive: false,
+      reason: 'merged',
+    });
+  });
+
+  it('salesman: Details only, no Actions menu', async () => {
+    mockApi(baseRoutes);
+    renderInBusiness(<CategoriesPanel slug="example-cement" businessId={BID} />, {
+      me: salesmanMe,
+    });
+    await screen.findByRole('link', { name: 'Details of OPC' });
+    expect(screen.queryByRole('button', { name: 'Actions for OPC' })).not.toBeInTheDocument();
+  });
+
+  it('detail page: fields, link to its products, Bengali, a11y; unknown id → not found', async () => {
+    const { calls } = mockApi(baseRoutes);
+    const { container, unmount } = renderInBusiness(
+      <CategoryDetail slug="example-cement" businessId={BID} id="c2" />,
+      { me: salesmanMe, locale: 'bn' },
+    );
+    expect(await screen.findByRole('heading', { name: 'পিসিসি' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'এই ক্যাটাগরির পণ্য' })).toHaveAttribute(
+      'href',
+      `${B}/products?category=c2`,
+    );
+    expect(screen.queryByRole('button', { name: 'সম্পাদনা' })).not.toBeInTheDocument();
+    expect(calls[0]!.url).toContain('active=all');
+    await expectNoA11yViolations(container);
+    unmount();
+
+    renderInBusiness(<CategoryDetail slug="example-cement" businessId={BID} id="nope" />, {
+      me: salesmanMe,
+    });
+    expect(await screen.findByRole('heading', { name: 'Not found' })).toBeInTheDocument();
   });
 });

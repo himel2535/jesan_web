@@ -34,7 +34,11 @@ describe('suppliers (view only)', () => {
       <SuppliersList slug="example-cement" businessId="b1" />,
       { me: managerMe },
     );
-    expect(await screen.findByRole('link', { name: /Example Supplier/ })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: /^Example Supplier/ })).toHaveAttribute(
+      'href',
+      `${B}/suppliers/s1`,
+    );
+    expect(screen.getByRole('link', { name: 'Details of Example Supplier' })).toHaveAttribute(
       'href',
       `${B}/suppliers/s1`,
     );

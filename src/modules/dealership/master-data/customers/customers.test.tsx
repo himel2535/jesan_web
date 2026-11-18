@@ -302,3 +302,56 @@ describe('<CustomerDetail>', () => {
     ]);
   });
 });
+
+describe('row Details and Actions (customers)', () => {
+  const routes = { [`GET ${B}/customers`]: () => json(200, page([customer()])) };
+
+  it('salesman: Details link and an Actions menu with Edit only', async () => {
+    mockApi(routes);
+    renderInBusiness(<CustomersList slug="example-cement" businessId={BID} />, {
+      me: salesmanMe,
+    });
+    expect(
+      await screen.findByRole('link', { name: 'Details of Sample Store Two' }),
+    ).toHaveAttribute('href', `${B}/customers/cu1`);
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Sample Store Two' }));
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute(
+      'href',
+      `${B}/customers/cu1/edit`,
+    );
+    expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument();
+  });
+
+  it('no manage and no deactivate permission → no Actions menu', async () => {
+    mockApi(routes);
+    renderInBusiness(<CustomersList slug="example-cement" businessId={BID} />, {
+      me: meWith(['customer.view']),
+    });
+    await screen.findByRole('link', { name: 'Details of Sample Store Two' });
+    expect(
+      screen.queryByRole('button', { name: 'Actions for Sample Store Two' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('owner: deactivate from the menu sends the reason; Bengali; a11y', async () => {
+    const { calls } = mockApi({
+      ...routes,
+      [`PATCH ${B}/customers/cu1`]: () => json(200, customer({ isActive: false })),
+    });
+    const { container, invalidate } = renderInBusiness(
+      <CustomersList slug="example-cement" businessId={BID} />,
+      { me: ownerMe, locale: 'bn' },
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'নমুনা স্টোর দুই-এর কাজ' }));
+    await userEvent.click(screen.getByRole('button', { name: 'নিষ্ক্রিয় করুন' }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.type(within(dialog).getByRole('textbox'), 'shop closed');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'নিষ্ক্রিয় করুন' }));
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({
+      isActive: false,
+      reason: 'shop closed',
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['dealership', BID, 'customers'] });
+    await expectNoA11yViolations(container);
+  });
+});

@@ -70,6 +70,7 @@ export function RowActions({
       <Dropdown
         label={t('actionsFor', { name })}
         triggerClassName="size-10 justify-center"
+        panelClassName="w-48"
         trigger={<EllipsisVertical aria-hidden className="size-5" />}
       >
         {(close) => (

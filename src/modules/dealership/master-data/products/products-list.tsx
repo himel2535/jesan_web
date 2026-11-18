@@ -3,7 +3,7 @@
 import { Package, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { useId } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import { useCan } from '@/core/auth/can';
 import { localizedName } from '@/core/auth/types';
 import { cn } from '@/core/ui/cn';
@@ -11,11 +11,12 @@ import { Pagination } from '@/core/ui/pagination';
 import { PAGE_SIZE } from '@/core/ui/pagination-logic';
 import { inputClass } from '@/core/ui/text-field';
 import { useIsDesktop } from '@/core/ui/use-media-query';
-import { useCategories, useProducts, useUnits } from '../api';
+import { useCategories, useProducts, useSaveProduct, useUnits } from '../api';
 import { Money, StatusBadge, useNameOf } from '../shared/display';
 import { useListParams, useSetListParams } from '../shared/list-params';
 import { ListToolbar } from '../shared/list-toolbar';
-import { ListEmpty, ListSkeleton, LoadError } from '../shared/states';
+import { DetailsLink, RowActions } from '../shared/row-actions';
+import { ListEmpty, ListSkeleton, LoadError, Notice } from '../shared/states';
 import type { Product } from '../types';
 
 const buttonLink =
@@ -34,6 +35,9 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
   const isDesktop = useIsDesktop();
   const canManage = useCan('product.manage');
   const canSeeCost = useCan('product.cost.view');
+  const canDeactivate = useCan('product.deactivate');
+  const save = useSaveProduct(slug, businessId);
+  const [notice, setNotice] = useState<string | null>(null);
   const params = useListParams();
   const setParams = useSetListParams();
   const query = useProducts(slug, businessId, params);
@@ -49,6 +53,21 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
   const filtered = Boolean(params.search || params.categoryId || params.active !== 'true');
   // Belt and braces: the column needs the permission AND the field in the data.
   const showCost = canSeeCost && items.some((p) => 'purchasePrice' in p);
+  const actions = (p: Product) => (
+    <>
+      <DetailsLink href={`${base}/${p.id}`} name={nameOf(p)} />
+      <RowActions
+        name={nameOf(p)}
+        isActive={p.isActive}
+        editHref={canManage ? `${base}/${p.id}/edit` : undefined}
+        canDeactivate={canDeactivate}
+        onToggleActive={async (reason) => {
+          await save.mutateAsync({ id: p.id, body: { isActive: !p.isActive, reason } });
+          setNotice(t('common.statusChanged'));
+        }}
+      />
+    </>
+  );
 
   return (
     <div className="space-y-4">
@@ -86,6 +105,7 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
         ) : null}
       </div>
 
+      <Notice>{notice}</Notice>
       {query.isPending ? (
         <ListSkeleton />
       ) : query.isError ? (
@@ -129,6 +149,9 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                       <th scope="col" className="px-4 py-3 font-medium">
                         {t('common.status')}
                       </th>
+                      <th scope="col" className="px-4 py-3 text-right font-medium">
+                        {t('common.actions')}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -165,6 +188,9 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                         <td className="px-4 py-3">
                           <StatusBadge active={p.isActive} />
                         </td>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center justify-end gap-1">{actions(p)}</div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -179,6 +205,7 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                     href={`${base}/${p.id}`}
                     showCost={showCost}
                     unitName={unitName}
+                    actions={actions(p)}
                   />
                 ))}
               </ul>
@@ -196,21 +223,19 @@ function ProductCard({
   href,
   showCost,
   unitName,
+  actions,
 }: {
   product: Product;
   href: string;
   showCost: boolean;
   unitName: (key: string) => string;
+  actions: ReactNode;
 }) {
   const t = useTranslations('dealership');
   const nameOf = useNameOf();
   return (
-    <li>
-      <Link
-        href={href}
-        prefetch={false}
-        className="block rounded-card border border-border bg-surface p-4 hover:bg-surface-muted"
-      >
+    <li className="rounded-card border border-border bg-surface p-4">
+      <Link href={href} prefetch={false} className="block hover:underline">
         <span className="flex items-start justify-between gap-3">
           <span className="font-medium">{nameOf(product)}</span>
           <StatusBadge active={product.isActive} />
@@ -232,6 +257,7 @@ function ProductCard({
           </span>
         </span>
       </Link>
+      <div className="mt-3 flex items-center justify-end gap-1">{actions}</div>
     </li>
   );
 }
