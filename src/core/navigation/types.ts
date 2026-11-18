@@ -17,4 +17,6 @@ export interface NavItem {
   prefetch?: NavPrefetch;
   /** Active only on this exact path (e.g. a dashboard whose children are other entries). */
   exact?: boolean;
+  /** A live count next to the label (rendered by a client component that fetches it). */
+  badge?: 'pendingApprovals';
 }

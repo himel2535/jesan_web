@@ -4,6 +4,9 @@ import { EllipsisVertical, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { useCurrentBusiness } from '@/core/auth/session-context';
+import { createPortal } from 'react-dom';
+import { ChangeRequestDialog, type RequestTarget } from '@/core/approvals/request-dialog';
 import { cn } from '@/core/ui/cn';
 import { Dropdown } from '@/core/ui/dropdown';
 import { DeactivateDialog } from './deactivate-dialog';
@@ -50,6 +53,8 @@ export function RowActions({
   onEdit,
   canDeactivate,
   onToggleActive,
+  requestTarget,
+  onRequestSent,
 }: {
   name: string;
   isActive: boolean;
@@ -59,11 +64,17 @@ export function RowActions({
   onEdit?: () => void;
   canDeactivate: boolean;
   onToggleActive: (reason: string) => Promise<unknown>;
+  /** "Request a correction" for someone with `change.request` but no direct permission. */
+  requestTarget?: RequestTarget | null;
+  onRequestSent?: (message: string) => void;
 }) {
   const t = useTranslations('dealership.common');
+  const tr = useTranslations('approvals.request');
+  const business = useCurrentBusiness();
   const [confirming, setConfirming] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const canEdit = Boolean(editHref || onEdit);
-  if (!canEdit && !canDeactivate) return null;
+  if (!canEdit && !canDeactivate && !requestTarget) return null;
 
   return (
     <>
@@ -103,9 +114,35 @@ export function RowActions({
                 {isActive ? t('deactivate') : t('activate')}
               </button>
             ) : null}
+            {requestTarget ? (
+              <button
+                type="button"
+                className={menuItem}
+                onClick={() => {
+                  close();
+                  setRequesting(true);
+                }}
+              >
+                {tr('button')}
+              </button>
+            ) : null}
           </div>
         )}
       </Dropdown>
+      {requesting && requestTarget
+        ? createPortal(
+            <ChangeRequestDialog
+              slug={business?.slug ?? ''}
+              target={requestTarget}
+              onClose={() => setRequesting(false)}
+              onSent={(message) => {
+                setRequesting(false);
+                onRequestSent?.(message);
+              }}
+            />,
+            document.body,
+          )
+        : null}
       <DeactivateDialog
         open={confirming}
         name={name}

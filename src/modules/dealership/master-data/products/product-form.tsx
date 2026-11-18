@@ -18,7 +18,9 @@ import {
   reasonError,
 } from '../shared/fields';
 import { CategoryDialog } from '../categories/category-dialog';
-import { FormError, ListSkeleton } from '../shared/states';
+import { FormError, ListSkeleton, Notice } from '../shared/states';
+import { useProductRequestTarget } from '../shared/correction';
+import { RequestChangeButton } from '@/core/approvals/request-dialog';
 import { LIMITS, type Category, type Product } from '../types';
 
 const FIELDS = ['categoryId', 'nameEn', 'nameBn', 'unitKey', 'purchasePrice', 'reason'] as const;
@@ -67,6 +69,8 @@ export function ProductForm({
   });
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+  const requestTarget = useProductRequestTarget(product);
   const inFlight = useRef(false);
   const set = (field: keyof typeof values) => (value: string) =>
     setValues((v) => ({ ...v, [field]: value }));
@@ -172,6 +176,7 @@ export function ProductForm({
             serverError ?? (noCategory && !canManage ? t('products.noActiveCategory') : null)
           }
         />
+        <Notice>{sent}</Notice>
 
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
@@ -241,8 +246,26 @@ export function ProductForm({
           </select>
         </Field>
 
-        {!showCost ? null : isEdit ? (
-          <SensitiveSection editable={canEditPrice}>
+        {!showCost ? (
+          isEdit && requestTarget ? (
+            <SensitiveSection
+              editable={false}
+              requestSlot={
+                <RequestChangeButton slug={slug} target={requestTarget} onSent={setSent} />
+              }
+            >
+              {null}
+            </SensitiveSection>
+          ) : null
+        ) : isEdit ? (
+          <SensitiveSection
+            editable={canEditPrice}
+            requestSlot={
+              requestTarget ? (
+                <RequestChangeButton slug={slug} target={requestTarget} onSent={setSent} />
+              ) : null
+            }
+          >
             <PriceFields
               id={id}
               values={values}

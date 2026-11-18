@@ -39,11 +39,23 @@ type Handler = (init: RequestInit & { url: string }) => Response | Promise<Respo
 
 /** fetch mock routed by "METHOD /path" (path without /api/v1 and query). Records every call. */
 export function mockApi(routes: Record<string, Handler>) {
-  const calls: { method: string; path: string; url: string; body: unknown }[] = [];
+  const calls: {
+    method: string;
+    path: string;
+    url: string;
+    body: unknown;
+    headers: Headers;
+  }[] = [];
   const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
     const method = (init.method ?? 'GET').toUpperCase();
     const path = url.replace(/^\/api\/v1/, '').split('?')[0]!;
-    calls.push({ method, path, url, body: init.body ? JSON.parse(String(init.body)) : undefined });
+    calls.push({
+      method,
+      path,
+      url,
+      body: init.body ? JSON.parse(String(init.body)) : undefined,
+      headers: new Headers(init.headers),
+    });
     const handler = routes[`${method} ${path}`];
     if (!handler) return new Response(JSON.stringify({ statusCode: 404 }), { status: 404 });
     return handler({ ...init, url });

@@ -9,7 +9,8 @@
   "nav": {
     "label": "Main navigation",
     "home": "All businesses",
-    "uiDemo": "UI demo"
+    "uiDemo": "UI demo",
+    "approvals": "Approvals"
   },
   "shell": {
     "skipToContent": "Skip to content",
@@ -596,6 +597,159 @@
       "change_view_own": "See and withdraw own requests",
       "change_view_all": "See all requests (inbox badge)",
       "change_approve": "Approve or reject requests"
+    }
+  },
+  "approvals": {
+    "title": "Approvals",
+    "description": "Correction requests for {business}: who asked, what and why.",
+    "tabs": {
+      "label": "Requests",
+      "mine": "My requests",
+      "all": "All requests"
+    },
+    "badge": "{count} pending requests",
+    "status": {
+      "label": "Status",
+      "all": "All statuses",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Withdrawn",
+      "stale": "Out of date"
+    },
+    "entityTypes": {
+      "label": "Record type",
+      "all": "All types",
+      "product": "Product",
+      "customer": "Customer",
+      "product_category": "Category"
+    },
+    "kind": {
+      "edit": "Change",
+      "void": "Void"
+    },
+    "columns": {
+      "who": "Requested by",
+      "what": "Record and change",
+      "when": "Requested",
+      "status": "Status",
+      "actions": "Details"
+    },
+    "detailsFor": "Details of the request for {label}",
+    "details": "Details",
+    "entityFilter": "Only requests for: {label}",
+    "entityFilterRecord": "this record",
+    "clearEntityFilter": "Show all records",
+    "emptyTitle": "No requests",
+    "emptyDescription": "Correction requests will appear here.",
+    "noResultsTitle": "Nothing matches",
+    "noResultsDescription": "No request matches these filters.",
+    "clearFilters": "Clear filters",
+    "loadError": "The requests could not be loaded.",
+    "retry": "Try again",
+    "notFoundTitle": "Request not found",
+    "notFoundDescription": "This request does not exist, or you may not see it.",
+    "back": "Back to requests",
+    "detail": {
+      "title": "Correction request",
+      "record": "Record",
+      "openRecord": "Open the record",
+      "requestedBy": "Requested by",
+      "requestedAt": "Requested",
+      "decidedBy": "Decided by",
+      "decidedAt": "Decided",
+      "appliedAt": "Took effect",
+      "reason": "Reason",
+      "values": "Values",
+      "field": "Field",
+      "before": "When requested",
+      "proposed": "Proposed",
+      "impact": "Effect if approved",
+      "impactChange": "Change",
+      "decisionNote": "Decision note",
+      "voidRequest": "Asks to void this record.",
+      "noValues": "No values you may see."
+    },
+    "fields": {
+      "purchasePrice": "Purchase price",
+      "openingBalance": "Opening due",
+      "creditLimit": "Credit limit",
+      "isActive": "Status"
+    },
+    "values": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "noLimit": "No limit",
+      "empty": "—"
+    },
+    "impact": {
+      "product_purchasePrice": "Purchase price",
+      "product_isActive": "Product status",
+      "customer_openingBalance": "Opening due",
+      "customer_currentBalance": "Current due",
+      "customer_creditLimit": "Credit limit",
+      "customer_isActive": "Customer status",
+      "product_category_isActive": "Category status"
+    },
+    "notes": {
+      "inactive": "While inactive it cannot be chosen for new entries; existing records stay."
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Withdraw request",
+      "close": "Not now",
+      "approving": "Approving…",
+      "rejecting": "Rejecting…",
+      "cancelling": "Withdrawing…",
+      "note": "Note",
+      "noteOptional": "Note (optional)",
+      "noteHint": "3–500 characters.",
+      "noteRequired": "Write why it is rejected (3–500 characters).",
+      "noteTooLong": "At most 500 characters.",
+      "approveTitle": "Approve this request?",
+      "approveBody": "The proposed values take effect at once, exactly as shown.",
+      "rejectTitle": "Reject this request?",
+      "rejectBody": "The record stays as it is. The person who asked sees your note.",
+      "cancelTitle": "Withdraw your request?",
+      "cancelBody": "The request is closed and nothing changes.",
+      "approved": "Approved; the change is now in effect.",
+      "rejected": "Rejected; the record was not changed.",
+      "cancelled": "Your request was withdrawn."
+    },
+    "stale": {
+      "title": "This request is out of date",
+      "body": "The record changed after this request was made, so it can no longer be approved.",
+      "link": "Open the record to request again"
+    },
+    "ownRequest": "This is your own request; someone else must approve or reject it.",
+    "request": {
+      "button": "Request a correction",
+      "title": "Request a correction: {name}",
+      "intro": "You cannot change these directly. Your request goes to the owner, and takes effect only when approved.",
+      "choose": "What should change?",
+      "change": "Change {field}",
+      "current": "Now: {value}",
+      "newValue": "New {field}",
+      "creditLimitHint": "Leave empty for no limit.",
+      "statusToggle": "Ask to deactivate",
+      "statusToggleActivate": "Ask to activate",
+      "reason": "Reason for the request",
+      "reasonHint": "Why should this change? (3–500 characters)",
+      "reasonRequired": "Write a reason (3–500 characters).",
+      "nothingChosen": "Choose at least one change.",
+      "review": "Review",
+      "reviewing": "Checking…",
+      "reviewFirst": "Review the effect before sending.",
+      "previewTitle": "Effect if approved",
+      "send": "Send request",
+      "sending": "Sending…",
+      "sent": "Request sent. It takes effect when the owner approves it.",
+      "pendingExists": "This record already has a pending request.",
+      "viewPending": "See the pending request",
+      "viewPendingList": "See pending requests for this record",
+      "cancel": "Cancel",
+      "moneyInvalid": "Enter an amount like 570 or 570.50."
     }
   }
 }

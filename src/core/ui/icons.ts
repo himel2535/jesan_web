@@ -1,6 +1,7 @@
 import {
   Boxes,
   ChartColumn,
+  ClipboardCheck,
   House,
   KeyRound,
   LayoutDashboard,
@@ -36,6 +37,7 @@ export const navIcons = {
   percent: Percent,
   chart: ChartColumn,
   settings: Settings,
+  approvals: ClipboardCheck,
 } satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof navIcons;

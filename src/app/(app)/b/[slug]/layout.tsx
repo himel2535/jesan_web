@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
+import { ChangeEntitiesProvider } from '@/core/approvals/context';
+import { withApprovalsEntry } from '@/core/approvals/nav';
 import { BusinessProvider } from '@/core/auth/session-context';
 import { lookupBusiness, moduleTranslator } from '@/core/module-system/business-context';
 import { buildBusinessNav } from '@/core/module-system/business-nav';
@@ -50,6 +52,7 @@ export default async function BusinessLayout({
     const tm = await moduleTranslator(manifest);
     navItems = buildBusinessNav(manifest, lookup.business, (key) => tm(`nav.${key}`));
   }
+  navItems = withApprovalsEntry(navItems, lookup.business, t('nav.approvals'));
 
   return (
     <BusinessProvider business={lookup.business}>
@@ -59,7 +62,9 @@ export default async function BusinessLayout({
         initialCollapsed={prefs.sidebarCollapsed}
         theme={prefs.theme}
       >
-        {children}
+        <ChangeEntitiesProvider entities={manifest?.changeEntities ?? {}}>
+          {children}
+        </ChangeEntitiesProvider>
       </AppShell>
     </BusinessProvider>
   );
