@@ -68,16 +68,36 @@ describe('<ChangePasswordForm>', () => {
     expect(screen.getByLabelText('Current password')).toHaveValue('');
   });
 
-  it('400 from the API → "current password is wrong"', async () => {
+  it('CURRENT_PASSWORD_INCORRECT → "current password is wrong" on the field', async () => {
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ message: 'Current password is incorrect', statusCode: 400 }), {
-        status: 400,
-      }),
+      new Response(
+        JSON.stringify({
+          message: 'Current password is incorrect',
+          statusCode: 400,
+          code: 'CURRENT_PASSWORD_INCORRECT',
+          field: 'currentPassword',
+        }),
+        { status: 400 },
+      ),
     );
     render();
     await fill('wrong-current-1', 'new-password-1');
     expect(screen.getByRole('alert')).toHaveTextContent('The current password is wrong');
     expect(screen.getByLabelText('Current password')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('another code (e.g. PASSWORD_MATCHES_IDENTITY) shows its own message', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ statusCode: 400, message: 'x', code: 'PASSWORD_MATCHES_IDENTITY' }),
+        { status: 400 },
+      ),
+    );
+    render();
+    await fill('old-password-1', 'new-password-1');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The password cannot be the user’s own email or phone.',
+    );
   });
 
   it('shows rule errors on the fields and sends nothing', async () => {

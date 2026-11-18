@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { managerMe, ownerMe } from '../../../test/fixtures/me';
-import { json, mockApi, renderInBusiness } from '../../../test/settings-utils';
+import { apiError, json, mockApi, renderInBusiness } from '../../../test/settings-utils';
 import { expectNoA11yViolations } from '../../../test/utils';
 import type { SettingsUser, UsersPage } from './types';
 import { UsersSection } from './users-section';
@@ -178,14 +178,19 @@ describe('<UsersSection> owner actions', () => {
     const submit = within(dialog).getByRole('button', { name: 'Create user' });
     await userEvent.dblClick(submit);
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
-    resolve(
-      json(409, {
-        message: 'A user with this email or phone already exists; grant them access instead',
-        statusCode: 409,
+    resolve(apiError(409, 'USER_ALREADY_EXISTS'));
+    expect(
+      await within(dialog).findByText('A user with this email or phone already exists.'),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Initial password')).toHaveValue('');
+    // Offer to add that existing user instead: opens the lookup with the same email.
+    await userEvent.click(
+      within(dialog).getByRole('button', {
+        name: 'Add the existing user to this business instead',
       }),
     );
-    expect(await within(dialog).findByText(/already exists/)).toBeInTheDocument();
-    expect(within(dialog).getByLabelText('Initial password')).toHaveValue('');
+    const lookup = await screen.findByRole('dialog', { name: 'Add an existing user' });
+    expect(within(lookup).getByLabelText('Email or phone')).toHaveValue('manager@example.com');
   });
 
   it('changes a role (PATCH) without offering owner', async () => {
@@ -241,15 +246,14 @@ describe('<UsersSection> owner actions', () => {
   it('server refuses (400, e.g. a platform owner account): message inside the dialog', async () => {
     mockApi({
       [LIST]: () => json(200, page([owner, karim])),
-      'PATCH /b/example-cement/users/u9/status': () =>
-        json(400, { message: 'Platform owner accounts cannot be changed here', statusCode: 400 }),
+      'PATCH /b/example-cement/users/u9/status': () => apiError(400, 'PLATFORM_OWNER_PROTECTED'),
     });
     renderUsers();
     await openAction('Karim Seller', 'Deactivate');
     const dialog = screen.getByRole('dialog', { name: 'Deactivate Karim Seller?' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'platform owner’s or your own account',
+      'A platform owner account cannot be changed here.',
     );
   });
 
@@ -286,5 +290,116 @@ describe('<UsersSection> owner actions', () => {
     expect(row).toHaveTextContent('বিক্রয়কর্মী');
     expect(row).toHaveTextContent('সক্রিয়');
     await expectNoA11yViolations(container);
+  });
+});
+
+describe('<UsersSection> platform owner rows and existing users (§8)', () => {
+  const LOOKUP = 'POST /b/example-cement/users/lookup';
+  const found = {
+    id: 'u7',
+    name: 'Rahim Uddin',
+    isActive: true,
+    isPlatformOwner: false,
+    hasAccess: false,
+    role: null,
+  };
+
+  const openLookup = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: 'Add existing user' }));
+    return screen.getByRole('dialog', { name: 'Add an existing user' });
+  };
+
+  it('another platform owner’s row has no actions, only a note', async () => {
+    mockApi({
+      [LIST]: () =>
+        json(
+          200,
+          page([owner, karim, user({ id: 'p2', name: 'Other Owner', isPlatformOwner: true })]),
+        ),
+    });
+    renderUsers();
+    const row = (await screen.findByRole('rowheader', { name: 'Other Owner' })).closest('tr')!;
+    expect(within(row).queryByRole('button')).not.toBeInTheDocument();
+    expect(row).toHaveTextContent('A platform owner’s account cannot be changed here.');
+    expect(screen.getByRole('button', { name: 'Actions for Karim Seller' })).toBeInTheDocument();
+  });
+
+  it('finds by email in the body (not the URL), then adds with the chosen role', async () => {
+    const { calls } = mockApi({
+      [LIST]: () => json(200, page([owner, karim])),
+      [LOOKUP]: () => json(200, found),
+      'POST /b/example-cement/users/u7/access': () => json(200, { id: 'u7', role: 'accountant' }),
+    });
+    const { invalidate } = renderUsers();
+    const dialog = await openLookup();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Search' }));
+    expect(within(dialog).getByLabelText('Email or phone')).toHaveAccessibleDescription(
+      /Enter an email or a phone number/,
+    );
+    await userEvent.type(within(dialog).getByLabelText('Email or phone'), 'Rahim@Example.com');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Search' }));
+    expect(await within(dialog).findByText('Rahim Uddin')).toBeInTheDocument();
+    const lookupCall = calls.find((c) => c.url.endsWith('/users/lookup'))!;
+    expect(lookupCall.body).toEqual({ identifier: 'Rahim@Example.com' });
+    expect(lookupCall.url).not.toContain('Rahim');
+
+    await userEvent.selectOptions(within(dialog).getByLabelText('Role'), 'accountant');
+    await userEvent.dblClick(within(dialog).getByRole('button', { name: 'Add to this business' }));
+    expect(await screen.findByText('Rahim Uddin was added as Accountant.')).toBeInTheDocument();
+    expect(calls.filter((c) => c.url.endsWith('/access'))).toHaveLength(1);
+    expect(calls.find((c) => c.url.endsWith('/access'))!.body).toEqual({ roleKey: 'accountant' });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['settings', BID, 'users'] });
+  });
+
+  it('already a member, or a platform owner: a message and no add button', async () => {
+    let answer: object = { ...found, hasAccess: true, role: 'manager' };
+    mockApi({ [LIST]: () => json(200, page([owner])), [LOOKUP]: () => json(200, answer) });
+    renderUsers();
+    const dialog = await openLookup();
+    await userEvent.type(within(dialog).getByLabelText('Email or phone'), '01712345678');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Search' }));
+    expect(
+      await within(dialog).findByText('Already in this business, as Manager.'),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: 'Add to this business' }),
+    ).not.toBeInTheDocument();
+
+    answer = { ...found, isPlatformOwner: true, hasAccess: true };
+    await userEvent.type(within(dialog).getByLabelText('Email or phone'), '9');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Search' }));
+    expect(
+      await within(dialog).findByText(/platform owner, who can already open every business/),
+    ).toBeInTheDocument();
+  });
+
+  it('404 → not found under the field; 429 → wait seconds; Bengali; a11y', async () => {
+    let status = 404;
+    mockApi({
+      [LIST]: () => json(200, page([owner])),
+      [LOOKUP]: () =>
+        status === 404
+          ? apiError(404, 'USER_NOT_FOUND')
+          : json(429, { statusCode: 429, code: 'RATE_LIMITED' }, { 'Retry-After': '42' }),
+    });
+    const { container } = renderUsers(ownerMe, 'bn');
+    await userEvent.click(await screen.findByRole('button', { name: 'বিদ্যমান ইউজার যোগ করুন' }));
+    const dialog = screen.getByRole('dialog', { name: 'বিদ্যমান ইউজারকে যোগ করুন' });
+    await userEvent.type(within(dialog).getByLabelText('ইমেইল বা ফোন'), 'nobody@example.com');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'খুঁজুন' }));
+    expect(within(dialog).getByLabelText('ইমেইল বা ফোন')).toHaveAccessibleDescription(
+      /কোনো ইউজার পাওয়া যায়নি/,
+    );
+    status = 429;
+    await userEvent.click(within(dialog).getByRole('button', { name: 'খুঁজুন' }));
+    expect(await within(dialog).findByText(/৪২ সেকেন্ড/)).toBeInTheDocument();
+    await expectNoA11yViolations(container);
+  });
+
+  it('a manager (no users.manage) has no add-existing button', async () => {
+    mockApi({ [LIST]: () => json(200, page([owner])) });
+    renderUsers(managerMe);
+    await screen.findByRole('rowheader', { name: /Jesan Owner|Owner/ });
+    expect(screen.queryByRole('button', { name: 'Add existing user' })).not.toBeInTheDocument();
   });
 });

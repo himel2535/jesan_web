@@ -13,6 +13,7 @@ export const CLIENT_NAMESPACES = [
   'locale',
   'pagination',
   'errors',
+  'apiErrors',
   'auth',
   'session',
   'business',

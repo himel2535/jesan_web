@@ -114,7 +114,6 @@ export type ProductInput = {
   nameBn?: string;
   unitKey?: string;
   purchasePrice?: string;
-  defaultSalePrice?: string;
   isActive?: boolean;
   reason?: string;
 };

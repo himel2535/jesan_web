@@ -156,3 +156,48 @@ test('category detail page links to its products', async ({ page }) => {
   await expect(page).toHaveURL(/category=c1/);
   await expect(page.getByRole('rowheader', { name: /Sample PCC/ })).toHaveCount(0);
 });
+
+test('new product without a sale price; a duplicate name is shown under the name field', async ({
+  page,
+}) => {
+  await signIn(page, 'manager', '/b/example-cement/products/new');
+  await expect(page.getByLabel(/sale price/i)).toHaveCount(0);
+  await page.getByLabel('Category').selectOption({ label: 'OPC' });
+  await page.getByLabel('Name (English)').fill('sample opc 02');
+  await page.getByLabel('Name (Bangla)').fill('নমুনা ডুপ্লিকেট');
+  await page.getByLabel('Purchase price').fill('450');
+  await page.getByRole('button', { name: 'Create' }).click();
+  // NAME_EN_DUPLICATE (code + field) from the API → under the field, not the English text.
+  await expect(page.getByLabel('Name (English)')).toHaveAccessibleDescription(
+    'This English name is already used in this business.',
+  );
+
+  await page.getByLabel('Name (English)').fill('Sample OPC 40kg');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('heading', { name: 'Sample OPC 40kg' })).toBeVisible();
+  await expect(page.locator('main')).not.toContainText(/sale price/i);
+  await expect(page.locator('main')).toContainText('৳450.00');
+});
+
+test('platform owner adds an existing user from another business', async ({ page }) => {
+  await signIn(page, 'owner', '/b/example-cement/settings/users');
+  await page.getByRole('button', { name: 'Add existing user' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add an existing user' });
+  await dialog.getByLabel('Email or phone').fill('nobody@example.com');
+  await dialog.getByRole('button', { name: 'Search' }).click();
+  await expect(dialog.getByLabel('Email or phone')).toHaveAccessibleDescription(
+    /No user with this email or phone was found/,
+  );
+
+  await dialog.getByLabel('Email or phone').fill('manager@example.com');
+  await dialog.getByRole('button', { name: 'Search' }).click();
+  await expect(dialog.getByText('Already in this business, as Manager.')).toBeVisible();
+
+  await dialog.getByLabel('Email or phone').fill('01700000004');
+  await dialog.getByRole('button', { name: 'Search' }).click();
+  await expect(dialog.getByText('Example Accountant')).toBeVisible();
+  await dialog.getByLabel('Role').selectOption('accountant');
+  await dialog.getByRole('button', { name: 'Add to this business' }).click();
+  await expect(page.getByText('Example Accountant was added as Accountant.')).toBeVisible();
+  await expect(page.getByRole('rowheader', { name: 'Example Accountant' })).toBeVisible();
+});

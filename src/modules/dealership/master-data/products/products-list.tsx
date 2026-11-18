@@ -143,9 +143,6 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                           {t('products.purchasePrice')}
                         </th>
                       ) : null}
-                      <th scope="col" className="px-4 py-3 text-right font-medium">
-                        {t('products.salePrice')}
-                      </th>
                       <th scope="col" className="px-4 py-3 font-medium">
                         {t('common.status')}
                       </th>
@@ -182,9 +179,6 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                             ) : null}
                           </td>
                         ) : null}
-                        <td className="px-4 py-3 text-right">
-                          <Money value={p.defaultSalePrice} />
-                        </td>
                         <td className="px-4 py-3">
                           <StatusBadge active={p.isActive} />
                         </td>
@@ -251,9 +245,8 @@ function ProductCard({
             </span>
           ) : null}
           <span>
-            <span className="text-fg-muted">{t('products.salePrice')}: </span>
-            <Money value={product.defaultSalePrice} />
-            <span className="text-fg-muted"> / {unitName(product.unitKey)}</span>
+            <span className="text-fg-muted">{t('products.unit')}: </span>
+            {unitName(product.unitKey)}
           </span>
         </span>
       </Link>

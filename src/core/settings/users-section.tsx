@@ -1,6 +1,6 @@
 'use client';
 
-import { EllipsisVertical, Eye, UserPlus, Users } from 'lucide-react';
+import { EllipsisVertical, Eye, UserPlus, UserSearch, Users } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useRef, useState } from 'react';
@@ -17,12 +17,19 @@ import { Pagination } from '@/core/ui/pagination';
 import { PAGE_SIZE, parsePageParam } from '@/core/ui/pagination-logic';
 import { Skeleton } from '@/core/ui/skeleton';
 import { useRemoveAccess, useSetUserStatus, useUsers } from './api';
-import { settingsErrorKind, type SettingsErrorKind } from './errors';
+import { useErrorMessage } from '@/core/api/field-errors';
+import { settingsErrorKind } from './errors';
 import type { SettingsUser } from './types';
-import { ChangeRoleDialog, CreateUserDialog, ResetPasswordDialog } from './user-dialogs';
+import {
+  AddExistingUserDialog,
+  ChangeRoleDialog,
+  CreateUserDialog,
+  ResetPasswordDialog,
+} from './user-dialogs';
 
 type DialogState =
   | { type: 'create' }
+  | { type: 'lookup'; identifier?: string }
   | { type: 'role' | 'reset' | 'deactivate' | 'activate' | 'remove'; user: SettingsUser }
   | null;
 
@@ -59,10 +66,16 @@ export function UsersSection({ slug, businessId }: { slug: string; businessId: s
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-fg-muted">{t('users.intro')}</p>
         {canManage ? (
-          <Button onClick={() => open({ type: 'create' })}>
-            <UserPlus aria-hidden className="size-4" />
-            {t('users.add')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => open({ type: 'lookup' })}>
+              <UserSearch aria-hidden className="size-4" />
+              {t('users.lookup.open')}
+            </Button>
+            <Button onClick={() => open({ type: 'create' })}>
+              <UserPlus aria-hidden className="size-4" />
+              {t('users.add')}
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -140,6 +153,8 @@ export function UsersSection({ slug, businessId }: { slug: string; businessId: s
               <tbody>
                 {items.map((user) => {
                   const isSelf = user.id === me.id;
+                  // Platform owner accounts are managed only from the command line (§8).
+                  const locked = isSelf || user.isPlatformOwner === true;
                   return (
                     <tr key={user.id} className="border-b border-border last:border-0">
                       <th scope="row" className="px-4 py-3 font-medium whitespace-nowrap">
@@ -178,7 +193,15 @@ export function UsersSection({ slug, businessId }: { slug: string; businessId: s
                       {canManage ? (
                         <td className="px-4 py-2 text-right">
                           {/* Your own account is changed from "Change password", never here. */}
-                          {isSelf ? null : <RowActions user={user} onOpen={open} />}
+                          {locked ? (
+                            user.isPlatformOwner && !isSelf ? (
+                              <span className="text-xs text-fg-muted">
+                                {t('users.platformOwner')}
+                              </span>
+                            ) : null
+                          ) : (
+                            <RowActions user={user} onOpen={open} />
+                          )}
                         </td>
                       ) : null}
                     </tr>
@@ -198,11 +221,23 @@ export function UsersSection({ slug, businessId }: { slug: string; businessId: s
         <>
           <CreateUserDialog
             open={dialog?.type === 'create'}
-            onClose={() => setDialog(null)}
+            // The native dialog's 'close' event can arrive after another dialog opened
+            // (409 → "add the existing user"), so close only the create dialog itself.
+            onClose={() => setDialog((d) => (d?.type === 'create' ? null : d))}
             onCreated={(name) => setNotice(t('users.create.success', { name }))}
+            onAddExisting={(identifier) => open({ type: 'lookup', identifier })}
             slug={slug}
             businessId={businessId}
           />
+          {dialog?.type === 'lookup' ? (
+            <AddExistingUserDialog
+              initialIdentifier={dialog.identifier}
+              onClose={() => setDialog(null)}
+              onDone={setNotice}
+              slug={slug}
+              businessId={businessId}
+            />
+          ) : null}
           {dialog?.type === 'role' ? (
             <ChangeRoleDialog
               user={dialog.user}
@@ -294,7 +329,8 @@ function RiskyActionDialog({
   const t = useTranslations('settings.users');
   const status = useSetUserStatus(slug, businessId);
   const remove = useRemoveAccess(slug, businessId);
-  const [error, setError] = useState<SettingsErrorKind | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const errorMessage = useErrorMessage();
   const inFlight = useRef(false);
   const key =
     type === 'deactivate'
@@ -314,7 +350,7 @@ function RiskyActionDialog({
       onDone(t(`${key}.success`, { name: user.name }));
       onClose();
     } catch (cause) {
-      setError(settingsErrorKind(cause));
+      setError(errorMessage.message(cause));
     } finally {
       inFlight.current = false;
     }
@@ -328,7 +364,7 @@ function RiskyActionDialog({
       cancelLabel={t('cancel')}
       danger={type !== 'activate'}
       pending={pending}
-      error={error ? t(`error.${error}`) : null}
+      error={error}
       onCancel={onClose}
       onConfirm={() => void confirm()}
     >

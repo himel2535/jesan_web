@@ -127,7 +127,6 @@ const products = Array.from({ length: 12 }, (_, i) => {
     nameBn: `নমুনা ${cat.nameBn} ${n}`,
     unitKey: 'bag',
     purchasePrice: `${500 + n}.00`,
-    defaultSalePrice: `${520 + n}.00`,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -201,7 +200,49 @@ const send = (res, status, body, headers = {}) => {
   res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
   res.end(body === undefined ? '' : JSON.stringify(body));
 };
-const err = (res, status, message) => send(res, status, { message, statusCode: status });
+// Errors in the docs/API.md §11 shape: stable `code`, and `field` + `errors[]` for one field.
+const CODE_BY_STATUS = {
+  400: 'BAD_REQUEST',
+  401: 'UNAUTHENTICATED',
+  403: 'ACCESS_DENIED',
+  404: 'NOT_FOUND',
+  409: 'CONFLICT',
+};
+const err = (res, status, message, code = CODE_BY_STATUS[status], field) =>
+  send(res, status, {
+    message,
+    statusCode: status,
+    code,
+    ...(field ? { field, errors: [{ field, code, message }] } : {}),
+  });
+/** 400 VALIDATION_FAILED with one entry per field. */
+const invalid = (res, list) =>
+  send(res, 400, {
+    message: list.map((e) => e.message),
+    statusCode: 400,
+    code: 'VALIDATION_FAILED',
+    errors: list,
+  });
+
+/** Someone with an account in another business only (for "add existing user"). */
+const OUTSIDER = {
+  id: 'u4',
+  name: 'Example Accountant',
+  email: 'accountant@example.com',
+  phone: '+8801700000004',
+  isActive: true,
+};
+/** Members of example-cement as GET users shows them (platform owners are not listed). */
+const members = [
+  { id: 'u2', name: 'Example Manager', email: 'manager@example.com', phone: null, role: 'manager' },
+  {
+    id: 'u3',
+    name: 'Example Salesman',
+    email: 'salesman@example.com',
+    phone: null,
+    role: 'salesman',
+  },
+].map((m) => ({ ...m, isActive: true, isPlatformOwner: false, lastLoginAt: null }));
 const normalizePhone = (v) => {
   const c = String(v)
     .replace(/[\s\-().]/g, '')
@@ -234,7 +275,7 @@ http
       const body = raw ? JSON.parse(raw) : {};
       const cookies = cookiesOf(req);
       if (req.method !== 'GET' && req.headers.origin && !ORIGINS.includes(req.headers.origin))
-        return err(res, 403, 'Origin not allowed');
+        return err(res, 403, 'Origin not allowed', 'ORIGIN_NOT_ALLOWED');
       if (path === '/health') return send(res, 200, { status: 'ok' });
       if (path === '/auth/login') {
         const u =
@@ -243,7 +284,8 @@ http
               .trim()
               .toLowerCase()
           ];
-        if (!u || u.password !== body.password) return err(res, 401, 'Invalid credentials');
+        if (!u || u.password !== body.password)
+          return err(res, 401, 'Invalid credentials', 'INVALID_CREDENTIALS');
         issue(res, u.user.email);
         return send(res, 200, { user: u.user });
       }
@@ -303,23 +345,122 @@ http
           ),
         });
       }
-      let r = rest.match(/^products\/([^/]+)$/);
+      if (rest === 'products' && req.method === 'POST') {
+        if (!need('product.manage')) return;
+        if ('defaultSalePrice' in body)
+          return invalid(res, [
+            {
+              field: 'defaultSalePrice',
+              code: 'DEFAULT_SALE_PRICE_NOT_ALLOWED',
+              message: 'property defaultSalePrice should not exist',
+            },
+          ]);
+        const cat = categories.find((c) => c.id === body.categoryId && c.isActive);
+        if (!cat)
+          return err(
+            res,
+            400,
+            'Category not found or inactive',
+            'CATEGORY_NOT_FOUND_OR_INACTIVE',
+            'categoryId',
+          );
+        const name = String(body.nameEn ?? '').trim();
+        if (products.some((p) => p.nameEn.toLowerCase() === name.toLowerCase()))
+          return err(
+            res,
+            409,
+            'A product with this name already exists',
+            'NAME_EN_DUPLICATE',
+            'nameEn',
+          );
+        const n = products.length + 1;
+        const p = {
+          id: `p${n}`,
+          code: `P-${String(n).padStart(4, '0')}`,
+          category: { id: cat.id, nameEn: cat.nameEn, nameBn: cat.nameBn },
+          nameEn: name,
+          nameBn: body.nameBn,
+          unitKey: body.unitKey ?? 'bag',
+          purchasePrice: body.purchasePrice
+            ? `${body.purchasePrice}`.includes('.')
+              ? body.purchasePrice
+              : `${body.purchasePrice}.00`
+            : '0.00',
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        };
+        products.push(p);
+        return send(res, 201, hide(perms, p, ['purchasePrice'], 'product.cost.view'));
+      }
+      if (rest === 'users' && req.method === 'GET')
+        return need('users.view') && send(res, 200, pageOf(members, page));
+      if (rest === 'users/lookup' && req.method === 'POST') {
+        if (!need('users.manage')) return;
+        const id = String(body.identifier ?? '')
+          .trim()
+          .toLowerCase();
+        if (!id)
+          return err(
+            res,
+            400,
+            'identifier should not be empty',
+            'IDENTIFIER_REQUIRED',
+            'identifier',
+          );
+        const phone = normalizePhone(id);
+        const known = Object.values(USERS).map((u) => u.user);
+        const hit = [...known, OUTSIDER].find(
+          (u) => u.email === id || (phone && u.phone === phone),
+        );
+        if (!hit) return err(res, 404, 'User not found', 'USER_NOT_FOUND');
+        const member = members.find((m) => m.id === hit.id);
+        return send(res, 200, {
+          id: hit.id,
+          name: hit.name,
+          isActive: hit.isActive,
+          isPlatformOwner: Boolean(hit.isPlatformOwner),
+          hasAccess: Boolean(hit.isPlatformOwner || member),
+          role: member?.role ?? null,
+        });
+      }
+      let r = rest.match(/^users\/([^/]+)\/access$/);
+      if (r && req.method === 'POST') {
+        if (!need('users.manage')) return;
+        const hit = [OUTSIDER, ...members].find((u) => u.id === r[1]);
+        if (!hit) return err(res, 404, 'User not found', 'USER_NOT_FOUND');
+        const existing = members.find((m) => m.id === hit.id);
+        if (existing) existing.role = body.roleKey;
+        else
+          members.push({
+            id: hit.id,
+            name: hit.name,
+            email: hit.email,
+            phone: hit.phone,
+            isActive: hit.isActive,
+            isPlatformOwner: false,
+            lastLoginAt: null,
+            role: body.roleKey,
+          });
+        return send(res, 200, { id: hit.id, role: body.roleKey });
+      }
+      r = rest.match(/^products\/([^/]+)$/);
       if (r && req.method === 'GET') {
         const p = products.find((x) => x.id === r[1]);
         return (
           need('product.view') &&
           (p
             ? send(res, 200, hide(perms, p, ['purchasePrice'], 'product.cost.view'))
-            : err(res, 404, 'Product not found'))
+            : err(res, 404, 'Product not found', 'PRODUCT_NOT_FOUND'))
         );
       }
       if (r && req.method === 'PATCH') {
         const p = products.find((x) => x.id === r[1]);
-        if (!p) return err(res, 404, 'Product not found');
+        if (!p) return err(res, 404, 'Product not found', 'PRODUCT_NOT_FOUND');
         if ('isActive' in body) {
           if (!need('product.deactivate')) return;
           if (!body.reason || body.reason.trim().length < 3)
-            return err(res, 400, 'A reason is required');
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
           p.isActive = body.isActive;
         } else if (!need('product.manage')) return;
         for (const k of ['nameEn', 'nameBn']) if (k in body) p[k] = body[k];
@@ -350,9 +491,15 @@ http
         )
           return err(res, 403, 'Access denied');
         const phone = normalizePhone(body.phone ?? '');
-        if (!phone) return err(res, 400, 'Phone number is not valid');
+        if (!phone) return err(res, 400, 'Phone number is not valid', 'PHONE_INVALID', 'phone');
         if (customers.some((c) => c.phone === phone))
-          return err(res, 409, 'A customer with this phone number already exists');
+          return err(
+            res,
+            409,
+            'A customer with this phone number already exists',
+            'PHONE_DUPLICATE',
+            'phone',
+          );
         const n = customers.length + 1;
         const c = {
           id: `cu${n}`,
@@ -384,14 +531,14 @@ http
           need('customer.view') &&
           (c
             ? send(res, 200, hide(perms, c, dueFields, 'customer.due.view'))
-            : err(res, 404, 'Customer not found'))
+            : err(res, 404, 'Customer not found', 'CUSTOMER_NOT_FOUND'))
         );
       }
       if (rest === 'suppliers' && req.method === 'GET')
         return need('supplier.view') && send(res, 200, pageOf(suppliers.filter(activeOk), page));
       r = rest.match(/^suppliers\/([^/]+)$/);
       if (r) return need('supplier.view') && send(res, 200, suppliers[0]);
-      return err(res, 404, 'Not Found');
+      return err(res, 404, 'Not Found', 'ROUTE_NOT_FOUND');
     });
   })
   .listen(PORT, () => console.log(`mock jesan-api on ${PORT}`));

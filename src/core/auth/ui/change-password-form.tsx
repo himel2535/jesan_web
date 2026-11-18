@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { apiFetch } from '@/core/api/client';
 import { ApiError } from '@/core/api/errors';
+import { useErrorMessage } from '@/core/api/field-errors';
 import { Button } from '@/core/ui/button';
 import { PasswordInput } from '@/core/ui/password-input';
 import { Field, describedBy } from '@/core/ui/text-field';
@@ -34,7 +35,7 @@ export function validatePasswords(
   return errors;
 }
 
-type Result = 'success' | 'currentWrong' | 'unavailable' | 'unknown';
+type Result = 'success' | 'currentWrong' | 'server';
 
 export function ChangePasswordForm() {
   const t = useTranslations('account');
@@ -47,6 +48,8 @@ export function ChangePasswordForm() {
   });
   const [errors, setErrors] = useState<Partial<Record<FieldName, FieldError>>>({});
   const [result, setResult] = useState<Result | null>(null);
+  const [serverMessage, setServerMessage] = useState('');
+  const errorMessage = useErrorMessage();
   const [saving, setSaving] = useState(false);
   const inFlight = useRef(false);
   const refs = {
@@ -77,12 +80,14 @@ export function ChangePasswordForm() {
       setValues({ current: '', new: '', confirm: '' });
       setResult('success');
     } catch (cause) {
-      // Rules were checked above, so a 400 here means the current password was wrong.
-      if (cause instanceof ApiError && cause.status === 400) {
+      // By the API's stable code (docs/API.md §11), never its English message.
+      if (cause instanceof ApiError && cause.code === 'CURRENT_PASSWORD_INCORRECT') {
         setResult('currentWrong');
         refs.current.current?.focus();
-      } else if (cause instanceof ApiError && cause.isServerUnavailable) setResult('unavailable');
-      else setResult('unknown');
+      } else {
+        setServerMessage(errorMessage.message(cause));
+        setResult('server');
+      }
     } finally {
       inFlight.current = false;
       setSaving(false);
@@ -122,7 +127,7 @@ export function ChangePasswordForm() {
       <div role="alert">
         {result && result !== 'success' ? (
           <p className="rounded-lg border border-danger px-3 py-2 text-sm font-medium text-danger">
-            {t(result)}
+            {result === 'server' ? serverMessage : t(result)}
           </p>
         ) : null}
       </div>

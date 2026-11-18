@@ -56,7 +56,6 @@ export function ProductDetail({
     ...('purchasePrice' in p && p.purchasePrice !== undefined
       ? [{ label: t('products.purchasePrice'), value: <Money value={p.purchasePrice} /> }]
       : []),
-    { label: t('products.salePrice'), value: <Money value={p.defaultSalePrice} /> },
     { label: t('common.status'), value: <StatusBadge active={p.isActive} /> },
     { label: t('common.createdAt'), value: format.date(p.createdAt) },
     {

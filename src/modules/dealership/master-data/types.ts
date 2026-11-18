@@ -40,7 +40,6 @@ export interface Product {
   unitKey: string;
   /** Absent (not null) without `product.cost.view`. */
   purchasePrice?: string;
-  defaultSalePrice: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

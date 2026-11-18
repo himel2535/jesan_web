@@ -155,7 +155,7 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | GET | `/b/:businessSlug/products?search=&categoryId=&active=&page=` | হ্যাঁ | `product.view` | 200 |
 | GET | `/b/:businessSlug/products/:id` | হ্যাঁ | `product.view` | 200 |
 | POST | `/b/:businessSlug/products` | হ্যাঁ | `product.manage` (+ কেনা-দামে `product.cost.view`) | 201 |
-| PATCH | `/b/:businessSlug/products/:id` | হ্যাঁ | `product.manage` (+ দামে `product.price.edit`, নিষ্ক্রিয়ে `product.deactivate`) | 200 |
+| PATCH | `/b/:businessSlug/products/:id` | হ্যাঁ | `product.manage` (+ কেনা-দামে `product.price.edit`, নিষ্ক্রিয়ে `product.deactivate`) | 200 |
 | GET | `/b/:businessSlug/customers?search=&active=&page=` | হ্যাঁ | `customer.view` | 200 |
 | GET | `/b/:businessSlug/customers/:id` | হ্যাঁ | `customer.view` | 200 |
 | POST | `/b/:businessSlug/customers` | হ্যাঁ | `customer.manage` (+ বাকি/সীমায় `customer.due.view`) | 201 |
@@ -194,7 +194,7 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 |---|---|---|
 | ডাটাবেস চালু | 200 | `{ "status": "ok", "database": "up" }` |
 | `DATABASE_URL` নেই | 200 | `{ "status": "ok", "database": "not_configured" }` |
-| ডাটাবেস পাওয়া যায় না | 503 | `{ "status": "error", "database": "down" }` |
+| ডাটাবেস পাওয়া যায় না | 503 | `{ "status": "error", "database": "down", "code": "SERVICE_UNAVAILABLE" }` |
 
 ---
 
@@ -394,7 +394,7 @@ Request:
 
 Response: **204**, body নেই।
 
-ত্রুটি: বর্তমান পাসওয়ার্ড ভুল হলে 400 `Current password is incorrect`; নতুন পাসওয়ার্ড নিয়ম না মানলে 400 (নিচে)।
+ত্রুটি: বর্তমান পাসওয়ার্ড ভুল হলে 400 `CURRENT_PASSWORD_INCORRECT` (`currentPassword`); নতুন পাসওয়ার্ড নিয়ম না মানলে 400 `PASSWORD_TOO_SHORT` / `PASSWORD_TOO_LONG` / `PASSWORD_MATCHES_IDENTITY` (`newPassword`)। সব code অংশ ১১-এ।
 
 **পাসওয়ার্ডের নিয়ম:** ১০ থেকে ১২৮ অক্ষর; ইউজারের নিজের email বা phone হতে পারবে না; চিহ্ন বা বড় হাতের অক্ষর বাধ্যতামূলক নয়।
 
@@ -489,7 +489,7 @@ Response 200 (কী যোগ হলো, কী বাদ গেল):
 { "role": "salesman", "added": ["customer.due.view"], "removed": [] }
 ```
 
-ত্রুটি: `owner` রোল → 400; অজানা রোল → 404 `Unknown role`; অজানা অনুমতি → 400 `Unknown permission: x`; owner-only অনুমতি → 400 `"commission.view" is owner-only and cannot be given to a role`।
+ত্রুটি: `owner` রোল → 400 `OWNER_ROLE_FIXED`; অজানা রোল → 404 `ROLE_NOT_FOUND`; অজানা অনুমতি → 400 `PERMISSION_UNKNOWN` (`permissions`); owner-only অনুমতি → 400 `PERMISSION_OWNER_ONLY` (`permissions`)।
 
 ### `GET users?page=1`: ব্যবসার ইউজার
 
@@ -592,7 +592,7 @@ Response **201**:
 { "id": "01a1e86e-9e22-720b-bd46-0235039e175b", "role": "manager" }
 ```
 
-ত্রুটি: একই email বা phone আগে থেকে থাকলে 409 `A user with this email or phone already exists; grant them access instead`। এই উত্তরে বিদ্যমান ইউজারের id **থাকে না**; id পেতে `POST users/lookup` দিয়ে খুঁজুন, তারপর `access` endpoint দিয়ে যোগ করুন; অজানা রোল 400 `Unknown role`; email ও phone কোনোটাই না থাকলে 400।
+ত্রুটি: একই email বা phone আগে থেকে থাকলে 409 `USER_ALREADY_EXISTS`। এই উত্তরে বিদ্যমান ইউজারের id **থাকে না**; id পেতে `POST users/lookup` দিয়ে খুঁজুন, তারপর `access` endpoint দিয়ে যোগ করুন; অজানা রোল 400 `ROLE_NOT_FOUND` (`roleKey`); email ও phone কোনোটাই না থাকলে 400 `EMAIL_OR_PHONE_REQUIRED`; ভুল ফোন 400 `PHONE_INVALID` (`phone`)।
 
 ### `POST users/:userId/access`: বিদ্যমান ইউজারকে এই ব্যবসায় যোগ
 
@@ -694,7 +694,6 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
       "nameBn": "নমুনা ওপিসি ৫০ কেজি",
       "unitKey": "bag",
       "purchasePrice": "540.00",
-      "defaultSalePrice": "560.00",
       "isActive": true,
       "createdAt": "2026-11-17T08:38:04.236Z",
       "updatedAt": "2026-11-17T08:38:04.236Z"
@@ -715,22 +714,21 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
   "categoryId": "01a1e8a7-f6d0-7858-ba94-86452eb3eb44",
   "nameEn": "Sample OPC 40kg",
   "nameBn": "নমুনা ওপিসি ৪০ কেজি",
-  "purchasePrice": "450",
-  "defaultSalePrice": "470"
+  "purchasePrice": "450"
 }
 ```
 
-→ 201, তৈরি হওয়া পণ্য (`"code": "P-0005"`, দাম `"450.00"` / `"470.00"`)।
+→ 201, তৈরি হওয়া পণ্য (`"code": "P-0005"`, `"purchasePrice": "450.00"`)।
 
-`PATCH products/:id`: `nameEn`, `nameBn`, `categoryId`, `unitKey` (`product.manage`); `purchasePrice`, `defaultSalePrice` (`product.price.edit` + `reason`); `isActive` (`product.deactivate` + `reason`)। উদাহরণ (মালিক):
+**পণ্যে বিক্রয়মূল্য নেই।** মালিক প্রতি গ্রাহকের কাছে আলাদা দামে বেচেন; দাম বসবে বিক্রির সময় ইনভয়েসে (Step 5)। `defaultSalePrice` পাঠালে 400 (অচেনা ফিল্ড), আর উত্তরেও এই ফিল্ড আসে না।
+
+`PATCH products/:id`: `nameEn`, `nameBn`, `categoryId`, `unitKey` (`product.manage`); `purchasePrice` (`product.cost.view` + `product.price.edit` + `reason`); `isActive` (`product.deactivate` + `reason`)। উদাহরণ (মালিক):
 
 ```json
-{ "defaultSalePrice": "565", "reason": "new rate from Akij" }
+{ "purchasePrice": "545", "reason": "new rate from Akij" }
 ```
 
-`defaultSalePrice` শুধু ডিফল্ট; বিক্রির সময় প্রতিটা বিক্রিতে আলাদা দাম দেওয়া যাবে, কেনা-দামের চেয়ে কম হলেও কোনো সতর্কতা নেই।
-
-ত্রুটি: একই নাম 409 `A product with this name already exists`; অজানা বা নিষ্ক্রিয় ক্যাটাগরি 400 `Category not found or inactive`; settings-এ নেই এমন একক 400 `Unknown unit: ton`; টাকা সংখ্যা হিসেবে পাঠালে 400।
+ত্রুটি: একই নাম 409 `NAME_EN_DUPLICATE` (`nameEn`); অজানা বা নিষ্ক্রিয় ক্যাটাগরি 400 `CATEGORY_NOT_FOUND_OR_INACTIVE` (`categoryId`); settings-এ নেই এমন একক 400 `UNIT_UNKNOWN` (`unitKey`); টাকা সংখ্যা হিসেবে পাঠালে 400 `PURCHASE_PRICE_INVALID`; কারণ ছাড়া দাম বা অবস্থা বদলে 400 `REASON_REQUIRED` (`reason`)।
 
 ### গ্রাহক
 
@@ -784,7 +782,7 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 { "openingBalance": "13000", "creditLimit": "50000", "reason": "opening balance was mistyped" }
 ```
 
-ত্রুটি: একই ফোন 409 `A customer with this phone number already exists`; ভুল ফোন 400 `Phone number is not valid`; বিক্রয়কর্মী বাকি পাঠালে 403।
+ত্রুটি: একই ফোন 409 `PHONE_DUPLICATE` (`phone`); ভুল ফোন 400 `PHONE_INVALID` (`phone`); বিক্রয়কর্মী বাকি পাঠালে 403 `ACCESS_DENIED`।
 
 ### সরবরাহকারী (শুধু দেখা)
 
@@ -838,7 +836,6 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 | `entityType` | ফিল্ড | দেখতে লাগে | অনুমোদনে (সরাসরি) লাগে |
 |---|---|---|---|
 | `product` | `purchasePrice` | `product.cost.view` | `product.price.edit` |
-| `product` | `defaultSalePrice` | - | `product.price.edit` |
 | `product` | `isActive` | - | `product.deactivate` |
 | `customer` | `openingBalance`, `creditLimit` | `customer.due.view` | `customer.balance.edit` |
 | `customer` | `isActive` | - | `customer.deactivate` |
@@ -897,7 +894,7 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
   "entityId": "01a1ed61-301a-75e8-a675-1fc7defd7876",
   "kind": "edit",
   "reason": "Akij changed the rate from today",
-  "proposedChange": { "defaultSalePrice": "565", "purchasePrice": "545" }
+  "proposedChange": { "purchasePrice": "545", "isActive": false }
 }
 ```
 
@@ -912,18 +909,18 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
   "entityId": "01a1ed61-301a-75e8-a675-1fc7defd7876",
   "entityLabel": "P-0001 Sample OPC 50kg",
   "kind": "edit",
-  "summary": "Purchase price: 540.00 → 545.00; Default sale price: 560.00 → 565.00",
+  "summary": "Active: true → false; Purchase price: 540.00 → 545.00",
   "status": "pending",
   "requestedBy": { "id": "01a1ed61-40e3-71f7-b8f9-67299cfb0785", "name": "Rahim Uddin" },
   "requestedAt": "2026-11-18T06:38:56.479Z",
   "decidedBy": null,
   "decidedAt": null,
   "reason": "Akij changed the rate from today",
-  "snapshot": { "purchasePrice": "540.00", "defaultSalePrice": "560.00" },
-  "proposedChange": { "purchasePrice": "545.00", "defaultSalePrice": "565.00" },
+  "snapshot": { "isActive": true, "purchasePrice": "540.00" },
+  "proposedChange": { "isActive": false, "purchasePrice": "545.00" },
   "impact": [
-    { "key": "product.purchasePrice", "label": "Purchase price", "before": "540.00", "after": "545.00" },
-    { "key": "product.defaultSalePrice", "label": "Default sale price", "before": "560.00", "after": "565.00" }
+    { "key": "product.isActive", "label": "Active", "before": true, "after": false, "note": "While inactive it cannot be chosen for new entries; existing records stay." },
+    { "key": "product.purchasePrice", "label": "Purchase price", "before": "540.00", "after": "545.00" }
   ],
   "isStale": false,
   "decisionNote": null,
@@ -944,7 +941,7 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
       "entityId": "01a1ed61-301a-75e8-a675-1fc7defd7876",
       "entityLabel": "P-0001 Sample OPC 50kg",
       "kind": "edit",
-      "summary": "Purchase price: 540.00 → 545.00; Default sale price: 560.00 → 565.00",
+      "summary": "Active: true → false; Purchase price: 540.00 → 545.00",
       "status": "pending",
       "requestedBy": { "id": "01a1ed61-40e3-71f7-b8f9-67299cfb0785", "name": "Rahim Uddin" },
       "requestedAt": "2026-11-18T06:38:56.479Z",
@@ -988,8 +985,19 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 ### ত্রুটি
 
-| Status | `message` | কখন |
+| Status | `code` (`field`) | কখন |
 |---|---|---|
+| 400 | `VALIDATION_FAILED` (`errors[]`-এ প্রতিটা ঘর) | body-র কাঠামো ভুল |
+| 400 | `ENTITY_TYPE_UNKNOWN` (`entityType`), `VOID_NOT_SUPPORTED` (`kind`), `PROPOSED_CHANGE_EMPTY` / `PROPOSED_CHANGE_NOT_ALLOWED` (`proposedChange`), `FIELD_NOT_CHANGEABLE` (`proposedChange.<ঘর>`), `<ঘর>_INVALID` (`proposedChange.<ঘর>`, যেমন `CREDIT_LIMIT_INVALID`), `NOTHING_TO_CHANGE`, `IDEMPOTENCY_KEY_INVALID` (`Idempotency-Key`) | ভুল অনুরোধ |
+| 403 | `ACCESS_DENIED` | অনুমতি নেই, বা লুকানো ফিল্ডের অনুরোধ, বা অনুমোদনকারীর সরাসরি-অনুমতি নেই |
+| 403 | `SELF_DECISION_FORBIDDEN` | নিজের অনুরোধ অনুমোদন/প্রত্যাখ্যান |
+| 404 | `CHANGE_REQUEST_NOT_FOUND`, `RECORD_NOT_FOUND` (`entityId`) | নেই, অন্য ব্যবসার, বা দেখার অনুমতি নেই |
+| 409 | `CHANGE_REQUEST_PENDING_EXISTS` | একই রেকর্ডে আরেকটা pending |
+| 409 | `CHANGE_REQUEST_ALREADY_DECIDED` | আগেই সিদ্ধান্ত হয়েছে (`message`-এ অবস্থা) |
+| 409 | `ENTITY_TYPE_UNSUPPORTED`, `CHANGE_FIELD_UNSUPPORTED` | রেকর্ডের ধরন বা ঘর আর সমর্থিত নয় |
+| 409 | `STALE_REQUEST` | stale |
+
+---|---|---|
 | 400 | validation তালিকা, `Nothing to change`, `Field "name" cannot be changed by request`, `proposedChange must name at least one field`, `A void request has no proposedChange`, `This kind of record cannot be voided; deactivate it instead`, `Unknown record type: …`, টাকার ভুল রূপ | ভুল অনুরোধ |
 | 403 | `Access denied` | অনুমতি নেই, বা লুকানো ফিল্ডের অনুরোধ, বা অনুমোদনকারীর সরাসরি-অনুমতি নেই |
 | 403 | `You cannot decide your own change request` | নিজের অনুরোধ অনুমোদন/প্রত্যাখ্যান |
@@ -1003,47 +1011,145 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 ## ১১. ত্রুটির রূপ ও কোড
 
-সব ত্রুটির রূপ একই:
+### রূপ
 
-```json
-{ "message": "Access denied", "error": "Forbidden", "statusCode": 403 }
-```
+সব ত্রুটিতে আগের ফিল্ডগুলো (`statusCode`, `error`, `message`) অপরিবর্তিত, সাথে যোগ হয়েছে:
 
-- `message` সাধারণত স্ট্রিং; **request body-র validation ত্রুটিতে স্ট্রিংয়ের তালিকা**:
+- **`code`**: স্থির, মেশিন-পড়ার মতো নাম (`UPPER_SNAKE`)। **সব** ত্রুটিতে থাকে। বার্তার ভাষা বদলালেও code বদলায় না; frontend বার্তা বাছবে `code` দেখে।
+- **`field`**: ত্রুটিটা একটা ঘরের হলে সেই ঘরের নাম (request body-র key; ভেতরের ঘর dot দিয়ে, যেমন `proposedChange.creditLimit`; header হলে `Idempotency-Key`)। ঘরের নয় এমন ত্রুটিতে থাকে না।
+- **`errors[]`**: ঘরের ত্রুটি থাকলে সবসময়, প্রতিটা `{ field, code, message }`। form-এ ঘরের নিচে বার্তা দেখাতে শুধু এটাই পড়ুন।
+
+একটা ব্যবসার নিয়মের ত্রুটি (এক ঘর):
 
 ```json
 {
-  "message": [
-    "password must be shorter than or equal to 128 characters",
-    "password should not be empty",
-    "password must be a string"
-  ],
-  "error": "Bad Request",
-  "statusCode": 400
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "A customer with this phone number already exists",
+  "code": "PHONE_DUPLICATE",
+  "field": "phone",
+  "errors": [
+    { "field": "phone", "code": "PHONE_DUPLICATE", "message": "A customer with this phone number already exists" }
+  ]
 }
 ```
 
-- `message` ইংরেজিতে, ডেভেলপারের জন্য। ইউজারকে দেখানোর বার্তা frontend-এর অনুবাদ ফাইল থেকে `statusCode` অনুযায়ী বেছে নিন; `message`-এর লেখার উপর নির্ভর করবেন না।
+form-এর কাঠামোর ত্রুটি (`message` আগের মতোই স্ট্রিংয়ের তালিকা; প্রতি ঘরে `errors[]`-এ একটা এন্ট্রি):
 
-| Status | কখন | উদাহরণ `message` | frontend কী করবে |
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": [
+    "property defaultDiscount should not exist",
+    "nameEn should not be empty",
+    "phone must be shorter than or equal to 20 characters",
+    "phone must be a string"
+  ],
+  "code": "VALIDATION_FAILED",
+  "errors": [
+    { "field": "defaultDiscount", "code": "DEFAULT_DISCOUNT_NOT_ALLOWED", "message": "property defaultDiscount should not exist" },
+    { "field": "nameEn", "code": "NAME_EN_REQUIRED", "message": "nameEn should not be empty" },
+    { "field": "phone", "code": "PHONE_INVALID", "message": "phone must be a string" }
+  ]
+}
+```
+
+ঘর ছাড়া ত্রুটি:
+
+```json
+{ "message": "Access denied", "error": "Forbidden", "statusCode": 403, "code": "ACCESS_DENIED" }
+```
+
+- `message` ইংরেজিতে, ডেভেলপারের জন্য। ইউজারকে দেখানোর বাংলা ও ইংরেজি বার্তা frontend-এর অনুবাদ ফাইলে `code` অনুযায়ী রাখুন; অজানা code এলে `statusCode` অনুযায়ী সাধারণ বার্তা।
+- ত্রুটিতে কখনো অন্য ইউজার বা অন্য রেকর্ডের তথ্য (id, নাম, ফোন, ইমেইল) থাকে না। অন্য ব্যবসার id আর না-থাকা id-র উত্তর হুবহু এক। লগইনের সব ব্যর্থতায় একই `INVALID_CREDENTIALS`।
+
+### form-এর কাঠামোর code (`VALIDATION_FAILED`-এর `errors[]`-এ)
+
+রূপ `<ঘর>_<সমস্যা>`; ঘরের নাম `camelCase` থেকে `UPPER_SNAKE` (`nameEn` → `NAME_EN`, `proposedChange.creditLimit` → `CREDIT_LIMIT`)। প্রতি ঘরে একটাই code: আগে `REQUIRED`, তারপর `INVALID`, তারপর বাকিগুলো।
+
+| সমস্যা | কখন আসে | উদাহরণ |
+|---|---|---|
+| `REQUIRED` | ঘরটা বাধ্যতামূলক কিন্তু খালি বা নেই | `NAME_EN_REQUIRED`, `REASON_REQUIRED`, `NOTE_REQUIRED` |
+| `INVALID` | ধরন বা রূপ ভুল (সংখ্যার জায়গায় লেখা, টাকা `"570.50"` রূপে নয়, ভুল uuid, তালিকার বাইরের মান) | `PHONE_INVALID`, `PURCHASE_PRICE_INVALID`, `CATEGORY_ID_INVALID`, `KIND_INVALID` |
+| `TOO_SHORT` | নির্দিষ্ট অক্ষরের চেয়ে ছোট | `REASON_TOO_SHORT` (৩), `NOTE_TOO_SHORT` (৩) |
+| `TOO_LONG` | নির্দিষ্ট অক্ষরের চেয়ে বড় | `NAME_EN_TOO_LONG` (১২০), `REASON_TOO_LONG` (৫০০) |
+| `TOO_SMALL` | সংখ্যা সর্বনিম্নের নিচে | `PAGE_TOO_SMALL` |
+| `TOO_LARGE` | সংখ্যা সর্বোচ্চের উপরে | `SORT_ORDER_TOO_LARGE` (১০০০০) |
+| `NOT_ALLOWED` | এই endpoint এই ঘর নেয় না | `DEFAULT_SALE_PRICE_NOT_ALLOWED` (পণ্যে বিক্রয়মূল্য নেই) |
+
+query string-এর ভুলও (`?page=0`) একই রূপে আসে, `field` হলো query-র নাম।
+
+### ব্যবসার নিয়মের code
+
+| code | status | `field` | কখন আসে |
 |---|---|---|---|
-| 400 | ফর্মের ভুল, নিয়ম ভাঙা | তালিকা (উপরে), `Password must be at least 10 characters`, `Current password is incorrect`, `"commission.view" is owner-only and cannot be given to a role`, `A reason is required for this change`, `Nothing to change` (অনুরোধের ত্রুটি অংশ ১০-এ) | ফর্মে ত্রুটি দেখান |
-| 401 | লগইন নেই বা token শেষ | `Unauthorized`; লগইনে `Invalid credentials` | একবার refresh (অংশ ৩); লগইনের 401-এ শুধু বার্তা |
-| 403 | অনুমতি বা ব্যবসার অ্যাক্সেস নেই | `Access denied` | "অনুমতি নেই" দেখান; refresh নয় |
-| 403 | অবিশ্বস্ত origin থেকে বদলানোর অনুরোধ | `Origin not allowed` | কনফিগারেশনের ভুল (`CORS_ORIGIN`) |
-| 404 | জিনিসটা নেই (অথবা অন্য ব্যবসার) | `User not found`, `Unknown role`, `Product not found`, `Customer not found` | "পাওয়া যায়নি" |
-| 409 | আগে থেকে আছে, বা অবস্থার সংঘাত (অনুরোধ আগেই সিদ্ধান্ত হয়েছে, stale; অংশ ১০) | `A user with this email or phone already exists; grant them access instead`, `A customer with this phone number already exists`, `A product with this name already exists` | কোন ফিল্ড ডুপ্লিকেট তা দেখান |
-| 429 | এক IP থেকে প্রতি মিনিটে বেশি লগইন চেষ্টা, অথবা এক ইউজারের প্রতি মিনিটে ২০টার বেশি ইউজার-খোঁজ | `ThrottlerException: Too Many Requests` | `Retry-After` header-এর সেকেন্ড পর্যন্ত অপেক্ষা |
-| 503 | ডাটাবেস কনফিগার করা নেই বা পাওয়া যায় না | `Database is not configured: set DATABASE_URL` | "সার্ভার সাময়িকভাবে বন্ধ" |
-| 500 | অপ্রত্যাশিত | `Internal server error` | সাধারণ ত্রুটি |
+| **সাধারণ** | | | |
+| `VALIDATION_FAILED` | 400 | - (`errors[]`-এ ঘরগুলো) | form-এর কাঠামো ভুল (উপরের টেবিল) |
+| `BAD_REQUEST` | 400 | - | অন্য কোনো ভুল অনুরোধ (যেমন ভাঙা JSON) |
+| `ID_INVALID` | 400 | - | পথের id (`/products/:id`) সঠিক uuid নয় |
+| `NOTHING_TO_CHANGE` | 400 | - | সংশোধনে পাঠানো সব মান আগের মতোই |
+| `REASON_REQUIRED` | 400 | `reason` | দাম, বাকি, সীমা বা সক্রিয়-অবস্থা বদলে কারণ লেখা হয়নি |
+| `UNAUTHENTICATED` | 401 | - | লগইন নেই বা সেশন শেষ (একবার refresh, অংশ ৩) |
+| `ACCESS_DENIED` | 403 | - | এই কাজ বা ব্যবসার অনুমতি নেই |
+| `ORIGIN_NOT_ALLOWED` | 403 | - | অবিশ্বস্ত ওয়েবসাইট থেকে বদলানোর অনুরোধ (কনফিগারেশনের ভুল) |
+| `NOT_FOUND` | 404 | - | জিনিসটা নেই (নির্দিষ্ট code না থাকলে) |
+| `ROUTE_NOT_FOUND` | 404 | - | এমন কোনো API পথ নেই |
+| `CONFLICT` | 409 | - | অন্য কোনো সংঘাত (নির্দিষ্ট code না থাকলে) |
+| `RATE_LIMITED` | 429 | - | অল্প সময়ে বেশি চেষ্টা; `Retry-After` সেকেন্ড পর্যন্ত অপেক্ষা |
+| `SERVICE_UNAVAILABLE` | 503 | - | ডাটাবেস পাওয়া যাচ্ছে না, সার্ভার সাময়িক বন্ধ |
+| `INTERNAL_ERROR` | 500 | - | অপ্রত্যাশিত ত্রুটি |
+| **লগইন ও পাসওয়ার্ড** | | | |
+| `INVALID_CREDENTIALS` | 401 | - | লগইন ব্যর্থ (ভুল পাসওয়ার্ড, অজানা ইউজার, নিষ্ক্রিয় বা লক, সবই একই) |
+| `CURRENT_PASSWORD_INCORRECT` | 400 | `currentPassword` | পাসওয়ার্ড বদলে বর্তমান পাসওয়ার্ড ভুল |
+| `PASSWORD_TOO_SHORT` | 400 | `password` / `newPassword` | নতুন পাসওয়ার্ড ১০ অক্ষরের কম |
+| `PASSWORD_TOO_LONG` | 400 | `password` / `newPassword` | নতুন পাসওয়ার্ড ১২৮ অক্ষরের বেশি |
+| `PASSWORD_MATCHES_IDENTITY` | 400 | `password` / `newPassword` | পাসওয়ার্ড ইউজারের নিজের ইমেইল বা ফোন |
+| **Settings: ইউজার ও রোল** | | | |
+| `USER_NOT_FOUND` | 404 | - | ইউজার নেই বা এই ব্যবসার নয়; খোঁজে কেউ মেলেনি |
+| `USER_ALREADY_EXISTS` | 409 | - | এই ইমেইল বা ফোনের ইউজার আগে থেকে আছে (কে, তা বলা হয় না; `users/lookup` দিয়ে খুঁজুন) |
+| `EMAIL_OR_PHONE_REQUIRED` | 400 | - | নতুন ইউজারে ইমেইল ও ফোন দুটোই নেই |
+| `PHONE_INVALID` | 400 | `phone` | ফোন নম্বর বাংলাদেশের সঠিক মোবাইল নম্বর নয় |
+| `ROLE_NOT_FOUND` | 400 / 404 | `roleKey` (400-এ) | অজানা রোল |
+| `OWNER_ROLE_FIXED` | 400 | - | `owner` রোলের অনুমতি বদলানোর চেষ্টা |
+| `PERMISSION_UNKNOWN` | 400 | `permissions` | তালিকায় অজানা অনুমতি (বা এই ধরনের ব্যবসায় প্রযোজ্য নয়) |
+| `PERMISSION_OWNER_ONLY` | 400 | `permissions` | owner-only অনুমতি রোলে দেওয়ার চেষ্টা |
+| `OWN_STATUS_CHANGE_FORBIDDEN` | 400 | - | নিজেকে নিষ্ক্রিয় বা সক্রিয় করার চেষ্টা |
+| `PLATFORM_OWNER_PROTECTED` | 400 | - | platform owner অ্যাকাউন্ট এই API দিয়ে বদলানোর চেষ্টা |
+| **মাস্টার ডেটা** | | | |
+| `NAME_EN_DUPLICATE` | 409 | `nameEn` | এই ব্যবসায় একই ইংরেজি নামের পণ্য বা ক্যাটাগরি আছে (ছোট-বড় হাতের অক্ষর আলাদা ধরা হয় না) |
+| `PHONE_DUPLICATE` | 409 | `phone` | এই ব্যবসায় একই ফোনের গ্রাহক আছে |
+| `RECORD_DUPLICATE` | 409 | - | অন্য কোনো একই-রকম রেকর্ড আছে |
+| `CATEGORY_NOT_FOUND_OR_INACTIVE` | 400 | `categoryId` | পণ্যের ক্যাটাগরি নেই বা নিষ্ক্রিয় |
+| `UNIT_UNKNOWN` | 400 | `unitKey` | ব্যবসার Settings-এ এই একক নেই |
+| `PRODUCT_NOT_FOUND` | 404 | - | পণ্য নেই (বা অন্য ব্যবসার) |
+| `CATEGORY_NOT_FOUND` | 404 | - | ক্যাটাগরি নেই (বা অন্য ব্যবসার) |
+| `CUSTOMER_NOT_FOUND` | 404 | - | গ্রাহক নেই (বা অন্য ব্যবসার) |
+| `SUPPLIER_NOT_FOUND` | 404 | - | সরবরাহকারী নেই (বা অন্য ব্যবসার) |
+| **সংশোধনের অনুরোধ** (অংশ ১০) | | | |
+| `ENTITY_TYPE_UNKNOWN` | 400 | `entityType` | এই ধরনের রেকর্ডের অনুরোধ হয় না |
+| `VOID_NOT_SUPPORTED` | 400 | `kind` | এই রেকর্ড বাতিল হয় না; নিষ্ক্রিয় করুন |
+| `PROPOSED_CHANGE_EMPTY` | 400 | `proposedChange` | বদলের অনুরোধে কোনো ঘর নেই |
+| `PROPOSED_CHANGE_NOT_ALLOWED` | 400 | `proposedChange` | বাতিলের অনুরোধে প্রস্তাবিত মান পাঠানো হয়েছে |
+| `FIELD_NOT_CHANGEABLE` | 400 | `proposedChange.<ঘর>` | এই ঘর অনুরোধে বদলানো যায় না (সরাসরি সম্পাদনা করুন) |
+| `<ঘর>_INVALID` | 400 | `proposedChange.<ঘর>` | প্রস্তাবিত মানের রূপ ভুল: `PURCHASE_PRICE_INVALID`, `OPENING_BALANCE_INVALID`, `CREDIT_LIMIT_INVALID`, `IS_ACTIVE_INVALID` |
+| `IDEMPOTENCY_KEY_INVALID` | 400 | `Idempotency-Key` | header ৮–৬৪ অক্ষরের অক্ষর, সংখ্যা, `-` বা `_` নয় |
+| `RECORD_NOT_FOUND` | 404 | `entityId` | যে রেকর্ডের অনুরোধ, তা নেই (বা অন্য ব্যবসার) |
+| `CHANGE_REQUEST_NOT_FOUND` | 404 | - | অনুরোধ নেই, অন্য ব্যবসার, বা দেখার অনুমতি নেই |
+| `CHANGE_REQUEST_PENDING_EXISTS` | 409 | - | এই রেকর্ডে আগেই একটা অপেক্ষমাণ অনুরোধ আছে |
+| `CHANGE_REQUEST_ALREADY_DECIDED` | 409 | - | অনুরোধ আর অপেক্ষমাণ নয় (অনুমোদিত, প্রত্যাখ্যাত, তুলে নেওয়া বা stale) |
+| `SELF_DECISION_FORBIDDEN` | 403 | - | নিজের অনুরোধ নিজে অনুমোদন বা প্রত্যাখ্যান |
+| `STALE_REQUEST` | 409 | - | অনুরোধের পরে রেকর্ড বদলেছে; অনুরোধ এখন stale, নতুন করে করতে হবে |
+| `ENTITY_TYPE_UNSUPPORTED` | 409 | - | এই ধরনের রেকর্ড আর বদলানো যায় না (module সরানো হয়েছে) |
+| `CHANGE_FIELD_UNSUPPORTED` | 409 | - | অনুরোধের কোনো ঘর আর নেই (যেমন সরানো বিক্রয়মূল্য) |
 
-429-এর আসল উত্তর (এর `error` ফিল্ড নেই):
+429-এর আসল উত্তর (`Retry-After` header আগের মতোই):
 
 ```
 HTTP/1.1 429 Too Many Requests
 Retry-After: 60
 
-{"statusCode":429,"message":"ThrottlerException: Too Many Requests"}
+{"statusCode":429,"message":"ThrottlerException: Too Many Requests","code":"RATE_LIMITED"}
 ```
 
 ---
@@ -1082,7 +1188,7 @@ Retry-After: 60
 | `product.view` | dealership | | ✓ | | ✓ | পণ্য ও category দেখা |
 | `product.manage` | dealership | | ✓ | | | পণ্য ও category বানানো, বদলানো |
 | `product.cost.view` | dealership | | ✓ | | | কেনা-দাম দেখা |
-| `product.price.edit` | dealership | | | | | তৈরির পরে কেনা-দাম ও বিক্রয়মূল্য বদল (কারণসহ) |
+| `product.price.edit` | dealership | | | | | তৈরির পরে কেনা-দাম বদল (কারণসহ) |
 | `product.deactivate` | dealership | | | | | পণ্য ও ক্যাটাগরি নিষ্ক্রিয়/সক্রিয় (কারণসহ) |
 | `customer.view` | dealership | | ✓ | ✓ | ✓ | গ্রাহকের তালিকা |
 | `customer.manage` | dealership | | ✓ | | ✓ | গ্রাহক যোগ ও বদল |

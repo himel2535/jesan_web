@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useId, useRef, useState, type FormEvent } from 'react';
-import { apiErrorKind } from '@/core/api/error-kind';
+import { useErrorMessage } from '@/core/api/field-errors';
 import { toLatinDigits } from '@/core/lib/phone';
 import { Button } from '@/core/ui/button';
 import { Modal } from '@/core/ui/modal';
@@ -11,7 +11,8 @@ import { TextInput } from '../shared/fields';
 import { FormError } from '../shared/states';
 import { LIMITS, type Category } from '../types';
 
-type Errors = Partial<Record<'nameEn' | 'nameBn' | 'sortOrder', string>>;
+const FIELDS = ['nameEn', 'nameBn', 'sortOrder'] as const;
+type Errors = Partial<Record<(typeof FIELDS)[number], string>>;
 
 /** Create (no `category`) or edit names and order. Status is changed with its own dialog. */
 export function CategoryDialog({
@@ -29,6 +30,7 @@ export function CategoryDialog({
   businessId: string;
 }) {
   const t = useTranslations('dealership');
+  const errorMessage = useErrorMessage();
   const id = useId();
   const save = useSaveCategory(slug, businessId);
   const [nameEn, setNameEn] = useState(category?.nameEn ?? '');
@@ -70,9 +72,9 @@ export function CategoryDialog({
       onSaved(category ? t('common.saved') : t('common.created'), saved);
       onClose();
     } catch (error) {
-      const kind = apiErrorKind(error);
-      if (kind === 'duplicate') setErrors({ nameEn: t('categories.duplicate') });
-      else setServerError(t(`common.error.${kind}`));
+      const split = errorMessage.split(error, FIELDS);
+      setErrors(split.fields);
+      setServerError(split.form);
     } finally {
       inFlight.current = false;
     }

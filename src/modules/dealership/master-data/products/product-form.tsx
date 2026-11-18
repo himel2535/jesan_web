@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { apiErrorKind } from '@/core/api/error-kind';
+import { useErrorMessage } from '@/core/api/field-errors';
 import { useCan } from '@/core/auth/can';
 import { localizedName } from '@/core/auth/types';
 import { MONEY_PATTERN, cleanMoneyInput, sameMoney } from '@/core/lib/money';
@@ -21,8 +21,8 @@ import { CategoryDialog } from '../categories/category-dialog';
 import { FormError, ListSkeleton } from '../shared/states';
 import { LIMITS, type Category, type Product } from '../types';
 
-type FieldName =
-  'categoryId' | 'nameEn' | 'nameBn' | 'purchasePrice' | 'defaultSalePrice' | 'reason';
+const FIELDS = ['categoryId', 'nameEn', 'nameBn', 'unitKey', 'purchasePrice', 'reason'] as const;
+type FieldName = (typeof FIELDS)[number];
 
 /**
  * Create (no `product`) or edit a product. Rules from jesan-api DTOs: names 1–120 characters,
@@ -39,6 +39,7 @@ export function ProductForm({
   product?: Product;
 }) {
   const t = useTranslations('dealership');
+  const errorMessage = useErrorMessage();
   const locale = useLocale();
   const router = useRouter();
   const id = useId();
@@ -62,7 +63,6 @@ export function ProductForm({
     nameBn: product?.nameBn ?? '',
     unitKey: product?.unitKey ?? '',
     purchasePrice: product?.purchasePrice ?? '',
-    defaultSalePrice: product?.defaultSalePrice ?? '',
     reason: '',
   });
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
@@ -82,23 +82,20 @@ export function ProductForm({
     return list;
   }, [categories.data, madeHere, product]);
 
+  // Products have no sale price (set per sale on the invoice); the only price is the purchase price.
   const priceChanged =
-    isEdit &&
-    (!sameMoney(cleanMoneyInput(values.defaultSalePrice), product?.defaultSalePrice) ||
-      (showCost && !sameMoney(cleanMoneyInput(values.purchasePrice), product?.purchasePrice)));
+    isEdit && showCost && !sameMoney(cleanMoneyInput(values.purchasePrice), product?.purchasePrice);
 
   /** The body to send: everything on create; only real changes on edit. */
   const buildBody = (): ProductInput => {
     const nameEn = values.nameEn.trim();
     const nameBn = values.nameBn.trim();
-    const sale = cleanMoneyInput(values.defaultSalePrice);
     const cost = cleanMoneyInput(values.purchasePrice);
     if (!product) {
       const body: ProductInput = {
         categoryId: values.categoryId,
         nameEn,
         nameBn,
-        defaultSalePrice: sale,
       };
       if (unitKey) body.unitKey = unitKey;
       if (showCost && cost) body.purchasePrice = cost;
@@ -110,9 +107,8 @@ export function ProductForm({
     if (nameBn !== product.nameBn) body.nameBn = nameBn;
     if (unitKey && unitKey !== product.unitKey) body.unitKey = unitKey;
     if (canEditPrice) {
-      if (!sameMoney(sale, product.defaultSalePrice)) body.defaultSalePrice = sale;
-      if (showCost && !sameMoney(cost, product.purchasePrice)) body.purchasePrice = cost;
-      if (body.defaultSalePrice !== undefined || body.purchasePrice !== undefined) {
+      if (showCost && !sameMoney(cost, product.purchasePrice)) {
+        body.purchasePrice = cost;
         body.reason = values.reason.trim();
       }
     }
@@ -125,9 +121,6 @@ export function ProductForm({
     if (!values.nameEn.trim()) found.nameEn = t('common.required');
     if (!values.nameBn.trim()) found.nameBn = t('common.required');
     if (pricesEditable) {
-      const sale = cleanMoneyInput(values.defaultSalePrice);
-      if (!sale) found.defaultSalePrice = t('common.required');
-      else if (!MONEY_PATTERN.test(sale)) found.defaultSalePrice = t('common.moneyInvalid');
       const cost = cleanMoneyInput(values.purchasePrice);
       if (showCost && cost && !MONEY_PATTERN.test(cost))
         found.purchasePrice = t('common.moneyInvalid');
@@ -159,9 +152,11 @@ export function ProductForm({
         `/b/${encodeURIComponent(slug)}/products/${saved.id}?saved=${product ? 'updated' : 'created'}`,
       );
     } catch (error) {
-      const kind = apiErrorKind(error);
-      if (kind === 'duplicate') setErrors({ nameEn: t('products.duplicate') });
-      else setServerError(t(`common.error.${kind}`));
+      // By the API's stable code (docs/API.md §11): duplicate name, inactive category, unknown
+      // unit and the like appear under their own field; anything else above the form.
+      const split = errorMessage.split(error, FIELDS);
+      setErrors(split.fields);
+      setServerError(split.form);
       inFlight.current = false;
     }
   };
@@ -229,11 +224,13 @@ export function ProductForm({
           />
         </div>
 
-        <Field id={`${id}-unit`} label={t('products.unit')}>
+        <Field id={`${id}-unit`} label={t('products.unit')} error={errors.unitKey}>
           <select
             id={`${id}-unit`}
             value={unitKey}
             onChange={(e) => set('unitKey')(e.target.value)}
+            aria-invalid={Boolean(errors.unitKey) || undefined}
+            aria-describedby={errors.unitKey ? `${id}-unit-error` : undefined}
             className={inputClass}
           >
             {(units.data?.items ?? []).map((u) => (
@@ -244,14 +241,13 @@ export function ProductForm({
           </select>
         </Field>
 
-        {isEdit ? (
+        {!showCost ? null : isEdit ? (
           <SensitiveSection editable={canEditPrice}>
             <PriceFields
               id={id}
               values={values}
               set={set}
               errors={errors}
-              showCost={showCost}
               readOnly={!canEditPrice}
             />
             {canEditPrice && priceChanged ? (
@@ -264,14 +260,7 @@ export function ProductForm({
             ) : null}
           </SensitiveSection>
         ) : (
-          <PriceFields
-            id={id}
-            values={values}
-            set={set}
-            errors={errors}
-            showCost={showCost}
-            readOnly={false}
-          />
+          <PriceFields id={id} values={values} set={set} errors={errors} readOnly={false} />
         )}
 
         <div className="flex flex-wrap gap-2 pt-2">
@@ -310,43 +299,30 @@ export function ProductForm({
   );
 }
 
+/** Only the purchase price (shown only with `product.cost.view` and when the API sent it). */
 function PriceFields({
   id,
   values,
   set,
   errors,
-  showCost,
   readOnly,
 }: {
   id: string;
-  values: { purchasePrice: string; defaultSalePrice: string };
-  set: (field: 'purchasePrice' | 'defaultSalePrice') => (value: string) => void;
+  values: { purchasePrice: string };
+  set: (field: 'purchasePrice') => (value: string) => void;
   errors: Partial<Record<FieldName, string>>;
-  showCost: boolean;
   readOnly: boolean;
 }) {
   const t = useTranslations('dealership');
   return (
     <div className="grid gap-5 sm:grid-cols-2">
-      {showCost ? (
-        <MoneyInput
-          id={`${id}-cost`}
-          label={t('products.purchasePrice')}
-          value={values.purchasePrice}
-          onChange={set('purchasePrice')}
-          error={errors.purchasePrice}
-          readOnly={readOnly}
-        />
-      ) : null}
       <MoneyInput
-        id={`${id}-sale`}
-        label={t('products.salePrice')}
-        hint={t('products.salePriceHint')}
-        value={values.defaultSalePrice}
-        onChange={set('defaultSalePrice')}
-        error={errors.defaultSalePrice}
+        id={`${id}-cost`}
+        label={t('products.purchasePrice')}
+        value={values.purchasePrice}
+        onChange={set('purchasePrice')}
+        error={errors.purchasePrice}
         readOnly={readOnly}
-        required
       />
     </div>
   );

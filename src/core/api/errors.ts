@@ -10,6 +10,8 @@ export class ApiError extends Error {
   readonly details?: unknown;
   /** From the Retry-After header (429): seconds to wait before trying again. */
   readonly retryAfterSeconds?: number;
+  /** Errors of single form fields (docs/API.md §11 `errors[]`, or `field` + `code`). */
+  readonly fieldErrors: readonly FieldError[];
 
   constructor(init: {
     kind: ApiErrorKind;
@@ -18,6 +20,7 @@ export class ApiError extends Error {
     message: string;
     details?: unknown;
     retryAfterSeconds?: number;
+    fieldErrors?: readonly FieldError[];
   }) {
     super(init.message);
     this.name = 'ApiError';
@@ -26,6 +29,7 @@ export class ApiError extends Error {
     this.code = init.code;
     this.details = init.details;
     this.retryAfterSeconds = init.retryAfterSeconds;
+    this.fieldErrors = init.fieldErrors ?? [];
   }
 
   get isUnauthorized(): boolean {
@@ -41,6 +45,27 @@ export class ApiError extends Error {
   get isServerUnavailable(): boolean {
     return this.kind !== 'http' || this.status >= 500;
   }
+}
+
+/** One field's error: the request-body key (dot path for nested) and its stable code. */
+export interface FieldError {
+  field: string;
+  code: string;
+}
+
+/** `errors[]` entries with a string field and code; else the top-level `field` + `code`. */
+function parseFieldErrors(body: Record<string, unknown>): FieldError[] {
+  if (Array.isArray(body.errors)) {
+    return body.errors.flatMap((e) =>
+      isRecord(e) && typeof e.field === 'string' && typeof e.code === 'string'
+        ? [{ field: e.field, code: e.code }]
+        : [],
+    );
+  }
+  if (typeof body.field === 'string' && typeof body.code === 'string') {
+    return [{ field: body.field, code: body.code }];
+  }
+  return [];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -78,6 +103,7 @@ export function apiErrorFromResponse(status: number, body: unknown, headers?: He
       message: list ? list.join('; ') : typeof message === 'string' ? message : fallbackMessage,
       details: list ?? (typeof error === 'string' ? error : undefined),
       retryAfterSeconds,
+      fieldErrors: parseFieldErrors(body),
     });
   }
 

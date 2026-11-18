@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useId, useRef, useState, type FormEvent } from 'react';
-import { apiErrorKind } from '@/core/api/error-kind';
+import { useErrorMessage } from '@/core/api/field-errors';
 import { useCan } from '@/core/auth/can';
 import {
   MONEY_PATTERN,
@@ -26,7 +26,17 @@ import {
 import { FormError } from '../shared/states';
 import { LIMITS, type Customer } from '../types';
 
-type FieldName = 'nameEn' | 'phone' | 'openingBalance' | 'creditLimit' | 'reason';
+const FIELDS = [
+  'nameEn',
+  'nameBn',
+  'phone',
+  'address',
+  'area',
+  'openingBalance',
+  'creditLimit',
+  'reason',
+] as const;
+type FieldName = (typeof FIELDS)[number];
 
 /**
  * Create (no `customer`) or edit a customer. Rules from jesan-api DTOs: English name required
@@ -44,6 +54,7 @@ export function CustomerForm({
   customer?: Customer;
 }) {
   const t = useTranslations('dealership');
+  const errorMessage = useErrorMessage();
   const router = useRouter();
   const id = useId();
   const canSeeDue = useCan('customer.due.view');
@@ -140,10 +151,10 @@ export function CustomerForm({
         `/b/${encodeURIComponent(slug)}/customers/${saved.id}?saved=${customer ? 'updated' : 'created'}`,
       );
     } catch (error) {
-      const kind = apiErrorKind(error);
-      // 409 here is always the phone (unique per business). 400 has no field yet (DECISIONS.md).
-      if (kind === 'duplicate') setErrors({ phone: t('customers.duplicatePhone') });
-      else setServerError(t(`common.error.${kind}`));
+      // By the API's stable code (docs/API.md §11): field errors under their field.
+      const split = errorMessage.split(error, FIELDS);
+      setErrors(split.fields);
+      setServerError(split.form);
       inFlight.current = false;
     }
   };
@@ -194,6 +205,7 @@ export function CustomerForm({
           label={t('common.nameBn')}
           value={values.nameBn}
           onChange={set('nameBn')}
+          error={errors.nameBn}
           maxLength={LIMITS.name}
         />
       </div>
@@ -214,6 +226,7 @@ export function CustomerForm({
         label={t('common.address')}
         value={values.address}
         onChange={set('address')}
+        error={errors.address}
         maxLength={LIMITS.address}
       />
       <TextInput
@@ -221,6 +234,7 @@ export function CustomerForm({
         label={t('common.area')}
         value={values.area}
         onChange={set('area')}
+        error={errors.area}
         maxLength={LIMITS.area}
       />
 

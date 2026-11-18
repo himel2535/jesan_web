@@ -201,9 +201,9 @@
 
 ### API-র ঘাটতি (backend-এ আলাদা PR; frontend-এ বদলানোর জায়গা)
 
-- **TODO ঘাটতি ১ — `GET users` item-এ `isPlatformOwner` নেই।** এখন: নিজের সারি (`me.user.id`) আগেই আটকানো (কাজের মেনু নেই); অন্য platform owner-এর সারিতে কাজ দেখায়, সার্ভার 400 দিলে dialog-এ বার্তা। ঠিক হলে: `SettingsUser`-এ `isPlatformOwner` যোগ (`src/core/settings/types.ts`), আর `users-section.tsx`-এ `isSelf`-এর মতো ওই সারিতেও `RowActions` লুকানো।
-- **TODO ঘাটতি ৩ — 409-এ বিদ্যমান ইউজারের id নেই, খোঁজার endpoint নেই।** এখন: শুধু বার্তা ("এখানে এখনো নেই")। ঠিক হলে: `CreateUserDialog`-এর 409 শাখায় (`user-dialogs.tsx`) "এই ব্যবসায় যোগ করুন" বাটন, যেটা `POST users/:userId/access` ডাকবে (`api.ts`-এ নতুন `useGrantAccess`), আর `settings.users.error.duplicate` লেখা বদলাতে হবে।
-- **TODO ঘাটতি ৪ — owner রোল দেওয়া যায় কি না, আর platform owner রা `GET users`-এ আসেন কি না, স্পষ্ট নয়।** এখন: owner রোল বাছাইয়ে নেই। অনুমোদন এলে: `ASSIGNABLE_ROLE_KEYS`-এ `'owner'` যোগ। platform owner তালিকায় না এলে কিছু বদলাতে হবে না।
+- **(বন্ধ, Step 4e) ঘাটতি ১ — `GET users` item-এ `isPlatformOwner` নেই।** এখন: নিজের সারি (`me.user.id`) আগেই আটকানো (কাজের মেনু নেই); অন্য platform owner-এর সারিতে কাজ দেখায়, সার্ভার 400 দিলে dialog-এ বার্তা। ঠিক হলে: `SettingsUser`-এ `isPlatformOwner` যোগ (`src/core/settings/types.ts`), আর `users-section.tsx`-এ `isSelf`-এর মতো ওই সারিতেও `RowActions` লুকানো।
+- **(বন্ধ, Step 4e) ঘাটতি ৩ — 409-এ বিদ্যমান ইউজারের id নেই, খোঁজার endpoint নেই।** এখন: শুধু বার্তা ("এখানে এখনো নেই")। ঠিক হলে: `CreateUserDialog`-এর 409 শাখায় (`user-dialogs.tsx`) "এই ব্যবসায় যোগ করুন" বাটন, যেটা `POST users/:userId/access` ডাকবে (`api.ts`-এ নতুন `useGrantAccess`), আর `settings.users.error.duplicate` লেখা বদলাতে হবে।
+- **TODO ঘাটতি ৪ (খোলা; Step 4e-তে মালিকের সিদ্ধান্ত: এখনো যোগ নয়; doc এখন বলে platform owner `owner` রোল দিতে পারেন) — owner রোল দেওয়া যায় কি না, আর platform owner রা `GET users`-এ আসেন কি না, স্পষ্ট নয়।** এখন: owner রোল বাছাইয়ে নেই। অনুমোদন এলে: `ASSIGNABLE_ROLE_KEYS`-এ `'owner'` যোগ। platform owner তালিকায় না এলে কিছু বদলাতে হবে না।
 - (ঘাটতি ২ ইচ্ছাকৃত, উপরে।) ম্যানেজার রোলের তালিকার endpoint ডাকতে পারে না বলে রোলের নাম অনুবাদ ফাইল থেকে (`settings.roleNames`, চারটা স্থির key); অজানা key এলে key-টাই দেখায়।
 
 ### কাঠামো
@@ -260,7 +260,7 @@
 
 ### API-র ঘাটতি (backend-এ আলাদা PR)
 
-- **TODO ঘাটতি — 400-এর উত্তরে মেশিন-পড়ার মতো `code`/`field` নেই।** এখন: সব 400 → একটাই সাধারণ বার্তা (`dealership.common.error.refused`); ক্লায়েন্ট আগেই DTO-র নিয়ম যাচাই করে, তাই সাধারণত 400 আসে না। 409 প্রতিটা ফর্মে একটাই কারণ (পণ্য/ক্যাটাগরি = নাম, গ্রাহক = ফোন), তাই ঘরে দেখানো যায়। ঠিক হলে বদলাতে হবে: `src/core/api/error-kind.ts` (field/code পড়া), আর ফর্মগুলোর catch শাখা — `products/product-form.tsx`, `customers/customer-form.tsx`, `categories/category-dialog.tsx`, `shared/deactivate-dialog.tsx` — যাতে `Category not found or inactive`, `Unknown unit`, `Phone number is not valid`, `A reason is required` নিজ নিজ ঘরে দেখায়।
+- **(বন্ধ, Step 4e) ঘাটতি — 400-এর উত্তরে মেশিন-পড়ার মতো `code`/`field` নেই।** এখন: সব 400 → একটাই সাধারণ বার্তা (`dealership.common.error.refused`); ক্লায়েন্ট আগেই DTO-র নিয়ম যাচাই করে, তাই সাধারণত 400 আসে না। 409 প্রতিটা ফর্মে একটাই কারণ (পণ্য/ক্যাটাগরি = নাম, গ্রাহক = ফোন), তাই ঘরে দেখানো যায়। ঠিক হলে বদলাতে হবে: `src/core/api/error-kind.ts` (field/code পড়া), আর ফর্মগুলোর catch শাখা — `products/product-form.tsx`, `customers/customer-form.tsx`, `categories/category-dialog.tsx`, `shared/deactivate-dialog.tsx` — যাতে `Category not found or inactive`, `Unknown unit`, `Phone number is not valid`, `A reason is required` নিজ নিজ ঘরে দেখায়।
 - (আগের) Settings-এর `isPlatformOwner` ও `users/lookup` backend-এ এসে গেছে; frontend-এ বসানো আলাদা ছোট PR-এ হবে (এই PR-এ নয়)।
 - ক্যাটাগরির `GET :id` নেই; সম্পাদনায় তালিকার ডেটা ব্যবহার — ঠিক আছে (মালিকের সিদ্ধান্ত)।
 
@@ -279,18 +279,9 @@
 - ক্যাটাগরির নতুন বিস্তারিত পাতা `/b/[slug]/products/categories/[id]` (মালিকের সিদ্ধান্ত): ছোট তালিকা, তাই `active=all` তালিকার cache থেকে পড়ে (আলাদা `GET :id` নেই); "এই ক্যাটাগরির পণ্য" → `/products?category=<id>`; সম্পাদনা ও নিষ্ক্রিয় সেখানেও।
 - পণ্যের ফর্মে ক্যাটাগরির পাশে **"নতুন ক্যাটাগরি"** (`product.manage`): ডায়ালগে তৈরি হলে সাথে সাথে বাছাই হয়, তালিকায় দেখায় (নতুন তালিকা আসার আগেও); `categories` (+ `products`) key refresh। ডায়ালগ `<form>`-এর বাইরে রাখা (form-এর ভেতর form বৈধ HTML নয়)। `CategoryDialog`-এর `onSaved` এখন তৈরি/সম্পাদিত ক্যাটাগরিও দেয়।
 
-### বিক্রয়মূল্য (মালিকের সিদ্ধান্ত: এখন যেমন আছে)
+### বিক্রয়মূল্য
 
-- backend-এ `defaultSalePrice` এখনো আছে (তৈরিতে বাধ্যতামূলক, সম্পাদনায় ঐচ্ছিক), তাই UI-তেও থাকছে।
-- **TODO — backend থেকে সরানোর PR merge হলে আলাদা ছোট PR-এ বদলাতে হবে:**
-  - `src/modules/dealership/master-data/types.ts` — `Product.defaultSalePrice` সরানো।
-  - `src/modules/dealership/master-data/api.ts` — `ProductInput.defaultSalePrice` সরানো।
-  - `products/product-form.tsx` — `PriceFields`-এর বিক্রয়মূল্যের ঘর, `values`, validate (বাধ্যতামূলক/`MONEY_PATTERN`), `priceChanged`, body বানানো (create ও PATCH)।
-  - `products/products-list.tsx` — টেবিলের কলাম ও ফোনের কার্ডের লাইন।
-  - `products/product-detail.tsx` — বিস্তারিতের সারি।
-  - `products/products.test.tsx` — fixture ও প্রত্যাশিত body; `e2e/mock-api.mjs` ও `e2e/master-data.spec.ts`।
-  - `messages/en.json`, `messages/bn.json` — `dealership.products.salePrice` (আর কোথাও না লাগলে)।
-  - `docs/API.md` হুবহু কপি।
+- (বন্ধ, Step 4e) backend থেকে `defaultSalePrice` সরেছে; frontend থেকেও সরানো হয়েছে।
 
 ### ভবিষ্যতের গ্রাহক ও পণ্যের প্রোফাইল (খসড়া নকশা, এখন কোড নয়)
 
@@ -317,3 +308,37 @@
 
 - Vitest: বিস্তারিত লিংক, অনুমতি অনুযায়ী কাজ মেনু (salesman/manager/owner), মেনু থেকে নিষ্ক্রিয়ে কারণ বাধ্যতামূলক, কীবোর্ড (Enter/Esc, ফোকাস ফেরে), ইনলাইন ক্যাটাগরি ও স্বয়ংক্রিয় বাছাই, ক্যাটাগরির বিস্তারিত পাতা, দুই ভাষা, axe।
 - Playwright: তালিকা → বিস্তারিত, কাজ মেনু থেকে কারণসহ নিষ্ক্রিয়।
+
+## ২০২৬-১১-১৮ — Step 4e: backend-এর ত্রুটি-code, বিক্রয়মূল্য সরানো, Settings-এর বাকি TODO
+
+### API চুক্তি
+
+- `docs/API.md` jesan_api `main` (`881d4a9`) থেকে হুবহু কপি।
+- **backend-এ ঠিক করতে হবে (মালিক জানাচ্ছেন):** অংশ ১০-এর "ত্রুটি" টেবিলের পরে পুরনো টেবিলের ৯টা সারি ভুল করে রয়ে গেছে। শুরু `---|---|---|` (হেডার ছাড়া বিভাজক), তারপর `400 | validation তালিকা, Nothing to change, …`, `403 | Access denied`, `403 | You cannot decide your own change request`, `404 | Change request not found, Record not found`, `409 | This record already has a pending change request`, `409 | This change request is already approved …`, `409 | This kind of record can no longer be changed here`, `409 | The record changed after this request was made …`। নতুন code-ভিত্তিক টেবিলই ঠিক; এই সারিগুলো মুছতে হবে। নিয়ম অনুযায়ী এখানে হুবহু কপি রাখা হয়েছে।
+
+### বিক্রয়মূল্য
+
+- পণ্যের তালিকা (কলাম ও ফোনের কার্ড), ফর্ম, বিস্তারিত, মালিক-স্তরের অংশ, নকল API ও টেস্ট থেকে সরানো; অনুবাদের `products.salePrice*` key মুছে ফেলা। মালিক-স্তরের অংশে এখন শুধু ক্রয়মূল্য; ক্রয়মূল্য দেখার অনুমতি (বা response-এ ঘর) না থাকলে অংশটাই নেই। নতুন পণ্য তৈরিতে শুধু ক্যাটাগরি, দুই নাম, একক, (অনুমতি থাকলে) ক্রয়মূল্য।
+
+### ত্রুটি-code (docs/API.md §11)
+
+- `ApiError.fieldErrors` পড়ে API-র `errors[]` (না থাকলে `field` + `code`)। `fieldErrorsOf(error)` → `{ ঘর: code }`; `useErrorMessage()` (`src/core/api/field-errors.ts`) দেয় `message(error)` আর `split(error, ঘরের তালিকা)` → ঘরের নিচের বার্তা + form-এর উপরের বার্তা।
+- বার্তা বাছাই শুধু `code` দেখে, API-র ইংরেজি `message` কখনো দেখানো হয় না: (১) code-এর নিজস্ব বার্তা `apiErrors.codes.<CODE>`, (২) form-এর কাঠামোর code (`<ঘর>_<সমস্যা>`) হলে সমস্যার সাধারণ বার্তা `apiErrors.problems.<সমস্যা>`, (৩) অচেনা code হলে status অনুযায়ী `apiErrors.status.<kind>`। 429-এ অপেক্ষার বার্তা।
+- code-এর তালিকা `src/core/api/error-codes.ts`-এ (§11-এর টেবিল + কয়েকটা কাঠামোর code); টেস্ট যাচাই করে প্রতিটার দুই ভাষার বার্তা আছে এবং অনুবাদে তালিকার বাইরের কিছু নেই। নতুন code এলে আগে তালিকায়, তারপর দুই অনুবাদ ফাইলে।
+- নামস্থান `apiErrors` (পুরনো `errors` নামস্থান পেজের ত্রুটির জন্য, তাই আলাদা)।
+- সংযোগ: গ্রাহক ফর্ম (ফোনের ডুপ্লিকেট ও অবৈধ, এবং প্রতিটা ঘর), পণ্য ফর্ম (নামের ডুপ্লিকেট, ক্যাটাগরি নেই/নিষ্ক্রিয়, অচেনা একক — এককের ঘরেও এখন বার্তা), ক্যাটাগরি ফর্ম, নিষ্ক্রিয়ের কারণের ঘর, Settings-এর নতুন ইউজার (`EMAIL_OR_PHONE_REQUIRED` ইমেইল/ফোনের দলের নিচে), রোল বদল, রিসেট (`newPassword`), ঝুঁকির কাজ, নিজের পাসওয়ার্ড বদল (`CURRENT_PASSWORD_INCORRECT`)।
+- তালিকা লোডের ত্রুটি (`LoadError`) আগের মতো status দেখে (ঘর নেই, "আবার চেষ্টা" status-এর উপর নির্ভর করে)।
+
+### Settings
+
+- `GET users`-এর `isPlatformOwner: true` সারিতে কাজের মেনু নেই, ছোট নোট থাকে (নিজের সারির মতো)। doc অনুযায়ী এমন সারি কার্যত আসে না; তবু সুরক্ষা।
+- **"বিদ্যমান ইউজার যোগ করুন"** (`users.manage`): ইমেইল/ফোন → `POST users/lookup` (body-তে) → নাম ও অবস্থা → রোল বাছাই → `POST users/:id/access`। আগে থেকে সদস্য হলে বর্তমান রোলসহ বার্তা, platform owner হলে বার্তা; দুটোতেই যোগের বাটন নেই। 404 → ঘরের নিচে "পাওয়া যায়নি"; 429 → কত সেকেন্ড পরে।
+- খোঁজার ইমেইল/ফোন URL, query বা mutation cache-এ যায় না: lookup সাধারণ `apiFetch` কল (TanStack mutation নয়, কারণ mutation cache variables রেখে দেয়), dialog বন্ধে মুছে যায়। সফল যোগে শুধু ওই ব্যবসার `users` key রিফ্রেশ।
+- নতুন ইউজার তৈরিতে 409 `USER_ALREADY_EXISTS` → বার্তার সাথে "বরং বিদ্যমান ইউজারকে যোগ করুন" বাটন; একই ইমেইল/ফোন দিয়ে খোঁজার dialog খোলে। native dialog-এর দেরিতে আসা `close` event যেন নতুন dialog বন্ধ না করে, তাই তৈরির dialog শুধু নিজেকে বন্ধ করে।
+- রোল বাছাইয়ে `owner` এখনো নেই (মালিকের সিদ্ধান্ত, TODO ৪ খোলা)।
+- "শেষ লগইন" কলাম আগে থেকেই আছে (`lastLoginAt` এলে); বদল লাগেনি।
+
+### যাচাই
+
+- Vitest: প্রতিটা code-এর দুই ভাষার বার্তা, `fieldErrorsOf`, অচেনা code-এ status-এর বার্তা, ঘরে/উপরে ভাগ, পণ্য (ক্যাটাগরি নিষ্ক্রিয়, অচেনা একক, বাংলায়), গ্রাহক (সার্ভারের অবৈধ ফোন), কারণের ঘর, পাসওয়ার্ড, Settings (platform owner-এর সারি, খোঁজার সব শাখা, 409 থেকে খোঁজায় যাওয়া, axe)।
+- Playwright: বিক্রয়মূল্য ছাড়া নতুন পণ্য (ডুপ্লিকেট নাম ঘরের নিচে), platform owner বিদ্যমান ইউজার খুঁজে যোগ করেন। নকল API-র সব ত্রুটি এখন §11-এর রূপে।
