@@ -93,14 +93,26 @@ test('owner rejects with a required note; own request has no approve; stale requ
   browser,
 }) => {
   const manager = await as(browser, 'manager', '/b/example-cement/products');
-  await requestCorrection(manager, 'Sample PCC 05', async (dialog) => {
-    await dialog.getByLabel(/Change Purchase price/).check();
-    await dialog.getByLabel('New Purchase price').fill('600');
-  });
-  await requestCorrection(manager, 'Sample PCC 07', async (dialog) => {
-    await dialog.getByLabel(/Change Purchase price/).check();
-    await dialog.getByLabel('New Purchase price').fill('700');
-  });
+  const askDeactivate = async (dialog: ReturnType<Page['getByRole']>) => {
+    // Products have no requestable price any more: only (de)activation.
+    await expect(dialog.getByText(/price/i)).toHaveCount(0);
+    await dialog.getByText('Ask to deactivate').click();
+  };
+  await requestCorrection(manager, 'Sample PCC 05', askDeactivate);
+  await requestCorrection(manager, 'Sample PCC 07', askDeactivate);
+
+  // A second request on the same record: 409 names the pending one → direct link.
+  await manager.goto('/b/example-cement/products/p5');
+  await manager.getByRole('button', { name: 'Request a correction' }).click();
+  const again = manager.getByRole('dialog', { name: 'Request a correction: Sample PCC 05' });
+  await again.getByText('Ask to deactivate').click();
+  await again.getByLabel('Reason for the request').fill('once more');
+  await again.getByRole('button', { name: 'Review' }).click();
+  await again.getByRole('button', { name: 'Send request' }).click();
+  await expect(again.getByText('This record already has a pending request.')).toBeVisible();
+  await again.getByRole('link', { name: 'See the pending request' }).click();
+  await expect(manager).toHaveURL(/\/approvals\/cr\d+$/);
+  await expect(manager.getByRole('heading', { name: 'P-0005 Sample PCC 05' })).toBeVisible();
 
   // The manager's own request: withdraw only, never approve/reject.
   await manager.goto('/b/example-cement/approvals/mine');

@@ -20,13 +20,15 @@ test.beforeEach(async ({ context }) => {
   await context.addCookies([{ name: 'NEXT_LOCALE', value: 'en', url: 'http://localhost:3000' }]);
 });
 
-test('manager sees purchase prices; salesman never does (column, cells, detail)', async ({
+test('manager sees last purchase prices; salesman never does (column, cells, detail)', async ({
   page,
   browser,
 }) => {
   await signIn(page, 'manager', '/b/example-cement/products');
-  await expect(page.getByRole('columnheader', { name: 'Purchase price' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Last purchase price' })).toBeVisible();
   await expect(page.getByRole('row', { name: /Sample PCC 01/ })).toContainText('৳501.00');
+  // Not purchased yet → a dash, no amount.
+  await expect(page.getByRole('row', { name: /Sample PCC 07/ })).toContainText('—');
 
   const salesman = await browser.newPage();
   await salesman
@@ -34,12 +36,12 @@ test('manager sees purchase prices; salesman never does (column, cells, detail)'
     .addCookies([{ name: 'NEXT_LOCALE', value: 'en', url: 'http://localhost:3000' }]);
   await signIn(salesman, 'salesman', '/b/example-cement/products');
   await expect(salesman.getByRole('rowheader', { name: /Sample PCC 01/ })).toBeVisible();
-  await expect(salesman.getByRole('columnheader', { name: 'Purchase price' })).toHaveCount(0);
-  await expect(salesman.locator('main')).not.toContainText('Purchase price');
+  await expect(salesman.getByRole('columnheader', { name: 'Last purchase price' })).toHaveCount(0);
+  await expect(salesman.locator('main')).not.toContainText('Last purchase price');
   await expect(salesman.locator('main')).not.toContainText('৳501.00');
   await salesman.getByRole('link', { name: 'Sample PCC 01', exact: true }).click();
   await expect(salesman.getByRole('heading', { name: 'Sample PCC 01' })).toBeVisible();
-  await expect(salesman.locator('main')).not.toContainText('Purchase price');
+  await expect(salesman.locator('main')).not.toContainText('Last purchase price');
 });
 
 test('search (debounced, in the URL) and paging', async ({ page }) => {
@@ -157,15 +159,15 @@ test('category detail page links to its products', async ({ page }) => {
   await expect(page.getByRole('rowheader', { name: /Sample PCC/ })).toHaveCount(0);
 });
 
-test('new product without a sale price; a duplicate name is shown under the name field', async ({
+test('new product without any price; a duplicate name is shown under the name field', async ({
   page,
 }) => {
   await signIn(page, 'manager', '/b/example-cement/products/new');
-  await expect(page.getByLabel(/sale price/i)).toHaveCount(0);
+  // Prices come only from purchases: no price field on the form.
+  await expect(page.getByLabel(/price/i)).toHaveCount(0);
   await page.getByLabel('Category').selectOption({ label: 'OPC' });
   await page.getByLabel('Name (English)').fill('sample opc 02');
   await page.getByLabel('Name (Bangla)').fill('নমুনা ডুপ্লিকেট');
-  await page.getByLabel('Purchase price').fill('450');
   await page.getByRole('button', { name: 'Create' }).click();
   // NAME_EN_DUPLICATE (code + field) from the API → under the field, not the English text.
   await expect(page.getByLabel('Name (English)')).toHaveAccessibleDescription(
@@ -175,8 +177,7 @@ test('new product without a sale price; a duplicate name is shown under the name
   await page.getByLabel('Name (English)').fill('Sample OPC 40kg');
   await page.getByRole('button', { name: 'Create' }).click();
   await expect(page.getByRole('heading', { name: 'Sample OPC 40kg' })).toBeVisible();
-  await expect(page.locator('main')).not.toContainText(/sale price/i);
-  await expect(page.locator('main')).toContainText('৳450.00');
+  await expect(page.locator('main')).toContainText('Not purchased yet');
 });
 
 test('platform owner adds an existing user from another business', async ({ page }) => {

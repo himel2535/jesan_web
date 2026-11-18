@@ -371,9 +371,23 @@
 - dialog (core, `request-dialog.tsx`): কোন ঘর বদলাবে বাছাই করে নতুন মান, বা নিষ্ক্রিয়/সক্রিয়ের অনুরোধ, আর কারণ (৩–৫০০)। "পর্যালোচনা" → `POST preview`-এর প্রভাব; মান বদলালে আবার পর্যালোচনা লাগে; তারপর "পাঠান"। টাকা স্ট্রিং।
 - Idempotency-Key dialog খোলার সময় একবার (`crypto.randomUUID()`), প্রতিটা চেষ্টায় সেটাই; সাথে ref-guard। ব্যর্থ হলে লেখা মান ও কারণ থাকে।
 - dialog `createPortal`-এ document.body-তে, আর submit-এ `stopPropagation`: সম্পাদনার ফর্মের ভেতরে বাটন থাকলেও form-এর ভেতর form হয় না, আর অনুরোধ পাঠাতে গিয়ে পণ্য/গ্রাহক সেভ হয় না।
-- **TODO (backend):** 409 `CHANGE_REQUEST_PENDING_EXISTS`-এ অপেক্ষমাণ অনুরোধের id নেই। এখন: `change.view.all` থাকলে `/approvals/all?entityId=…&status=pending` লিংক; না থাকলে নিজের `mine?status=pending` প্রথম পাতা থেকে মিলিয়ে সেই অনুরোধের লিংক; তাও না মিললে শুধু বার্তা। backend id দিলে `request-dialog.tsx`-এর `findPendingLink` বাদ দিয়ে সরাসরি `/approvals/<id>`।
+- **(বন্ধ, Step 4f) TODO (backend):** 409 `CHANGE_REQUEST_PENDING_EXISTS`-এ অপেক্ষমাণ অনুরোধের id নেই। এখন: `change.view.all` থাকলে `/approvals/all?entityId=…&status=pending` লিংক; না থাকলে নিজের `mine?status=pending` প্রথম পাতা থেকে মিলিয়ে সেই অনুরোধের লিংক; তাও না মিললে শুধু বার্তা। backend id দিলে `request-dialog.tsx`-এর `findPendingLink` বাদ দিয়ে সরাসরি `/approvals/<id>`।
 
 ### যাচাই
 
 - Vitest: অনুমতিভেদে বাটন (মালিক/ম্যানেজার/বিক্রয়কর্মী), নিজের অনুরোধে অনুমোদন নেই, stale (আগে ও 409-এ), প্রত্যাখ্যানে নোট বাধ্যতামূলক, Idempotency-Key ও দুবার জমা না হওয়া, ব্যর্থতায় মান থাকা, 409 pending-exists-এর দুই লিংক, ব্যাজ (৬০ সেকেন্ড, লুকানো ট্যাবে বন্ধ, দেখা গেলে সঙ্গে সঙ্গে), ঠিক key-ই invalidate, লুকানো ঘর, ফাঁকা বনাম কিছু মেলেনি, 403/404, দুই ভাষা, axe, কীবোর্ড।
 - Playwright (দুটো আলাদা browser context): ম্যানেজার নিষ্ক্রিয়ের অনুরোধ পাঠান → মালিক ব্যাজে ১ দেখে অনুমোদন → পণ্য নিষ্ক্রিয়, ম্যানেজারের তালিকায় "অনুমোদিত"; প্রত্যাখ্যানে নোট; মালিক সরাসরি বদলালে অনুরোধ stale। নকল API-তে change-requests (preview, idempotency, mine/all/count, approve/reject/cancel, stale, নিজের সিদ্ধান্ত নিষেধ, লুকানো ঘর)।
+
+## ২০২৬-১১-১৮ — Step 4f: শুধু-পড়া শেষ কেনা-দাম (প্ল্যান: `docs/plans/step-4f.md`)
+
+- `docs/API.md` jesan_api `main` (`347f37b`, #12) থেকে হুবহু কপি।
+- **পণ্যে হাতে বসানো কেনা-দাম নেই।** `purchasePrice` সরানো; বদলে শুধু-পড়া `lastPurchasePrice` ও `lastPurchasedAt`। এগুলো কেনা (Step 5a) থেকে আসে, UI-তে কোনো হিসাব হয় না।
+  - তালিকা ও ফোনের কার্ড: কলাম "শেষ কেনা-দাম", `null` হলে "—"।
+  - বিস্তারিত: দাম ও তারিখ, `null` হলে "এখনো কেনা হয়নি"।
+  - শর্ত `product.cost.view` **এবং** response-এ ঘর থাকা; না হলে জায়গাও নেই।
+- পণ্যের তৈরি ও সম্পাদনায় কোনো দামের ঘর নেই; সম্পাদনায় শুধু নাম, ক্যাটাগরি, একক। সক্রিয়/নিষ্ক্রিয় আগের মতো বিস্তারিত পাতা ও "কাজ" মেনুতে।
+- `product.price.edit` অনুমতি নেই (মোট ৩৯টা; লেবেল ও টেস্ট-তালিকা থেকে সরানো)। পণ্যের সংশোধনের অনুরোধে এখন শুধু নিষ্ক্রিয়/সক্রিয়।
+- নতুন ত্রুটি-code `PURCHASE_PRICE_NOT_ALLOWED`, `LAST_PURCHASE_PRICE_NOT_ALLOWED` (দুই ভাষা); `PURCHASE_PRICE_INVALID` তালিকা থেকে বাদ (আর আসে না)।
+- 409 `CHANGE_REQUEST_PENDING_EXISTS`-এ `changeRequestId` এলে সরাসরি `/approvals/<id>` লিংক। না এলে আগের মতো: `change.view.all` থাকলে ফিল্টার করা তালিকা, নইলে নিজের অপেক্ষমাণ অনুরোধ মিলিয়ে, তাও না মিললে শুধু বার্তা।
+  - id পড়তে `ApiError.body` যোগ হয়েছে, এতে পার্স করা error body থাকে।
+- অনুমোদনের core টেস্টগুলোর উদাহরণ এখন গ্রাহকের ঋণসীমা (API doc-এর মতো)।
