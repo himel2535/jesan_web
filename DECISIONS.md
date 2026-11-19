@@ -422,3 +422,12 @@
   - id-যুক্ত প্রভাবের key (`stock.<id>`, `lastPurchasePrice.<id>`, `purchaseCounter.<মাস>`) prefix দিয়ে অনুবাদ, পরিচয় API-র লেবেলের শেষ শব্দ থেকে।
   - `items.<id>.*` ঘর "লাইনের পরিমাণ · …শেষ ৪ অক্ষর"। API লাইনের পণ্যের নাম দেয় না; প্রভাবের স্টক-লাইনে পণ্যের কোড থাকে।
 - কমিশন ও কেনার কাউন্টার (`purchase-counters`) এই ধাপে নয় (Step 7c)।
+
+## ২০২৬-১১-১৯ — Mac dev-এর Turbopack ক্যাশ (`docs/plans/mac-dev-cache.md`)
+
+- **কারণ:** dev-এর স্থায়ী Turbopack ক্যাশ (`.next/dev/cache/turbopack`) `npm ci`, Next বা Node বদলের পর পুরনো module-পথ ধরে রাখে, তাই `Cannot find module 'tapable'` (Tailwind PostCSS-এর transitive dependency) বা `@vercel/turbopack/postcss`।
+- **সমাধান:**
+  - `predev` (`scripts/dev-cache-guard.mjs`): lockfile, Next, Node, OS বা CPU বদলালে শুধু `.next/dev` মোছে।
+  - `dev:clean`: জোর করে মুছে চালায়।
+  - `dev:webpack`: শেষ উপায়।
+- build, CI, Vercel ও `next.config.ts` অপরিবর্তিত। dev ডিফল্ট Turbopack-ই থাকল, যাতে dev ও production একই bundler-এ চলে।
