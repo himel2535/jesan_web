@@ -118,7 +118,7 @@
       "PURCHASE_ALREADY_VOID": "This purchase is already void; it cannot be voided or corrected again.",
       "PRODUCT_DUPLICATE": "This product is already in another line of this purchase.",
       "PRODUCT_NOT_FOUND_OR_INACTIVE": "This product does not exist or is inactive.",
-      "QUANTITY_INVALID": "Enter a quantity above zero (bags are whole numbers).",
+      "QUANTITY_INVALID": "Enter a quantity above zero that fits the unit’s rule.",
       "UNIT_PRICE_INVALID": "Enter the price like 570 or 570.50.",
       "SUPPLIER_NOT_FOUND_OR_INACTIVE": "This supplier does not exist or is inactive.",
       "PURCHASE_DATE_INVALID": "This date does not exist.",
@@ -126,9 +126,38 @@
       "PURCHASE_DATE_TOO_OLD": "This date is older than you may enter.",
       "STOCK_INSUFFICIENT": "Not enough stock for this.",
       "ADJUSTMENT_APPROVAL_REQUIRED": "This is above your daily adjustment limit; send it for approval.",
-      "ADJUST_BY_INVALID": "Enter a non-zero quantity (bags are whole numbers).",
+      "ADJUST_BY_INVALID": "Enter a non-zero quantity that fits the unit’s rule.",
       "NOTE_INVALID": "The note is not valid or is too long.",
-      "SUPPLIER_REFERENCE_INVALID": "The paper number is not valid or is too long."
+      "SUPPLIER_REFERENCE_INVALID": "The paper number is not valid or is too long.",
+      "ORDER_NOT_FOUND": "This order was not found.",
+      "DELIVERY_NOT_FOUND": "This delivery was not found.",
+      "COLLECTION_NOT_FOUND": "This collection was not found.",
+      "CUSTOMER_NOT_FOUND_OR_INACTIVE": "This customer does not exist or is inactive, so no new order can be taken.",
+      "DELIVER_BY_INVALID": "The promised date is not valid, or is before the order date.",
+      "DELIVERY_WINDOW_INVALID": "Choose one of the offered urgency options.",
+      "ORDER_DATE_INVALID": "This order date does not exist, or is after the first delivery.",
+      "ORDER_DATE_IN_FUTURE": "The order date cannot be in the future.",
+      "ORDER_DATE_TOO_OLD": "This order date is older than you may enter.",
+      "DELIVERY_DATE_INVALID": "This delivery date does not exist, or is before the order date.",
+      "DELIVERY_DATE_IN_FUTURE": "The delivery date cannot be in the future.",
+      "DELIVERY_DATE_TOO_OLD": "This delivery date is older than you may enter.",
+      "COLLECTION_DATE_INVALID": "This collection date does not exist.",
+      "COLLECTION_DATE_IN_FUTURE": "The collection date cannot be in the future.",
+      "COLLECTION_DATE_TOO_OLD": "This collection date is older than you may enter.",
+      "ORDER_ITEM_NOT_FOUND": "This line does not belong to this order.",
+      "ORDER_ITEM_DUPLICATE": "This order line is already in another line of this delivery.",
+      "DELIVERY_QUANTITY_TOO_LARGE": "This is more than is left to deliver on this line.",
+      "ORDER_QUANTITY_TOO_SMALL": "The order cannot go below what has already been delivered.",
+      "COLLECTION_METHOD_UNKNOWN": "Choose one of the offered payment methods.",
+      "AMOUNT_TOO_SMALL": "Enter an amount above zero.",
+      "AMOUNT_INVALID": "Enter the amount like 570 or 570.50.",
+      "TRANSPORT_REFERENCE_INVALID": "The transport reference is not valid or is too long.",
+      "REFERENCE_INVALID": "The reference is not valid or is too long.",
+      "CREDIT_LIMIT_EXCEEDED": "This delivery would pass the customer’s credit limit.",
+      "ORDER_ALREADY_VOID": "This order is void; it cannot be delivered, corrected or voided again.",
+      "DELIVERY_ALREADY_VOID": "This delivery is already void; it cannot be corrected or voided again.",
+      "COLLECTION_ALREADY_VOID": "This collection is already void; it cannot be corrected or voided again.",
+      "DELIVERY_EXISTS": "This order still has active deliveries; void those first."
     },
     "problems": {
       "REQUIRED": "This field is required.",
@@ -262,7 +291,9 @@
       "accounts": "Accounts",
       "commission": "Commission",
       "reports": "Reports",
-      "settings": "Settings"
+      "settings": "Settings",
+      "deliveries": "Deliveries",
+      "collections": "Collections"
     },
     "common": {
       "searchLabel": "Search",
@@ -445,7 +476,7 @@
         "remove": "Remove {name}",
         "noLines": "Add at least one product.",
         "tooManyLines": "At most 50 lines.",
-        "quantityInvalid": "Enter a quantity above zero (bags are whole numbers).",
+        "quantityInvalid": "Enter a quantity above zero that fits the unit’s rule.",
         "priceInvalid": "Enter the price like 570 or 570.50.",
         "required": "This field is required.",
         "grandTotal": "Total (shown only; the server calculates)",
@@ -472,14 +503,14 @@
       },
       "void": {
         "title": "Void {code}?",
-        "body": "Stock goes back down by these bags, dated today. The purchase stays visible as void.",
+        "body": "Stock goes back down by these quantities, dated today. The purchase stays visible as void.",
         "confirm": "Void",
         "done": "Purchase voided."
       },
       "correct": {
         "title": "Correct {code}",
         "intro": "Only what you change is sent. Lines cannot be added, removed or swapped; void and re-enter for that.",
-        "reasonNeeded": "A reason is required when the date, bags or prices change.",
+        "reasonNeeded": "A reason is required when the date, quantities or prices change.",
         "nothing": "Nothing has changed.",
         "done": "Purchase corrected.",
         "save": "Save correction",
@@ -532,10 +563,10 @@
       },
       "adjustDialog": {
         "title": "Adjust stock: {name}",
-        "intro": "For torn or found bags. Use a minus sign to lower the stock, e.g. -3.",
+        "intro": "For damaged or found goods. Use a minus sign to lower the stock, e.g. -3.",
         "quantity": "Change (with sign)",
         "quantityHint": "Now in stock: {quantity}. Example: -3 or 5.",
-        "quantityInvalid": "Enter a non-zero quantity with sign, e.g. -3 (bags are whole numbers).",
+        "quantityInvalid": "Enter a non-zero quantity with sign, e.g. -3, that fits the unit’s rule.",
         "reason": "Reason",
         "reasonHint": "Why? (3–500 characters)",
         "reasonRequired": "Write a reason (3–500 characters).",
@@ -551,6 +582,263 @@
       "notFoundDescription": "This product does not exist in this business.",
       "productStock": "Current stock",
       "productHistory": "Stock history"
+    },
+    "sales": {
+      "status": {
+        "label": "Status",
+        "all": "All statuses",
+        "active": "Active",
+        "void": "Void"
+      },
+      "deliveryStatus": {
+        "label": "Delivery",
+        "all": "All",
+        "open": "Not finished",
+        "pending": "Not started",
+        "partial": "Part delivered",
+        "delivered": "Delivered"
+      },
+      "window": {
+        "label": "Urgency",
+        "today": "Today",
+        "two_days": "Within two days",
+        "one_week": "Within a week"
+      },
+      "pick": {
+        "searchCustomers": "Name, code or phone",
+        "searchHint": "Type at least part of the name, code or phone number.",
+        "noCustomers": "No customer matches.",
+        "inactiveCustomer": "Inactive"
+      },
+      "filters": {
+        "from": "From",
+        "to": "To",
+        "customer": "Customer",
+        "customerAll": "All customers",
+        "chip": "Customer: {name}",
+        "clearCustomer": "Clear customer",
+        "unknown": "chosen customer"
+      },
+      "errors": {
+        "remainingOnly": "Only {remaining} {unit} are left to deliver on this line.",
+        "stockOnly": "Only {available} {unit} are in stock.",
+        "creditLimit": "The credit limit is {limit}; after this delivery the due would be {after}."
+      },
+      "common": {
+        "code": "Code",
+        "date": "Date",
+        "customer": "Customer",
+        "amount": "Amount",
+        "quantity": "Quantity",
+        "quantityWithUnit": "Quantity ({unit})",
+        "unitPrice": "Unit price",
+        "lineTotal": "Line total",
+        "totalQuantity": "Total quantity",
+        "totalAmount": "Total",
+        "note": "Note",
+        "createdBy": "Entered by",
+        "createdAt": "Entered at",
+        "product": "Product",
+        "order": "Order",
+        "saving": "Saving…",
+        "save": "Save",
+        "cancel": "Cancel",
+        "back": "Back",
+        "required": "This field is required.",
+        "quantityInvalid": "Enter a quantity above zero that fits the unit’s rule.",
+        "priceInvalid": "Enter the price like 570 or 570.50.",
+        "voidedTitle": "This record is void",
+        "voidedBy": "Voided by {name} on {date}.",
+        "voidReason": "Reason",
+        "nothing": "Nothing was changed.",
+        "reasonNeeded": "Write why (3–500 characters)."
+      },
+      "orders": {
+        "title": "Orders",
+        "description": "Customer orders of {business}: what was ordered, delivered and still due.",
+        "newTitle": "New order",
+        "new": "New order",
+        "emptyTitle": "No orders yet",
+        "emptyDescription": "New customer orders appear here.",
+        "deliveredQuantity": "Delivered",
+        "remainingQuantity": "Left",
+        "deliverBy": "Promised by",
+        "orderDate": "Order date",
+        "form": {
+          "customer": "Customer",
+          "customerChosen": "Customer: {name}",
+          "changeCustomer": "Choose another customer",
+          "customerRequired": "Choose a customer.",
+          "dateHint": "Defaults to today; it cannot be in the future.",
+          "addProduct": "Add a product",
+          "remove": "Remove {name}",
+          "noLines": "Add at least one product.",
+          "tooManyLines": "At most 50 lines.",
+          "grandTotal": "Order total",
+          "advanceTitle": "Advance collected with this order",
+          "advanceToggle": "Take an advance now",
+          "advanceHint": "Optional. It is recorded as a collection against this order, not allocated to it.",
+          "created": "The order was saved.",
+          "createdNoAdvance": "The order was saved, but the advance was not recorded: {reason} Take the collection again from here.",
+          "takeCollection": "Take a collection"
+        },
+        "detail": {
+          "title": "Order {code}",
+          "items": "Lines",
+          "deliveries": "Deliveries of this order",
+          "noDeliveries": "Nothing delivered yet.",
+          "collections": "Collections against this order",
+          "noCollections": "No collection recorded against this order.",
+          "back": "Back to orders",
+          "deliver": "Deliver"
+        },
+        "actions": {
+          "correct": "Correct",
+          "void": "Void"
+        },
+        "void": {
+          "title": "Void order {code}?",
+          "body": "The order is cancelled and nothing more can be delivered against it.",
+          "advanceNote": "Money already collected is NOT refunded automatically; it stays as the customer’s advance. To refund it, void that collection separately.",
+          "confirm": "Void the order",
+          "done": "The order was voided."
+        },
+        "correct": {
+          "title": "Correct order {code}",
+          "intro": "Only what you change is sent. A reason is kept with the change.",
+          "save": "Save the correction",
+          "saving": "Saving…",
+          "done": "The order was corrected."
+        }
+      },
+      "deliveries": {
+        "title": "Deliveries",
+        "description": "Deliveries of {business}: what left the store, against which order.",
+        "newTitle": "New delivery",
+        "emptyTitle": "No deliveries yet",
+        "emptyDescription": "Deliveries against orders appear here.",
+        "deliveryDate": "Delivery date",
+        "transportReference": "Transport reference",
+        "transportReferenceHint": "Trip or truck number. No transport cost is charged to the customer.",
+        "creditWarning": "This delivery passed the customer’s credit limit.",
+        "form": {
+          "orderRequired": "Open a delivery from an order.",
+          "intro": "Deliver all or part of this order. Leave a line empty to deliver nothing of it.",
+          "remaining": "Left on this line",
+          "fillAll": "Deliver everything left",
+          "noLines": "Enter a quantity on at least one line.",
+          "tooLarge": "More than is left on this line.",
+          "created": "The delivery was saved.",
+          "nothingLeft": "Everything on this order has been delivered."
+        },
+        "detail": {
+          "title": "Delivery {code}",
+          "items": "Lines",
+          "back": "Back to deliveries"
+        },
+        "actions": {
+          "correct": "Correct",
+          "void": "Void"
+        },
+        "void": {
+          "title": "Void delivery {code}?",
+          "body": "The goods go back into stock and the customer’s due goes down, dated today.",
+          "confirm": "Void the delivery",
+          "done": "The delivery was voided."
+        },
+        "correct": {
+          "title": "Correct delivery {code}",
+          "intro": "Only what you change is sent. Stock, the order and the ledger follow the difference.",
+          "save": "Save the correction",
+          "done": "The delivery was corrected."
+        }
+      },
+      "collections": {
+        "title": "Collections",
+        "description": "Money collected from the customers of {business}.",
+        "newTitle": "Take a collection",
+        "new": "Take a collection",
+        "emptyTitle": "Nothing collected yet",
+        "emptyDescription": "Money collected from customers appears here.",
+        "collectionDate": "Collection date",
+        "method": "Method",
+        "methodAll": "All methods",
+        "reference": "Reference",
+        "referenceHint": "Transaction id, cheque number.",
+        "againstOrder": "Against which order",
+        "againstOrderNone": "No order (general advance)",
+        "againstOrderHint": "A reference only: money is never allocated to one order.",
+        "amountInvalid": "Enter an amount above zero, like 570 or 570.50.",
+        "methodRequired": "Choose a method.",
+        "advance": "More than the due is allowed; the balance then becomes an advance.",
+        "form": {
+          "created": "The collection was saved."
+        },
+        "detail": {
+          "title": "Collection {code}",
+          "back": "Back to collections"
+        },
+        "actions": {
+          "correct": "Correct",
+          "void": "Void"
+        },
+        "void": {
+          "title": "Void collection {code}?",
+          "body": "The ledger gets a reversing line dated today and the customer’s due goes back up.",
+          "confirm": "Void the collection",
+          "done": "The collection was voided."
+        },
+        "correct": {
+          "title": "Correct collection {code}",
+          "intro": "Only what you change is sent. The balance and the ledger follow the difference.",
+          "save": "Save the correction",
+          "done": "The collection was corrected."
+        },
+        "methodNames": {
+          "cash": "Cash",
+          "bkash": "bKash",
+          "nagad": "Nagad",
+          "rocket": "Rocket",
+          "bank": "Bank transfer",
+          "cheque": "Cheque",
+          "card": "Card"
+        }
+      },
+      "ledger": {
+        "title": "Ledger",
+        "tabDetails": "Details",
+        "tabLedger": "Ledger",
+        "tabActivity": "Orders & deliveries",
+        "tabsLabel": "Customer sections",
+        "openingBalance": "Opening due",
+        "deliveredAmount": "Delivered",
+        "collectedAmount": "Collected",
+        "currentBalance": "Current due",
+        "creditLimit": "Credit limit",
+        "noLimit": "No limit",
+        "pendingDeliveryQuantity": "Left to deliver",
+        "entryDate": "Date",
+        "kind": "Entry",
+        "source": "Document",
+        "reason": "Reason",
+        "amountHint": "A positive amount raises the due; a negative one lowers it.",
+        "emptyTitle": "The ledger is empty",
+        "emptyDescription": "Deliveries and collections appear here.",
+        "kinds": {
+          "delivery": "Delivery",
+          "delivery_edit": "Delivery corrected",
+          "delivery_void": "Delivery voided",
+          "collection": "Collection",
+          "collection_edit": "Collection corrected",
+          "collection_void": "Collection voided"
+        },
+        "activity": {
+          "orders": "Orders",
+          "deliveries": "Deliveries",
+          "noOrders": "No order for this customer.",
+          "noDeliveries": "No delivery for this customer."
+        }
+      }
     }
   },
   "settings": {
@@ -733,7 +1021,8 @@
       "reports": "Reports",
       "commission": "Commission",
       "profit": "Profit",
-      "change": "Correction requests"
+      "change": "Correction requests",
+      "delivery": "Deliveries"
     },
     "items": {
       "settings_view": "View settings",
@@ -749,10 +1038,13 @@
       "customer_manage": "Add and edit customers",
       "customer_due_view": "View customer dues and credit limits",
       "collection_create": "Record due collections",
+      "collection_view": "See money collected",
+      "collection_edit": "Correct a collection, directly or by approval",
+      "collection_void": "Void a collection, directly or by approval",
       "supplier_view": "View supplier",
       "purchase_view": "View purchases",
       "purchase_create": "Record purchases",
-      "purchase_edit": "Correct purchases (date, bags, prices)",
+      "purchase_edit": "Correct purchases (date, quantity, prices)",
       "purchase_void": "Void purchases",
       "stock_view": "View stock quantity (not value)",
       "stock_adjust": "Adjust stock",
@@ -760,7 +1052,13 @@
       "sale_create": "Create sale invoices",
       "sale_view_all": "View all sales",
       "sale_view_own": "View own sales only",
+      "sale_edit": "Correct an order (price, quantity, date, urgency), directly or by approval",
       "sale_void": "Void sales",
+      "delivery_view": "See deliveries",
+      "delivery_create": "Deliver against an order",
+      "delivery_edit": "Correct a delivery, directly or by approval",
+      "delivery_void": "Void a delivery, directly or by approval",
+      "delivery_credit_override": "Deliver even when the credit limit is passed (block mode)",
       "ledger_view": "View ledger",
       "ledger_entry_create": "Add ledger entries",
       "payment_create": "Record payments",
@@ -804,7 +1102,10 @@
       "customer": "Customer",
       "product_category": "Category",
       "purchase": "Purchase",
-      "product_stock": "Stock"
+      "product_stock": "Stock",
+      "sales_order": "Order",
+      "delivery": "Delivery",
+      "collection": "Collection"
     },
     "kind": {
       "edit": "Change",
@@ -861,7 +1162,16 @@
       "supplierReference": "Paper number",
       "adjustBy": "Stock change",
       "line_quantity": "Line quantity",
-      "line_unitPrice": "Line price"
+      "line_unitPrice": "Line price",
+      "orderDate": "Order date",
+      "deliverBy": "Promised by",
+      "deliveryWindow": "Urgency",
+      "deliveryDate": "Delivery date",
+      "collectionDate": "Collection date",
+      "transportReference": "Transport reference",
+      "reference": "Reference",
+      "method": "Method",
+      "amount": "Amount"
     },
     "values": {
       "active": "Active",
@@ -876,7 +1186,12 @@
       "customer_creditLimit": "Credit limit",
       "customer_isActive": "Customer status",
       "product_category_isActive": "Category status",
-      "purchase_totalAmount": "Purchase total"
+      "purchase_totalAmount": "Purchase total",
+      "order_totalAmount": "Order total",
+      "order_remainingQuantity": "Left to deliver",
+      "customer_pendingDeliveryQuantity": "Left to deliver",
+      "delivery_totalAmount": "Delivery total",
+      "collection_amount": "Collection amount"
     },
     "notes": {
       "inactive": "While inactive it cannot be chosen for new entries; existing records stay."
@@ -941,15 +1256,15 @@
       "modeEdit": "Change values",
       "modeVoid": "Void this record",
       "voidNote": "If approved, the record is voided: it stays visible as void and its effects are reversed.",
-      "quantityInvalid": "Enter a quantity above zero (bags are whole numbers).",
-      "signedQuantityInvalid": "Enter a non-zero quantity with sign, e.g. -30 (bags are whole numbers).",
+      "quantityInvalid": "Enter a quantity above zero that fits the unit’s rule.",
+      "signedQuantityInvalid": "Enter a non-zero quantity with sign, e.g. -3, that fits the unit’s rule.",
       "dateInvalid": "Choose a date.",
       "textInvalid": "This is too long."
     },
     "impactPrefix": {
       "stock": "Stock",
       "lastPurchasePrice": "Last purchase price",
-      "purchaseCounter": "Bags bought in"
+      "purchaseCounter": "Quantity bought in"
     }
   }
 }

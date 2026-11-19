@@ -145,11 +145,12 @@ export function useCustomers(slug: string, businessId: string, params: ListParam
   });
 }
 
-export function useCustomer(slug: string, businessId: string, id: string) {
+export function useCustomer(slug: string, businessId: string, id: string, enabled = true) {
   return useQuery({
     queryKey: dealershipKeys.detail(businessId, 'customers', id),
     queryFn: ({ signal }) =>
       apiFetch<Customer>(`${base(slug)}/customers/${encodeURIComponent(id)}`, { signal }),
+    enabled: enabled && Boolean(id),
   });
 }
 

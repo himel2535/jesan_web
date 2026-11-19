@@ -13,7 +13,7 @@ import { useCustomer, useSaveCustomer } from '../api';
 import { CorrectionSection, useCustomerRequestTarget } from '../shared/correction';
 import { DeactivateDialog } from '../shared/deactivate-dialog';
 import { DetailList, type DetailRow } from '../shared/detail-list';
-import { Balance, StatusBadge, useNameOf } from '../shared/display';
+import { Balance, Money, StatusBadge, useNameOf } from '../shared/display';
 import { ListSkeleton, LoadError, Notice } from '../shared/states';
 import { CreditLimit, hasDueFields } from './customers-list';
 import { CustomerForm } from './customer-form';
@@ -54,6 +54,16 @@ export function CustomerDetail({
     { label: t('common.address'), value: c.address ?? '—' },
     { label: t('common.area'), value: c.area ?? '—' },
     // Only when the API sent them (customer.due.view); otherwise these rows do not exist.
+    ...(c.pendingDeliveryQuantity !== undefined
+      ? [
+          {
+            label: t('sales.ledger.pendingDeliveryQuantity'),
+            value: (
+              <span className="tabular-nums">{format.quantity(c.pendingDeliveryQuantity)}</span>
+            ),
+          },
+        ]
+      : []),
     ...(hasDueFields(c)
       ? [
           { label: t('customers.currentBalance'), value: <Balance value={c.currentBalance} /> },
@@ -66,6 +76,18 @@ export function CustomerDetail({
               ]
             : []),
           { label: t('customers.creditLimit'), value: <CreditLimit value={c.creditLimit} /> },
+          ...(c.deliveredAmount !== undefined && c.collectedAmount !== undefined
+            ? [
+                {
+                  label: t('sales.ledger.deliveredAmount'),
+                  value: <Money value={c.deliveredAmount} />,
+                },
+                {
+                  label: t('sales.ledger.collectedAmount'),
+                  value: <Money value={c.collectedAmount} />,
+                },
+              ]
+            : []),
         ]
       : []),
     { label: t('common.status'), value: <StatusBadge active={c.isActive} /> },

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useCan } from '@/core/auth/can';
+import { useFormat } from '@/core/i18n/use-format';
 import { cn } from '@/core/ui/cn';
 import { Pagination } from '@/core/ui/pagination';
 import { PAGE_SIZE } from '@/core/ui/pagination-logic';
@@ -32,6 +33,7 @@ export function hasDueFields(c: Customer): c is Customer & { currentBalance: str
 export function CustomersList({ slug, businessId }: { slug: string; businessId: string }) {
   const t = useTranslations('dealership');
   const locale = useLocale();
+  const format = useFormat();
   const nameOf = useNameOf();
   const isDesktop = useIsDesktop();
   const canManage = useCan('customer.manage');
@@ -45,6 +47,8 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
   const base = `/b/${encodeURIComponent(slug)}/customers`;
   const items = query.data?.items ?? [];
   const showDue = canSeeDue && items.some(hasDueFields);
+  // Everyone with customer.view gets this one; still only a column when the API sent it (§11).
+  const showPending = items.some((c) => c.pendingDeliveryQuantity !== undefined);
   const filtered = Boolean(params.search || params.active !== 'true');
   const actions = (c: Customer) => (
     <>
@@ -109,6 +113,11 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
                       <th scope="col" className="px-4 py-3 font-medium">
                         {t('common.area')}
                       </th>
+                      {showPending ? (
+                        <th scope="col" className="px-4 py-3 text-right font-medium">
+                          {t('sales.ledger.pendingDeliveryQuantity')}
+                        </th>
+                      ) : null}
                       {showDue ? (
                         <>
                           <th scope="col" className="px-4 py-3 text-right font-medium">
@@ -150,6 +159,13 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
                         </th>
                         <td className="px-4 py-3 whitespace-nowrap tabular-nums">{c.phone}</td>
                         <td className="px-4 py-3">{c.area ?? '—'}</td>
+                        {showPending ? (
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {c.pendingDeliveryQuantity !== undefined
+                              ? format.quantity(c.pendingDeliveryQuantity)
+                              : null}
+                          </td>
+                        ) : null}
                         {showDue ? (
                           <>
                             <td className="px-4 py-3 text-right">

@@ -62,6 +62,11 @@ export interface Customer {
   currentBalance?: string;
   /** null = no limit. */
   creditLimit?: string | null;
+  /** Bags still to deliver on active orders; everyone with `customer.view` sees it (§11). */
+  pendingDeliveryQuantity?: string;
+  /** Both absent without `customer.due.view`. */
+  deliveredAmount?: string;
+  collectedAmount?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

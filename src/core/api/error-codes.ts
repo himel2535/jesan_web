@@ -1,5 +1,5 @@
 /**
- * Stable error codes of jesan-api (docs/API.md §11), each with its own translated message in
+ * Stable error codes of jesan-api (docs/API.md §13), each with its own translated message in
  * `messages/*.json` under `apiErrors.codes`. A test checks both languages have every one.
  *
  * Field-structure codes are `<FIELD>_<PROBLEM>` (e.g. `NAME_EN_REQUIRED`); they are endless, so
@@ -48,7 +48,7 @@ export const ERROR_CODES = [
   'CATEGORY_NOT_FOUND',
   'CUSTOMER_NOT_FOUND',
   'SUPPLIER_NOT_FOUND',
-  // Change requests (§11)
+  // Change requests (§12)
   'ENTITY_TYPE_UNKNOWN',
   'VOID_NOT_SUPPORTED',
   'PROPOSED_CHANGE_EMPTY',
@@ -82,7 +82,37 @@ export const ERROR_CODES = [
   'ADJUST_BY_INVALID',
   'NOTE_INVALID',
   'SUPPLIER_REFERENCE_INVALID',
-  // Field-structure codes with a message of their own (examples in §11)
+  // Orders, deliveries and collections (§11)
+  'ORDER_NOT_FOUND',
+  'DELIVERY_NOT_FOUND',
+  'COLLECTION_NOT_FOUND',
+  'CUSTOMER_NOT_FOUND_OR_INACTIVE',
+  'DELIVER_BY_INVALID',
+  'DELIVERY_WINDOW_INVALID',
+  'ORDER_DATE_INVALID',
+  'ORDER_DATE_IN_FUTURE',
+  'ORDER_DATE_TOO_OLD',
+  'DELIVERY_DATE_INVALID',
+  'DELIVERY_DATE_IN_FUTURE',
+  'DELIVERY_DATE_TOO_OLD',
+  'COLLECTION_DATE_INVALID',
+  'COLLECTION_DATE_IN_FUTURE',
+  'COLLECTION_DATE_TOO_OLD',
+  'ORDER_ITEM_NOT_FOUND',
+  'ORDER_ITEM_DUPLICATE',
+  'DELIVERY_QUANTITY_TOO_LARGE',
+  'ORDER_QUANTITY_TOO_SMALL',
+  'COLLECTION_METHOD_UNKNOWN',
+  'AMOUNT_TOO_SMALL',
+  'AMOUNT_INVALID',
+  'TRANSPORT_REFERENCE_INVALID',
+  'REFERENCE_INVALID',
+  'CREDIT_LIMIT_EXCEEDED',
+  'ORDER_ALREADY_VOID',
+  'DELIVERY_ALREADY_VOID',
+  'COLLECTION_ALREADY_VOID',
+  'DELIVERY_EXISTS',
+  // Field-structure codes with a message of their own (examples in §13)
   'NAME_EN_REQUIRED',
   'NAME_BN_REQUIRED',
   'NAME_EN_TOO_LONG',
@@ -101,7 +131,7 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
-/** The PROBLEM part of a field-structure code (§11); each has one general message. */
+/** The PROBLEM part of a field-structure code (§13); each has one general message. */
 export const FIELD_PROBLEMS = [
   'REQUIRED',
   'INVALID',

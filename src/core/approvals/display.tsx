@@ -34,14 +34,29 @@ export function StatusPill({ status }: { status: ChangeStatus }) {
 export type ValueKind = 'quantity' | 'date' | 'text' | 'money';
 
 /**
- * The kind of a request field by its stable name (docs/API.md §11). Purchase lines are
- * `items.<id>.quantity` / `items.<id>.unitPrice`; a large stock adjustment is `adjustBy`.
+ * The kind of a request field by its stable name (docs/API.md §12). Purchase, order and
+ * delivery lines are `items.<id>.quantity` / `items.<id>.unitPrice`; a large stock adjustment
+ * is `adjustBy`.
  */
 export function kindOfField(field: string): ValueKind {
-  if (field === 'adjustBy' || field === 'quantity' || field.endsWith('.quantity'))
+  if (
+    field === 'adjustBy' ||
+    field === 'quantity' ||
+    field.endsWith('.quantity') ||
+    field === 'remainingQuantity' ||
+    field === 'pendingDeliveryQuantity'
+  )
     return 'quantity';
-  if (field === 'purchaseDate') return 'date';
-  if (field === 'note' || field === 'supplierReference') return 'text';
+  if (field.endsWith('Date') || field === 'deliverBy') return 'date';
+  if (
+    field === 'note' ||
+    field === 'supplierReference' ||
+    field === 'transportReference' ||
+    field === 'reference' ||
+    field === 'method' ||
+    field === 'deliveryWindow'
+  )
+    return 'text';
   return 'money';
 }
 
