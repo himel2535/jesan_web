@@ -11,3 +11,6 @@ Dealership ধরনের ব্যবসার generic module: নির্দ
 - `master-data/`: পণ্য ক্যাটাগরি, পণ্য, গ্রাহক, সরবরাহকারীর পাতা (API hooks, ফর্ম, তালিকা, টেস্ট)। route ফাইল `src/app/(app)/b/[slug]/{products,customers,suppliers}`। প্রতিটা তালিকায় "বিস্তারিত" আর অনুমতি অনুযায়ী "কাজ" মেনু (`shared/row-actions.tsx`); ক্যাটাগরির বিস্তারিত পাতা `products/categories/[id]`।
 
 কেনা, বিক্রি, স্টক, হিসাব, কমিশন ও রিপোর্টের পাতা এখনো "শীঘ্রই আসছে"।
+
+- `purchases/`: কেনার তালিকা, নতুন কেনা, বিস্তারিত, বাতিল ও সংশোধন (সরাসরি বা অনুরোধ)। route `src/app/(app)/b/[slug]/purchases`।
+- `stock/`: স্টকের তালিকা, পণ্যের স্টক-ইতিহাস, সমন্বয় (সীমা পার হলে অনুরোধ)। route `src/app/(app)/b/[slug]/stock`।

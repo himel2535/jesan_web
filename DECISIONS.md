@@ -391,3 +391,34 @@
 - 409 `CHANGE_REQUEST_PENDING_EXISTS`-এ `changeRequestId` এলে সরাসরি `/approvals/<id>` লিংক। না এলে আগের মতো: `change.view.all` থাকলে ফিল্টার করা তালিকা, নইলে নিজের অপেক্ষমাণ অনুরোধ মিলিয়ে, তাও না মিললে শুধু বার্তা।
   - id পড়তে `ApiError.body` যোগ হয়েছে, এতে পার্স করা error body থাকে।
 - অনুমোদনের core টেস্টগুলোর উদাহরণ এখন গ্রাহকের ঋণসীমা (API doc-এর মতো)।
+
+## ২০২৬-১১-১৯ — Step 5a-c: কেনা ও স্টকের পাতা (প্ল্যান: `docs/plans/step-5a-c.md`)
+
+মালিক অনুপস্থিত থাকায় স্বয়ংক্রিয় মোডে করা। পর্যালোচনার সিদ্ধান্তগুলো প্ল্যান ফাইলের "স্বয়ংক্রিয় সিদ্ধান্ত: পর্যালোচনা দরকার" অংশে।
+
+- `docs/API.md` jesan_api `main` (`e8cd126`) থেকে হুবহু কপি। অংশ ১০ এখন কেনা ও স্টক, ১১ অনুরোধ, ১২ ত্রুটি, ১৩ রোল।
+- অনুমতি ৪১টা (`purchase.edit`, `stock.adjust.large`)। নতুন ১৫টা ত্রুটি-code দুই ভাষায়।
+- অনুরোধে লেখা `ADJUSTMENT_NEEDS_APPROVAL` docs-এ নেই; docs-এর `ADJUSTMENT_APPROVAL_REQUIRED` (403, `details.limit`, `usedToday`) ধরা হয়েছে।
+- **কেনা** (`src/modules/dealership/purchases/`):
+  - তালিকা: ফিল্টার URL-এ; মোট টাকা উত্তরে থাকলে তবেই।
+  - নতুন কেনা: `purchase.create` + `product.cost.view`; সরবরাহকারী ডিফল্ট প্রিন্সিপাল, ডেটা থেকে; পণ্য খুঁজে লাইন যোগ; ১–৫০ লাইন; Idempotency-Key + ref-guard; ব্যর্থ হলে মান থাকে।
+  - বিস্তারিত: দাম ও লাইন-মোটের কলাম শুধু উত্তরে থাকলে।
+- **লাইন-মোট ও মোট** ফর্মে শুধু দেখানোর জন্য: `multiplyMoney`/`sumMoney` (`core/lib/money.ts`), BigInt-এ দশমিক-স্ট্রিং, half up দুই দশমিক। Number-এ কোনো হিসাব নয়; সেভের পর সার্ভারের মানই দেখায়। পরিমাণ `core/lib/quantity.ts` (এককের `decimals`)।
+- **বাতিল ও সংশোধন:**
+  - সরাসরি: বাতিল `purchase.void`; তারিখ ও বস্তা `purchase.edit`; দাম `purchase.edit` + `product.cost.view`; নোট ও কাগজের নম্বর `purchase.create`।
+  - অনুরোধ: যা সরাসরি করা যায় না তা একটা "সংশোধনের অনুরোধ" বাটনে (বাতিল = `kind: void`; লাইন = `items.<id>.quantity` / `unitPrice`)।
+  - `STOCK_INSUFFICIENT`-এ `details.available` থেকে "আছে মাত্র …"।
+- **core request dialog বাড়ানো:** ঘরের ধরন `quantity`, `signedQuantity`, `date`, `text`; ঘরের `label`; `voidable` (বাতিলের অনুরোধ); `initial` (আগে বসানো মান ও কারণ)। সাধারণ, কোনো ব্যবসার নাম নেই।
+- **স্টক** (`src/modules/dealership/stock/`):
+  - তালিকায় পরিমাণ সবাই দেখেন; শেষ কেনা-দাম ও তারিখ শুধু উত্তরে থাকলে।
+  - ইতিহাসে চিহ্নসহ পরিবর্তন, পরের স্টক, উৎস (কেনার লিংক), কারণ।
+  - সমন্বয় dialog: সীমা পার হলে একই মান ও কারণে `product_stock` অনুরোধ (`adjustBy`)। সমন্বয়ের পর শুধু `stock` রিফ্রেশ; কেনা বদলালে `purchases`, `stock`, `products`।
+- **পণ্যের পাতায় স্টক:**
+  - তালিকায় `GET stock` একই ফিল্টারে (backend-এ একই ক্রম ও খোঁজা, id দিয়ে মেলানো), শুধু `stock.view`-এ। **TODO (backend):** `GET products`-এ `currentStock` দিলে বাড়তি অনুরোধ বাদ দিয়ে `products-list.tsx`-এর `useStock` সরানো।
+  - বিস্তারিতে movements-এর প্রথম পাতা থেকে বর্তমান স্টক, সাথে ইতিহাসের লিংক।
+- **ইনবক্স:**
+  - `changeEntities`-এ `purchase` (`purchases/:id`; `purchases`, `stock`, `products`) ও `product_stock` (`stock/:id`; `stock`)।
+  - মানের ধরন ঘরের নাম থেকে (`kindOfField`, `kindOfImpact`): বস্তা পরিমাণ হিসেবে, তারিখ তারিখ হিসেবে, টাকা টাকা হিসেবে।
+  - id-যুক্ত প্রভাবের key (`stock.<id>`, `lastPurchasePrice.<id>`, `purchaseCounter.<মাস>`) prefix দিয়ে অনুবাদ, পরিচয় API-র লেবেলের শেষ শব্দ থেকে।
+  - `items.<id>.*` ঘর "লাইনের পরিমাণ · …শেষ ৪ অক্ষর"। API লাইনের পণ্যের নাম দেয় না; প্রভাবের স্টক-লাইনে পণ্যের কোড থাকে।
+- কমিশন ও কেনার কাউন্টার (`purchase-counters`) এই ধাপে নয় (Step 7c)।
