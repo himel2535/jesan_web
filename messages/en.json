@@ -1052,7 +1052,7 @@
       "sale_create": "Create sale invoices",
       "sale_view_all": "View all sales",
       "sale_view_own": "View own sales only",
-      "sale_edit": "Correct an order (price, quantity, date, urgency), directly or by approval",
+      "sale_edit": "Correct an order, directly or by approval",
       "sale_void": "Void sales",
       "delivery_view": "See deliveries",
       "delivery_create": "Deliver against an order",

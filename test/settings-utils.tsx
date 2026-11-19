@@ -91,6 +91,9 @@ const ALL: [string, string, boolean][] = [
   ['customer.balance.edit', 'dealership', false],
   ['customer.deactivate', 'dealership', false],
   ['collection.create', 'dealership', false],
+  ['collection.view', 'dealership', false],
+  ['collection.edit', 'dealership', false],
+  ['collection.void', 'dealership', false],
   ['supplier.view', 'dealership', false],
   ['purchase.view', 'dealership', false],
   ['purchase.create', 'dealership', false],
@@ -102,7 +105,13 @@ const ALL: [string, string, boolean][] = [
   ['sale.create', 'dealership', false],
   ['sale.view.all', 'dealership', false],
   ['sale.view.own', 'dealership', false],
+  ['sale.edit', 'dealership', false],
   ['sale.void', 'dealership', false],
+  ['delivery.view', 'dealership', false],
+  ['delivery.create', 'dealership', false],
+  ['delivery.edit', 'dealership', false],
+  ['delivery.void', 'dealership', false],
+  ['delivery.credit.override', 'dealership', false],
   ['ledger.view', 'dealership', false],
   ['ledger.entry.create', 'dealership', false],
   ['payment.create', 'dealership', false],
@@ -114,7 +123,7 @@ const ALL: [string, string, boolean][] = [
   ['profit.view', 'dealership', true],
 ];
 
-/** GET roles/permissions as in docs/API.md §8 (all 32 permissions, 4 roles). */
+/** GET roles/permissions as in docs/API.md §8 (all 50 permissions, 4 roles). */
 export function rolesMatrix(): RolesMatrix {
   return {
     permissions: ALL.map(([key, module, ownerOnly]) => ({ key, module, ownerOnly })),
@@ -140,6 +149,7 @@ export function rolesMatrix(): RolesMatrix {
         locked: false,
         permissions: [
           'collection.create',
+          'collection.view',
           'customer.due.view',
           'customer.view',
           'expense.create',
@@ -169,7 +179,7 @@ export function rolesMatrix(): RolesMatrix {
 
 export const ALL_PERMISSION_KEYS = ALL.map(([key]) => key);
 
-/** An error response in the API's §11 shape: stable `code`, optional `field` and `errors[]`. */
+/** An error response in the API's §13 shape: stable `code`, optional `field` and `errors[]`. */
 export const apiError = (
   status: number,
   code: string,

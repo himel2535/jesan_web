@@ -111,14 +111,17 @@ export function DeliveryForm({ slug, businessId }: { slug: string; businessId: s
         ...indexed.map((x) => x.key),
         ...indexed.map((x) => `items.${x.id}.quantity`),
       ]);
-      const detailed = salesError(cause);
       const fields: Errors = {};
+      let formMessage = split.form;
       for (const [key, message] of Object.entries(split.fields)) {
         const hit = indexed.find((x) => x.key === key);
+        const line = hit ? typed.find((l) => l.item.id === hit.id) : undefined;
+        const detailed = salesError(cause, line ? units.nameOf(line.item.product.unitKey) : '');
         fields[hit ? `items.${hit.id}.quantity` : key] = detailed ?? message;
       }
+      if (Object.keys(fields).length === 0) formMessage = salesError(cause) ?? split.form;
       setErrors(fields);
-      setFormError(detailed && Object.keys(fields).length === 0 ? detailed : split.form);
+      setFormError(formMessage);
       inFlight.current = false;
     }
   };

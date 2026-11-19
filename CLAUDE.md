@@ -57,6 +57,7 @@ npm run test:e2e     # Playwright (build-এর পরে); নতুন প্�
 - URL-এ ভাষার প্রিফিক্স নেই; ভাষা `NEXT_LOCALE` cookie-তে।
 - নতুন namespace client component-এ লাগলে `src/core/i18n/client-messages.ts`-এ যোগ করো, নইলে ব্রাউজারে যাবে না।
 - সংখ্যা, টাকা, পরিমাণ, তারিখ শুধু `src/core/i18n/format.ts` (`useFormat()` client-এ) দিয়ে। নিজে `toLocaleString` বা ৳ বসানো নয়। টাকার হিসাব ব্রাউজারে নয়।
+- এককের নাম (বস্তা, টন, …) কোনো বার্তায় হার্ডকোড নয়: অনুবাদে `{unit}` প্যারামিটার, মান `GET product-units` থেকে। নতুন ব্যবসার ধরন যোগ করার নিয়ম `docs/adding-a-business.md`-এ।
 
 **থিম ও স্টাইল**
 
@@ -104,6 +105,16 @@ npm run test:e2e     # Playwright (build-এর পরে); নতুন প্�
 - দাম, লাইন-মোট, মোট ও শেষ কেনা-দাম শুধু উত্তরে থাকলে (`product.cost.view`); না থাকলে কলাম বা জায়গাও নেই।
 - কেনা বদলালে `purchases`, `stock`, `products` রিফ্রেশ; সমন্বয়ে শুধু `stock`।
 - সরাসরি অনুমতি না থাকলে বাতিল, সংশোধন ও বড় সমন্বয় অনুরোধের মাধ্যমে (core request dialog)।
+
+**অর্ডার, ডেলিভারি ও আদায় (`src/modules/dealership/sales`)**
+
+- অর্ডারে স্টক বা টাকা বদলায় না; ডেলিভারিতে স্টক কমে ও পাওনা বাড়ে; আদায় সরাসরি ব্যালেন্সে যায়। কোনো হিসাব ব্রাউজারে নয়, সব সংখ্যা API-র।
+- দাম প্রতি অর্ডার-লাইনে; কেনা-দামের সঙ্গে তুলনা বা "কম দামে বিক্রি" সতর্কতা নয়।
+- আংশিক ডেলিভারি চলে। `details` থাকা ত্রুটি আসল সংখ্যাসহ দেখাও: `DELIVERY_QUANTITY_TOO_LARGE` (`remaining`), `STOCK_INSUFFICIENT` (`available`), `CREDIT_LIMIT_EXCEEDED` (`creditLimit`, `balanceAfter`)।
+- অর্ডার বাতিলে আদায় আপনা থেকে ফেরত যায় না (অগ্রিম গ্রাহকের জমা); dialog-এ তা লেখা থাকে। নিষ্ক্রিয় গ্রাহকের পুরনো অর্ডারে ডেলিভারি ও আদায় চলে, নতুন অর্ডার নয়। বিক্রয়কর্মী ডেলিভারির তালিকা দেখেন না, শুধু নিজের অর্ডারের ভেতরে।
+- আদায়ের পদ্ধতি `GET collection-methods` থেকে (`useMethodLabel`), অর্ডার শুধু রেফারেন্স — বরাদ্দ নয়। পাওনার বেশি আদায়ে বাধা নেই।
+- খাতায় সারি-ভিত্তিক চলমান ব্যালেন্স নেই (API-তে `balance_after` নেই); সারাংশে এখনকার ব্যালেন্স, ঋণাত্মক হলে "অগ্রিম"।
+- সেভের পর রিফ্রেশ: অর্ডার তৈরি → `orders`, `customers`; অর্ডার বদল/বাতিল → `orders`, `deliveries`, `customers`, `ledger`; ডেলিভারি → `deliveries`, `orders`, `stock`, `customers`, `ledger`; আদায় → `collections`, `customers`, `ledger`।
 
 **অনুমোদন ও সংশোধনের অনুরোধ (`src/core/approvals`)**
 

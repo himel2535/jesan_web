@@ -64,6 +64,9 @@ export function useUnitInfo(slug: string, businessId: string) {
  * A payment method's label. The list of methods is the business's own (`GET collection-methods`),
  * so a key with no translation yet shows as itself instead of breaking the page.
  */
+/** Without a unit name the sentence would keep its double space. */
+const collapse = (text: string) => text.replace(/\s+/g, ' ').trim();
+
 export function useMethodLabel() {
   const dt = useDynamicT();
   return (method: string) => dt(`dealership.sales.collections.methodNames.${method}`, method);
@@ -189,10 +192,11 @@ export function CustomerPicker({
  * what is left on the line, what is in stock, and the credit limit that would be passed.
  * Returns null for anything else, so the caller falls back to the code's general message.
  */
-export function useSalesErrorMessage(unitName?: string) {
+export function useSalesErrorMessage() {
   const t = useTranslations('dealership.sales.errors');
   const format = useFormat();
-  return (error: unknown): string | null => {
+  /** `unitName` names the unit of the line the error is about, when the caller knows it. */
+  return (error: unknown, unitName = ''): string | null => {
     if (!(error instanceof ApiError)) return null;
     const details = error.body?.details as Record<string, unknown> | undefined;
     const text = (key: string) => (typeof details?.[key] === 'string' ? details[key] : null);
@@ -200,16 +204,13 @@ export function useSalesErrorMessage(unitName?: string) {
       const remaining = text('remaining');
       return remaining === null
         ? null
-        : t('remainingOnly', {
-            remaining: format.quantity(remaining),
-            unit: unitName ?? '',
-          }).trim();
+        : collapse(t('remainingOnly', { remaining: format.quantity(remaining), unit: unitName }));
     }
     if (error.code === 'STOCK_INSUFFICIENT') {
       const available = text('available');
       return available === null
         ? null
-        : t('stockOnly', { available: format.quantity(available), unit: unitName ?? '' }).trim();
+        : collapse(t('stockOnly', { available: format.quantity(available), unit: unitName }));
     }
     if (error.code === 'CREDIT_LIMIT_EXCEEDED') {
       const limit = text('creditLimit');

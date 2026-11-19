@@ -431,3 +431,23 @@
   - `dev:clean`: জোর করে মুছে চালায়।
   - `dev:webpack`: শেষ উপায়।
 - build, CI, Vercel ও `next.config.ts` অপরিবর্তিত। dev ডিফল্ট Turbopack-ই থাকল, যাতে dev ও production একই bundler-এ চলে।
+
+## ২০২৬-১১-১৯ — Step 5b-c: অর্ডার, ডেলিভারি, আদায় ও গ্রাহকের খাতা (প্ল্যান: `docs/plans/step-5b-c.md`)
+
+মালিক অনুপস্থিত থাকায় স্বয়ংক্রিয় মোডে করা। পর্যালোচনার সিদ্ধান্তগুলো প্ল্যান ফাইলের "স্বয়ংক্রিয় সিদ্ধান্ত" অংশে।
+
+- `docs/API.md` jesan_api `main` (`feec536`) থেকে হুবহু কপি। অংশ ১১ = অর্ডার, ডেলিভারি ও আদায়; ১২ = অনুরোধ; ১৩ = ত্রুটি; ১৪ = রোল।
+- অনুমতি ৪১ → ৫০ (`sale.edit`, `delivery.view/create/edit/void`, `delivery.credit.override`, `collection.view/edit/void`)। নতুন ২৯টা ত্রুটি-code দুই ভাষায়।
+- **নতুন পাতা** (`src/modules/dealership/sales/`): অর্ডার (`/sales`), ডেলিভারি (`/deliveries`), আদায় (`/collections`), গ্রাহকের খাতা ও ইতিহাস (`/customers/[id]/ledger`, `/activity`)। manifest-এ দুটো নতুন মেনু (`deliveries`, `collections`) আর তিনটা `changeEntities` (`sales_order`, `delivery`, `collection`)।
+- **অর্ডার:** দাম প্রতি লাইনে; কেনা-দামের সঙ্গে কোনো তুলনা বা সতর্কতা নয়। অগ্রিম একই ফর্মে, কিন্তু **দুই কলে** (API-তে একসাথে পাঠানোর পথ নেই): আদায় ব্যর্থ হলে অর্ডার টেকে আর বিস্তারিত পাতায় কারণসহ "আদায় নিন" লিংক দেখায় — টাকা দুবার বসার চেয়ে নিরাপদ।
+- **ডেলিভারি:** আংশিক চলে (ফাঁকা লাইন বাদ); `details` থাকা তিন ত্রুটি আসল সংখ্যাসহ লাইনের নিচে — `DELIVERY_QUANTITY_TOO_LARGE` (`remaining`), `STOCK_INSUFFICIENT` (`available`), `CREDIT_LIMIT_EXCEEDED` (`creditLimit`, `balanceAfter`)। `creditLimitExceeded` সতর্কবার্তা শুধু উত্তরে ফিল্ডটা থাকলে।
+- **আদায়:** পদ্ধতি `GET collection-methods` থেকে; কোডে কোনো পদ্ধতির নাম নেই, অনুবাদ না থাকলে key নিজেই দেখায় (`useMethodLabel` + `useDynamicT`)। অর্ডার শুধু রেফারেন্স, বরাদ্দ নয়। নিষ্ক্রিয় গ্রাহকও আদায় ও ডেলিভারি পান (`active: 'all'`), নতুন অর্ডার নয়।
+- **খাতা:** সারিতে "চলমান ব্যালেন্স" কলাম **নেই** — backend-এ `balance_after` নেই (step-5b সিদ্ধান্ত ২), শুরুর বাকি সংশোধনে পুরনো সংখ্যা ভুল হতো। সারাংশে এখনকার ব্যালেন্স; ঋণাত্মক মানে "অগ্রিম" ব্যাজ। frontend কোনো হিসাব করে না।
+- **invalidate:** অর্ডার তৈরি → `orders`, `customers`; অর্ডার সংশোধন/বাতিল → `orders`, `deliveries`, `customers`, `ledger`; ডেলিভারি → `deliveries`, `orders`, `stock`, `customers`, `ledger`; আদায় → `collections`, `customers`, `ledger`। `products` কখনো নয়।
+- **গতি:** প্রতিটা পাতায় একটাই পাতার আকারের skeleton (`sales/skeletons.tsx`); তালিকায় `keepPreviousData`; সারিতে hover/focus-এ `router.prefetch`; অর্ডারের তালিকা idle-এ `sales/new` prefetch করে; ডাবল-সাবমিট `inFlight` ref + `disabled`-এ বন্ধ।
+- **একক:** এককের নাম সবসময় `GET product-units` থেকে, অনুবাদে `{unit}` প্যারামিটার। পুরনো যেসব বার্তায় "বস্তা" হার্ডকোড ছিল (`QUANTITY_INVALID`, `ADJUST_BY_INVALID`, কেনার বাতিল ও সংশোধন, স্টক সমন্বয়, `purchase.edit`-এর লেবেল, `purchaseCounter`) সেগুলো একক-নিরপেক্ষ করা হয়েছে।
+- **পরিমাণের তুলনা** (`moreThan`, `delivery-form.tsx`) দশমিক-স্ট্রিং-এ অঙ্ক ধরে; Number-এ কোনো হিসাব নয়।
+- **টেস্ট:** ৪৮টা নতুন unit টেস্ট; প্রতিটা ফর্ম দুটো একক-fixture-এ চলে — `bag` (decimals 0) আর শুধু-টেস্টের `tonne` (decimals 3)। নতুন e2e `e2e/sales.spec.ts` (৬টা প্রবাহ) আর mock-API-তে অর্ডার, ডেলিভারি, আদায়, খাতা ও তিনটা নতুন অনুরোধ-ধরন।
+- mock-API-র `currentBalance` এখন সবসময় `openingBalance + delivered − collected`; তাই পুরনো e2e-র বেমানান ১২,৫০,০০০ ধরে নেওয়া বাদ।
+- `docs/adding-a-business.md` রেপোতে ছিল না; এই PR-এ frontend অনুচ্ছেদ দিয়ে তৈরি।
+- দৈনিক সারাংশ, Accounts, কমিশন, রিপোর্ট ও ছাপার কাগজ এই ধাপে নয়।

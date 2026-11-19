@@ -154,11 +154,11 @@ describe('<RolesMatrix>', () => {
     await userEvent.keyboard('{ArrowRight}');
     expect(cell('Void sales', 'Accountant')).toHaveFocus();
     await userEvent.keyboard('{ArrowUp}');
-    expect(cell('View own sales only', 'Accountant')).toHaveFocus();
+    expect(cell('Correct an order, directly or by approval', 'Accountant')).toHaveFocus();
     await userEvent.keyboard(' ');
-    expect(cell('View own sales only', 'Accountant')).toBeChecked();
-    await userEvent.keyboard('{ArrowDown}{ArrowDown}'); // past sale.void to the next row (ledger.view)
-    expect(cell('View ledger', 'Accountant')).toHaveFocus();
+    expect(cell('Correct an order, directly or by approval', 'Accountant')).toBeChecked();
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}'); // past sale.void to the next row (delivery.view)
+    expect(cell('See deliveries', 'Accountant')).toHaveFocus();
   });
 
   it('load error shows retry', async () => {

@@ -25,6 +25,7 @@ describe('groupPermissions', () => {
       'sale.create',
       'sale.view.all',
       'sale.view.own',
+      'sale.edit',
       'sale.void',
     ]);
   });
