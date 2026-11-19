@@ -346,7 +346,9 @@
       "perUnit": "প্রতি {unit}",
       "lastPurchasePrice": "শেষ কেনা-দাম",
       "lastPurchasedAt": "শেষ কেনার তারিখ",
-      "neverPurchased": "এখনো কেনা হয়নি"
+      "neverPurchased": "এখনো কেনা হয়নি",
+      "currentStock": "বর্তমান স্টক",
+      "stockHistory": "স্টক-ইতিহাস"
     },
     "categories": {
       "title": "ক্যাটাগরি",
@@ -518,7 +520,9 @@
         "noResultsTitle": "কিছু মেলেনি",
         "noResultsDescription": "এই ফিল্টারে কোনো চলাচল নেই।",
         "kindAll": "সব ধরন",
-        "back": "স্টকের তালিকায় ফিরুন"
+        "back": "স্টকের তালিকায় ফিরুন",
+        "from": "থেকে",
+        "to": "পর্যন্ত"
       },
       "kinds": {
         "purchase": "কেনা",
@@ -798,7 +802,9 @@
       "all": "সব ধরন",
       "product": "পণ্য",
       "customer": "গ্রাহক",
-      "product_category": "ক্যাটাগরি"
+      "product_category": "ক্যাটাগরি",
+      "purchase": "কেনা",
+      "product_stock": "স্টক"
     },
     "kind": {
       "edit": "বদল",
@@ -849,7 +855,13 @@
     "fields": {
       "openingBalance": "প্রারম্ভিক বাকি",
       "creditLimit": "ঋণসীমা",
-      "isActive": "অবস্থা"
+      "isActive": "অবস্থা",
+      "purchaseDate": "কেনার তারিখ",
+      "note": "নোট",
+      "supplierReference": "কাগজের নম্বর",
+      "adjustBy": "স্টক পরিবর্তন",
+      "line_quantity": "লাইনের পরিমাণ",
+      "line_unitPrice": "লাইনের দাম"
     },
     "values": {
       "active": "সক্রিয়",
@@ -863,7 +875,8 @@
       "customer_currentBalance": "বর্তমান বাকি",
       "customer_creditLimit": "ঋণসীমা",
       "customer_isActive": "গ্রাহকের অবস্থা",
-      "product_category_isActive": "ক্যাটাগরির অবস্থা"
+      "product_category_isActive": "ক্যাটাগরির অবস্থা",
+      "purchase_totalAmount": "কেনার মোট"
     },
     "notes": {
       "inactive": "নিষ্ক্রিয় থাকলে নতুন কাজে বাছাই করা যাবে না; পুরনো রেকর্ড যেমন আছে থাকবে।"
@@ -932,6 +945,11 @@
       "signedQuantityInvalid": "চিহ্নসহ শূন্য নয় এমন পরিমাণ লিখুন, যেমন -30 (বস্তা পূর্ণসংখ্যা)।",
       "dateInvalid": "একটা তারিখ বাছাই করুন।",
       "textInvalid": "লেখাটা বেশি লম্বা।"
+    },
+    "impactPrefix": {
+      "stock": "স্টক",
+      "lastPurchasePrice": "শেষ কেনা-দাম",
+      "purchaseCounter": "মাসে কেনা বস্তা"
     }
   }
 }

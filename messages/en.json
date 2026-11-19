@@ -346,7 +346,9 @@
       "perUnit": "per {unit}",
       "lastPurchasePrice": "Last purchase price",
       "lastPurchasedAt": "Last purchased",
-      "neverPurchased": "Not purchased yet"
+      "neverPurchased": "Not purchased yet",
+      "currentStock": "Current stock",
+      "stockHistory": "Stock history"
     },
     "categories": {
       "title": "Categories",
@@ -518,7 +520,9 @@
         "noResultsTitle": "Nothing matches",
         "noResultsDescription": "No movement matches these filters.",
         "kindAll": "All types",
-        "back": "Back to stock"
+        "back": "Back to stock",
+        "from": "From",
+        "to": "To"
       },
       "kinds": {
         "purchase": "Purchase",
@@ -798,7 +802,9 @@
       "all": "All types",
       "product": "Product",
       "customer": "Customer",
-      "product_category": "Category"
+      "product_category": "Category",
+      "purchase": "Purchase",
+      "product_stock": "Stock"
     },
     "kind": {
       "edit": "Change",
@@ -849,7 +855,13 @@
     "fields": {
       "openingBalance": "Opening due",
       "creditLimit": "Credit limit",
-      "isActive": "Status"
+      "isActive": "Status",
+      "purchaseDate": "Purchase date",
+      "note": "Note",
+      "supplierReference": "Paper number",
+      "adjustBy": "Stock change",
+      "line_quantity": "Line quantity",
+      "line_unitPrice": "Line price"
     },
     "values": {
       "active": "Active",
@@ -863,7 +875,8 @@
       "customer_currentBalance": "Current due",
       "customer_creditLimit": "Credit limit",
       "customer_isActive": "Customer status",
-      "product_category_isActive": "Category status"
+      "product_category_isActive": "Category status",
+      "purchase_totalAmount": "Purchase total"
     },
     "notes": {
       "inactive": "While inactive it cannot be chosen for new entries; existing records stay."
@@ -932,6 +945,11 @@
       "signedQuantityInvalid": "Enter a non-zero quantity with sign, e.g. -30 (bags are whole numbers).",
       "dateInvalid": "Choose a date.",
       "textInvalid": "This is too long."
+    },
+    "impactPrefix": {
+      "stock": "Stock",
+      "lastPurchasePrice": "Last purchase price",
+      "purchaseCounter": "Bags bought in"
     }
   }
 }
