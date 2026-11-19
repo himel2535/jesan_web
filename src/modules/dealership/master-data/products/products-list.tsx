@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { type ReactNode, useId, useState } from 'react';
 import { useCan } from '@/core/auth/can';
+import { useFormat } from '@/core/i18n/use-format';
 import { localizedName } from '@/core/auth/types';
 import { cn } from '@/core/ui/cn';
 import { Pagination } from '@/core/ui/pagination';
 import { PAGE_SIZE } from '@/core/ui/pagination-logic';
 import { inputClass } from '@/core/ui/text-field';
 import { useIsDesktop } from '@/core/ui/use-media-query';
+import { useStock } from '../../stock/api';
 import { useCategories, useProducts, useSaveProduct, useUnits } from '../api';
 import { Money, StatusBadge, useNameOf } from '../shared/display';
 import { useListParams, useSetListParams } from '../shared/list-params';
@@ -43,6 +45,21 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
   const query = useProducts(slug, businessId, params);
   const categories = useCategories(slug, businessId, 'all');
   const units = useUnits(slug, businessId);
+  // Current stock: GET products has no stock, so ask GET stock with the same filters (same
+  // order and search on the API) and match by id; only with stock.view (DECISIONS.md).
+  const canSeeStock = useCan('stock.view');
+  const stock = useStock(
+    slug,
+    businessId,
+    {
+      search: params.search,
+      categoryId: params.categoryId,
+      active: params.active,
+      page: params.page,
+    },
+    canSeeStock,
+  );
+  const stockOf = (id: string) => stock.data?.items.find((r) => r.id === id)?.currentStock;
   const base = `/b/${encodeURIComponent(slug)}/products`;
 
   const unitName = (key: string) => {
@@ -138,6 +155,11 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                       <th scope="col" className="px-4 py-3 font-medium">
                         {t('products.unit')}
                       </th>
+                      {canSeeStock ? (
+                        <th scope="col" className="px-4 py-3 text-right font-medium">
+                          {t('products.currentStock')}
+                        </th>
+                      ) : null}
                       {showCost ? (
                         <th scope="col" className="px-4 py-3 text-right font-medium">
                           {t('products.lastPurchasePrice')}
@@ -172,6 +194,11 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                         </th>
                         <td className="px-4 py-3">{nameOf(p.category)}</td>
                         <td className="px-4 py-3">{unitName(p.unitKey)}</td>
+                        {canSeeStock ? (
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            <StockCell value={stockOf(p.id)} />
+                          </td>
+                        ) : null}
                         {showCost ? (
                           <td className="px-4 py-3 text-right">
                             <LastPrice value={p.lastPurchasePrice} />
@@ -197,6 +224,8 @@ export function ProductsList({ slug, businessId }: { slug: string; businessId: s
                     href={`${base}/${p.id}`}
                     showCost={showCost}
                     unitName={unitName}
+                    stock={canSeeStock ? stockOf(p.id) : undefined}
+                    showStock={canSeeStock}
                     actions={actions(p)}
                   />
                 ))}
@@ -215,12 +244,16 @@ function ProductCard({
   href,
   showCost,
   unitName,
+  stock,
+  showStock,
   actions,
 }: {
   product: Product;
   href: string;
   showCost: boolean;
   unitName: (key: string) => string;
+  stock: string | undefined;
+  showStock: boolean;
   actions: ReactNode;
 }) {
   const t = useTranslations('dealership');
@@ -246,6 +279,12 @@ function ProductCard({
             <span className="text-fg-muted">{t('products.unit')}: </span>
             {unitName(product.unitKey)}
           </span>
+          {showStock ? (
+            <span>
+              <span className="text-fg-muted">{t('products.currentStock')}: </span>
+              <StockCell value={stock} />
+            </span>
+          ) : null}
         </span>
       </Link>
       <div className="mt-3 flex items-center justify-end gap-1">{actions}</div>
@@ -256,4 +295,14 @@ function ProductCard({
 /** Last purchase price, read-only (from purchases); "—" until the first purchase. */
 function LastPrice({ value }: { value: string | null | undefined }) {
   return value ? <Money value={value} /> : <span className="text-fg-muted">—</span>;
+}
+
+/** Current stock (a quantity string) or "—" while unknown. */
+function StockCell({ value }: { value: string | undefined }) {
+  const format = useFormat();
+  return value !== undefined ? (
+    <span className="font-semibold">{format.quantity(value)}</span>
+  ) : (
+    <span className="text-fg-muted">—</span>
+  );
 }

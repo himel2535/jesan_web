@@ -34,5 +34,8 @@ export const dealershipManifest = {
     customer: { path: 'customers/:id', invalidate: ['customers'] },
     // A category's status shows in every product row too.
     product_category: { path: 'products/categories/:id', invalidate: ['categories', 'products'] },
+    // A purchase changes stock and last purchase prices; a large adjustment only the stock.
+    purchase: { path: 'purchases/:id', invalidate: ['purchases', 'stock', 'products'] },
+    product_stock: { path: 'stock/:id', invalidate: ['stock'] },
   },
 } as const satisfies ModuleManifest;

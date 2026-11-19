@@ -113,7 +113,22 @@
       "CATEGORY_ID_INVALID": "Choose a category.",
       "DEFAULT_SALE_PRICE_NOT_ALLOWED": "Products have no sale price; the price is set on each sale.",
       "PURCHASE_PRICE_NOT_ALLOWED": "The purchase price cannot be set here; it comes from purchases.",
-      "LAST_PURCHASE_PRICE_NOT_ALLOWED": "The last purchase price is read-only; it comes from purchases."
+      "LAST_PURCHASE_PRICE_NOT_ALLOWED": "The last purchase price is read-only; it comes from purchases.",
+      "PURCHASE_NOT_FOUND": "This purchase was not found.",
+      "PURCHASE_ALREADY_VOID": "This purchase is already void; it cannot be voided or corrected again.",
+      "PRODUCT_DUPLICATE": "This product is already in another line of this purchase.",
+      "PRODUCT_NOT_FOUND_OR_INACTIVE": "This product does not exist or is inactive.",
+      "QUANTITY_INVALID": "Enter a quantity above zero (bags are whole numbers).",
+      "UNIT_PRICE_INVALID": "Enter the price like 570 or 570.50.",
+      "SUPPLIER_NOT_FOUND_OR_INACTIVE": "This supplier does not exist or is inactive.",
+      "PURCHASE_DATE_INVALID": "This date does not exist.",
+      "PURCHASE_DATE_IN_FUTURE": "The purchase date cannot be in the future.",
+      "PURCHASE_DATE_TOO_OLD": "This date is older than you may enter.",
+      "STOCK_INSUFFICIENT": "Not enough stock for this.",
+      "ADJUSTMENT_APPROVAL_REQUIRED": "This is above your daily adjustment limit; send it for approval.",
+      "ADJUST_BY_INVALID": "Enter a non-zero quantity (bags are whole numbers).",
+      "NOTE_INVALID": "The note is not valid or is too long.",
+      "SUPPLIER_REFERENCE_INVALID": "The paper number is not valid or is too long."
     },
     "problems": {
       "REQUIRED": "This field is required.",
@@ -331,7 +346,9 @@
       "perUnit": "per {unit}",
       "lastPurchasePrice": "Last purchase price",
       "lastPurchasedAt": "Last purchased",
-      "neverPurchased": "Not purchased yet"
+      "neverPurchased": "Not purchased yet",
+      "currentStock": "Current stock",
+      "stockHistory": "Stock history"
     },
     "categories": {
       "title": "Categories",
@@ -375,6 +392,165 @@
       "principal": "Principal supplier",
       "emptyTitle": "No supplier",
       "emptyDescription": "The supplier comes from the business settings."
+    },
+    "purchases": {
+      "title": "Purchases",
+      "description": "Purchases of {business} from suppliers: cash, fully paid.",
+      "new": "New purchase",
+      "newTitle": "New purchase",
+      "code": "Code",
+      "date": "Date",
+      "supplier": "Supplier",
+      "lines": "Lines",
+      "totalQuantity": "Total quantity",
+      "totalAmount": "Total",
+      "status": {
+        "label": "Status",
+        "all": "All statuses",
+        "active": "Active",
+        "void": "Void"
+      },
+      "createdBy": "Entered by",
+      "createdAt": "Entered",
+      "supplierReference": "Paper number",
+      "supplierReferenceHint": "The supplier’s challan or invoice number (optional).",
+      "note": "Note",
+      "filters": {
+        "from": "From",
+        "to": "To",
+        "supplierAll": "All suppliers",
+        "product": "Product",
+        "productChip": "Product: {name}",
+        "productChipUnknown": "one product",
+        "clearProduct": "Remove product filter"
+      },
+      "emptyTitle": "No purchases yet",
+      "emptyDescription": "Purchases will appear here once entered.",
+      "noResultsTitle": "Nothing matches",
+      "noResultsDescription": "No purchase matches these filters.",
+      "clearFilters": "Clear filters",
+      "detailsFor": "Details of {code}",
+      "form": {
+        "dateHint": "Today or earlier.",
+        "supplierPrincipal": "{name} (main supplier)",
+        "addProduct": "Add a product",
+        "searchProducts": "Search products by name or code",
+        "searchHint": "Pick a product to add a line.",
+        "noProducts": "No active product matches.",
+        "alreadyAdded": "Already added",
+        "product": "Product",
+        "quantity": "Quantity",
+        "unitPrice": "Unit price",
+        "lineTotal": "Line total",
+        "remove": "Remove {name}",
+        "noLines": "Add at least one product.",
+        "tooManyLines": "At most 50 lines.",
+        "quantityInvalid": "Enter a quantity above zero (bags are whole numbers).",
+        "priceInvalid": "Enter the price like 570 or 570.50.",
+        "required": "This field is required.",
+        "grandTotal": "Total (shown only; the server calculates)",
+        "totalQuantity": "Total quantity",
+        "save": "Save purchase",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "created": "Purchase saved.",
+        "noCostPermission": "Entering a purchase needs permission to see purchase prices."
+      },
+      "detail": {
+        "title": "Purchase {code}",
+        "items": "Lines",
+        "voidedTitle": "This purchase is void",
+        "voidedBy": "Voided by {name} on {date}",
+        "voidReason": "Reason",
+        "back": "Back to purchases",
+        "stockHistory": "Stock history of {name}"
+      },
+      "actions": {
+        "void": "Void purchase",
+        "correct": "Correct",
+        "request": "Request a correction"
+      },
+      "void": {
+        "title": "Void {code}?",
+        "body": "Stock goes back down by these bags, dated today. The purchase stays visible as void.",
+        "confirm": "Void",
+        "done": "Purchase voided."
+      },
+      "correct": {
+        "title": "Correct {code}",
+        "intro": "Only what you change is sent. Lines cannot be added, removed or swapped; void and re-enter for that.",
+        "reasonNeeded": "A reason is required when the date, bags or prices change.",
+        "nothing": "Nothing has changed.",
+        "done": "Purchase corrected.",
+        "save": "Save correction",
+        "saving": "Saving…"
+      },
+      "stockInsufficient": "Not enough stock: only {available} available.",
+      "notFoundTitle": "Purchase not found",
+      "notFoundDescription": "This purchase does not exist in this business."
+    },
+    "stock": {
+      "title": "Stock",
+      "description": "Current stock of {business}, per product.",
+      "currentStock": "Current stock",
+      "lastPurchasePrice": "Last purchase price",
+      "lastPurchasedAt": "Last purchased",
+      "neverPurchased": "Not purchased yet",
+      "history": "History",
+      "historyFor": "Stock history of {name}",
+      "adjust": "Adjust",
+      "adjustFor": "Adjust stock of {name}",
+      "emptyTitle": "No products yet",
+      "emptyDescription": "Stock appears once products exist.",
+      "noResultsTitle": "Nothing matches",
+      "noResultsDescription": "No product matches these filters.",
+      "clearFilters": "Clear filters",
+      "movements": {
+        "title": "Stock history",
+        "now": "Now in stock: {quantity}",
+        "date": "Date",
+        "kind": "Type",
+        "quantity": "Change",
+        "balanceAfter": "Stock after",
+        "source": "Source",
+        "reason": "Reason",
+        "by": "By",
+        "emptyTitle": "No movements yet",
+        "emptyDescription": "Purchases and adjustments will appear here.",
+        "noResultsTitle": "Nothing matches",
+        "noResultsDescription": "No movement matches these filters.",
+        "kindAll": "All types",
+        "back": "Back to stock",
+        "from": "From",
+        "to": "To"
+      },
+      "kinds": {
+        "purchase": "Purchase",
+        "purchase_edit": "Purchase correction",
+        "purchase_void": "Purchase void",
+        "adjustment": "Adjustment"
+      },
+      "adjustDialog": {
+        "title": "Adjust stock: {name}",
+        "intro": "For torn or found bags. Use a minus sign to lower the stock, e.g. -3.",
+        "quantity": "Change (with sign)",
+        "quantityHint": "Now in stock: {quantity}. Example: -3 or 5.",
+        "quantityInvalid": "Enter a non-zero quantity with sign, e.g. -3 (bags are whole numbers).",
+        "reason": "Reason",
+        "reasonHint": "Why? (3–500 characters)",
+        "reasonRequired": "Write a reason (3–500 characters).",
+        "save": "Save adjustment",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "done": "Stock adjusted.",
+        "overLimit": "This is above your daily limit of {limit} (used today: {used}). The owner must approve it.",
+        "sendForApproval": "Send for approval",
+        "noRequest": "Ask the owner to make this adjustment."
+      },
+      "notFoundTitle": "Product not found",
+      "notFoundDescription": "This product does not exist in this business.",
+      "productStock": "Current stock",
+      "productHistory": "Stock history"
     }
   },
   "settings": {
@@ -576,9 +752,11 @@
       "supplier_view": "View supplier",
       "purchase_view": "View purchases",
       "purchase_create": "Record purchases",
+      "purchase_edit": "Correct purchases (date, bags, prices)",
       "purchase_void": "Void purchases",
       "stock_view": "View stock quantity (not value)",
       "stock_adjust": "Adjust stock",
+      "stock_adjust_large": "Large stock adjustments (above the daily limit)",
       "sale_create": "Create sale invoices",
       "sale_view_all": "View all sales",
       "sale_view_own": "View own sales only",
@@ -624,7 +802,9 @@
       "all": "All types",
       "product": "Product",
       "customer": "Customer",
-      "product_category": "Category"
+      "product_category": "Category",
+      "purchase": "Purchase",
+      "product_stock": "Stock"
     },
     "kind": {
       "edit": "Change",
@@ -675,7 +855,13 @@
     "fields": {
       "openingBalance": "Opening due",
       "creditLimit": "Credit limit",
-      "isActive": "Status"
+      "isActive": "Status",
+      "purchaseDate": "Purchase date",
+      "note": "Note",
+      "supplierReference": "Paper number",
+      "adjustBy": "Stock change",
+      "line_quantity": "Line quantity",
+      "line_unitPrice": "Line price"
     },
     "values": {
       "active": "Active",
@@ -689,7 +875,8 @@
       "customer_currentBalance": "Current due",
       "customer_creditLimit": "Credit limit",
       "customer_isActive": "Customer status",
-      "product_category_isActive": "Category status"
+      "product_category_isActive": "Category status",
+      "purchase_totalAmount": "Purchase total"
     },
     "notes": {
       "inactive": "While inactive it cannot be chosen for new entries; existing records stay."
@@ -749,7 +936,20 @@
       "viewPending": "See the pending request",
       "viewPendingList": "See pending requests for this record",
       "cancel": "Cancel",
-      "moneyInvalid": "Enter an amount like 570 or 570.50."
+      "moneyInvalid": "Enter an amount like 570 or 570.50.",
+      "mode": "What do you want to ask for?",
+      "modeEdit": "Change values",
+      "modeVoid": "Void this record",
+      "voidNote": "If approved, the record is voided: it stays visible as void and its effects are reversed.",
+      "quantityInvalid": "Enter a quantity above zero (bags are whole numbers).",
+      "signedQuantityInvalid": "Enter a non-zero quantity with sign, e.g. -30 (bags are whole numbers).",
+      "dateInvalid": "Choose a date.",
+      "textInvalid": "This is too long."
+    },
+    "impactPrefix": {
+      "stock": "Stock",
+      "lastPurchasePrice": "Last purchase price",
+      "purchaseCounter": "Bags bought in"
     }
   }
 }

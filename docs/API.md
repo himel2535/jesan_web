@@ -15,9 +15,10 @@ API বদলালে এই ফাইলও একই PR-এ হালনা�
 7. [Auth](#৭-auth)
 8. [Settings API](#৮-settings-api)
 9. [মাস্টার ডেটা (dealership)](#৯-মাস্টার-ডেটা-dealership)
-10. [সংশোধনের অনুরোধ ও অনুমোদন](#১০-সংশোধনের-অনুরোধ-ও-অনুমোদন)
-11. [ত্রুটির রূপ ও কোড](#১১-ত্রুটির-রূপ-ও-কোড)
-12. [রোল ও অনুমতি](#১২-রোল-ও-অনুমতি)
+10. [কেনা ও স্টক](#১০-কেনা-ও-স্টক)
+11. [সংশোধনের অনুরোধ ও অনুমোদন](#১১-সংশোধনের-অনুরোধ-ও-অনুমোদন)
+12. [ত্রুটির রূপ ও কোড](#১২-ত্রুটির-রূপ-ও-কোড)
+13. [রোল ও অনুমতি](#১৩-রোল-ও-অনুমতি)
 
 ---
 
@@ -162,6 +163,15 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | PATCH | `/b/:businessSlug/customers/:id` | হ্যাঁ | `customer.manage` (+ বাকি/সীমায় `customer.balance.edit`, নিষ্ক্রিয়ে `customer.deactivate`) | 200 |
 | GET | `/b/:businessSlug/suppliers?active=&page=` | হ্যাঁ | `supplier.view` | 200 |
 | GET | `/b/:businessSlug/suppliers/:id` | হ্যাঁ | `supplier.view` | 200 |
+| POST | `/b/:businessSlug/purchases` | হ্যাঁ | `purchase.create` + `product.cost.view` | 201 (একই `Idempotency-Key` আবার: 200) |
+| GET | `/b/:businessSlug/purchases?from=&to=&supplierId=&productId=&status=&page=` | হ্যাঁ | `purchase.view` | 200 |
+| GET | `/b/:businessSlug/purchases/:id` | হ্যাঁ | `purchase.view` | 200 |
+| PATCH | `/b/:businessSlug/purchases/:id` | হ্যাঁ | নোট/রেফারেন্সে `purchase.create`; তারিখ/বস্তা/দামে `purchase.edit` + `reason` | 200 |
+| POST | `/b/:businessSlug/purchases/:id/void` | হ্যাঁ | `purchase.void` | 200 |
+| GET | `/b/:businessSlug/stock?search=&categoryId=&active=&page=` | হ্যাঁ | `stock.view` | 200 |
+| GET | `/b/:businessSlug/stock/:productId/movements?from=&to=&kind=&page=` | হ্যাঁ | `stock.view` | 200 |
+| POST | `/b/:businessSlug/stock/adjustments` | হ্যাঁ | `stock.adjust` (দৈনিক সীমার বেশি হলে `stock.adjust.large`) | 201 |
+| GET | `/b/:businessSlug/purchase-counters?year=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
 | POST | `/b/:businessSlug/change-requests/preview` | হ্যাঁ | `change.request` বা `change.approve` | 200 |
 | POST | `/b/:businessSlug/change-requests` | হ্যাঁ | `change.request` (+ রেকর্ড দেখার অনুমতি) | 201 (একই `Idempotency-Key` আবার: 200) |
 | GET | `/b/:businessSlug/change-requests/mine?status=&page=` | হ্যাঁ | `change.view.own` | 200 |
@@ -231,7 +241,7 @@ Response 200 (সাথে দুটো `Set-Cookie`, অংশ ২ দেখু
 ```
 
 - পরপর ৫ বার ভুল পাসওয়ার্ডে অ্যাকাউন্ট ১৫ মিনিট লক; লক অবস্থায় সঠিক পাসওয়ার্ডেও ওই একই 401। frontend কারণ জানতে পারে না, তাই বার্তা হিসেবে "ইমেইল/ফোন বা পাসওয়ার্ড ভুল, অথবা অ্যাকাউন্ট সাময়িকভাবে বন্ধ" দেখানো ভালো।
-- এক IP থেকে প্রতি মিনিটে ১০টার বেশি চেষ্টায় **429** (অংশ ১১)।
+- এক IP থেকে প্রতি মিনিটে ১০টার বেশি চেষ্টায় **429** (অংশ ১২)।
 - লগইনের পর ব্যবসা ও অনুমতি পেতে `GET /auth/me` ডাকুন।
 
 ### `POST /auth/refresh`
@@ -307,6 +317,7 @@ Response: **204**, body নেই।
         "product.view",
         "profit.view",
         "purchase.create",
+        "purchase.edit",
         "purchase.view",
         "purchase.void",
         "reports.finance.view",
@@ -318,6 +329,7 @@ Response: **204**, body নেই।
         "settings.manage",
         "settings.view",
         "stock.adjust",
+        "stock.adjust.large",
         "stock.view",
         "summary.finance.view",
         "supplier.view",
@@ -393,7 +405,7 @@ Request:
 
 Response: **204**, body নেই।
 
-ত্রুটি: বর্তমান পাসওয়ার্ড ভুল হলে 400 `CURRENT_PASSWORD_INCORRECT` (`currentPassword`); নতুন পাসওয়ার্ড নিয়ম না মানলে 400 `PASSWORD_TOO_SHORT` / `PASSWORD_TOO_LONG` / `PASSWORD_MATCHES_IDENTITY` (`newPassword`)। সব code অংশ ১১-এ।
+ত্রুটি: বর্তমান পাসওয়ার্ড ভুল হলে 400 `CURRENT_PASSWORD_INCORRECT` (`currentPassword`); নতুন পাসওয়ার্ড নিয়ম না মানলে 400 `PASSWORD_TOO_SHORT` / `PASSWORD_TOO_LONG` / `PASSWORD_MATCHES_IDENTITY` (`newPassword`)। সব code অংশ ১২-এ।
 
 **পাসওয়ার্ডের নিয়ম:** ১০ থেকে ১২৮ অক্ষর; ইউজারের নিজের email বা phone হতে পারবে না; চিহ্ন বা বড় হাতের অক্ষর বাধ্যতামূলক নয়।
 
@@ -411,7 +423,7 @@ Response: **204**, body নেই।
 - `roles`: চারটা রোল, Settings-এর কলামের ক্রমে। প্রতিটায় চালু অনুমতির তালিকা।
 - `locked: true` (শুধু `owner` রোলে): এই রোলের অনুমতি বদলানো যায় না; সবসময় সব owner-only-বহির্ভূত অনুমতি।
 
-Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৩৯টা, অংশ ১২-এর টেবিলে সব):
+Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৪১টা, অংশ ১৩-এর টেবিলে সব):
 
 ```json
 {
@@ -633,7 +645,7 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 - **অনুসন্ধান:** অংশ মিললেই হয়, বড়-ছোট হাতের অক্ষর ধরা হয় না। পণ্য: ইংরেজি নাম, বাংলা নাম, কোড। গ্রাহক: ইংরেজি নাম, বাংলা নাম, ফোন, কোড। ফোন `01712...` লিখলেও `+8801712...`-তে মেলে।
 - **সাজানো:** ইংরেজি নাম অনুযায়ী (ক্যাটাগরি `sortOrder` অনুযায়ী; সরবরাহকারীতে প্রিন্সিপাল আগে)।
 - **কোড:** স্বয়ংক্রিয়, বদলানো যায় না: পণ্য `P-0001`, গ্রাহক `C-00001`, সরবরাহকারী `S-001` (prefix ব্যবসার settings থেকে, যেমন অন্য ব্যবসায় `R-0001`)। একসাথে অনেক তৈরি হলেও কখনো ডুপ্লিকেট হয় না।
-- **সংবেদনশীল সংশোধন:** তৈরির পরে শুরুর বাকি, ক্রেডিট সীমা বদলানো আর নিষ্ক্রিয়/সক্রিয় করা শুধু মালিক-স্তরের (platform owner ও `owner` রোল; অনুমতি `product.deactivate`, `customer.balance.edit`, `customer.deactivate`)। পণ্যে কোনো দাম হাতে বসানো বা বদলানো যায় না। এতে body-তে `reason` (৩-৫০০ অক্ষর) বাধ্যতামূলক, আর audit log-এ আগের ও পরের মান লেখা হয়। নাম, ঠিকানা, ফোন, ক্যাটাগরির বদল `product.manage` / `customer.manage` দিয়েই চলে। ম্যানেজার সংবেদনশীল বদলের জন্য "সংশোধনের অনুরোধ" পাঠান (অংশ ১০)।
+- **সংবেদনশীল সংশোধন:** তৈরির পরে শুরুর বাকি, ক্রেডিট সীমা বদলানো আর নিষ্ক্রিয়/সক্রিয় করা শুধু মালিক-স্তরের (platform owner ও `owner` রোল; অনুমতি `product.deactivate`, `customer.balance.edit`, `customer.deactivate`)। পণ্যে কোনো দাম হাতে বসানো বা বদলানো যায় না। এতে body-তে `reason` (৩-৫০০ অক্ষর) বাধ্যতামূলক, আর audit log-এ আগের ও পরের মান লেখা হয়। নাম, ঠিকানা, ফোন, ক্যাটাগরির বদল `product.manage` / `customer.manage` দিয়েই চলে। ম্যানেজার সংবেদনশীল বদলের জন্য "সংশোধনের অনুরোধ" পাঠান (অংশ ১১)।
 - **PATCH:** শুধু যা বদলাবেন সেটা পাঠান। আগের মানের সমান মান পাঠালে সেটা বদল ধরা হয় না (অনুমতিও লাগে না)। কিছুই না বদলালে 400 `Nothing to change`।
 - **লুকানো ফিল্ড:** শেষ কেনা-দাম ও তারিখ (`lastPurchasePrice`, `lastPurchasedAt`) `product.cost.view` ছাড়া, আর গ্রাহকের `openingBalance`, `currentBalance`, `creditLimit` `customer.due.view` ছাড়া response-এ থাকেই না। অনুমতি ছাড়া এগুলো পাঠালে 403।
 
@@ -707,7 +719,7 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 বিক্রয়কর্মীর উত্তর একই, শুধু `lastPurchasePrice` আর `lastPurchasedAt` ফিল্ড দুটো **নেই**। `GET products/:id` একটা পণ্য, একই রূপে।
 
-**শেষ কেনা-দাম শুধু-পড়া।** `lastPurchasePrice` (টাকার স্ট্রিং) আর `lastPurchasedAt` (ISO সময়) হলো শেষ বৈধ কেনার দাম ও সময়। কেনা নিশ্চিত হলে একই transaction-এ বসে; কেনা বাতিল বা সংশোধন হলে শেষ বৈধ কেনা থেকে আবার হিসাব হয় (কেনা আসবে Step 5a-তে)। কোনো কেনা না হলে দুটোই `null`; দুটো সবসময় একসাথে থাকে বা একসাথে `null`। তৈরি বা সম্পাদনায় কেনা-দাম নেওয়া হয় না: `purchasePrice` পাঠালে 400 `PURCHASE_PRICE_NOT_ALLOWED`, `lastPurchasePrice` পাঠালে 400 `LAST_PURCHASE_PRICE_NOT_ALLOWED`। কেনার ভুল দাম ঠিক হবে কেনার রেকর্ডের সংশোধনে (`purchase.edit`, অংশ ১০-এর অনুরোধ)।
+**শেষ কেনা-দাম শুধু-পড়া।** `lastPurchasePrice` (টাকার স্ট্রিং) আর `lastPurchasedAt` (ISO সময়) হলো শেষ বৈধ কেনার দাম ও সময়। কেনা নিশ্চিত হলে একই transaction-এ বসে; কেনা বাতিল বা সংশোধন হলে শেষ বৈধ কেনা থেকে আবার হিসাব হয় (কেনা আসবে Step 5a-তে)। কোনো কেনা না হলে দুটোই `null`; দুটো সবসময় একসাথে থাকে বা একসাথে `null`। তৈরি বা সম্পাদনায় কেনা-দাম নেওয়া হয় না: `purchasePrice` পাঠালে 400 `PURCHASE_PRICE_NOT_ALLOWED`, `lastPurchasePrice` পাঠালে 400 `LAST_PURCHASE_PRICE_NOT_ALLOWED`। কেনার ভুল দাম ঠিক হবে কেনার রেকর্ডের সংশোধনে (`purchase.edit`, অংশ ১১-এর অনুরোধ)।
 
 `POST products` (`unitKey` না দিলে ব্যবসার প্রধান একক):
 
@@ -815,7 +827,342 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 ---
 
-## ১০. সংশোধনের অনুরোধ ও অনুমোদন
+## ১০. কেনা ও স্টক
+
+Akij থেকে নগদে কেনা, স্টক আর মাসিক কেনার কাউন্টার। সব পথ `/api/v1/b/:businessSlug/...`-এর নিচে।
+
+### সাধারণ নিয়ম
+
+- **তারিখ** `YYYY-MM-DD`, ব্যবসার নিজের সময়-অঞ্চলে (ডিফল্ট Asia/Dhaka): রাত ১২টার পরে Dhaka-তে নতুন দিন, সার্ভারের ঘড়ি যা-ই বলুক।
+- **পরিমাণ** স্ট্রিং, দশমিকের শূন্য বাদ দিয়ে: `"500"`, `"12.5"`। বস্তা পূর্ণসংখ্যা। কত দশমিক চলে তা পণ্যের একক ঠিক করে (`GET product-units`-এর `decimals`)।
+- **টাকা** স্ট্রিং, দুই দশমিকে (`"570.00"`)। লাইন-মোট = বস্তা × দাম, দুই দশমিকে **half up** রাউন্ড (যেমন `0.005` → `0.01`)। ডাটাবেসের CHECK-ও একই নিয়মে মেলায়।
+- **কেনা-দাম** (লাইনের `unitPrice`, `lineTotal`, কেনার `totalAmount`, স্টকে `lastPurchasePrice` ও `lastPurchasedAt`) শুধু `product.cost.view` থাকলে উত্তরে আসে; না থাকলে ফিল্ডগুলো থাকেই না। বস্তার সংখ্যা সবাই দেখেন।
+- **স্টক কখনো শূন্যের নিচে নামে না।** নামাতে চাইলে 409 `STOCK_INSUFFICIENT`, সাথে `details: { productId, available, required }`।
+- কিছুই মোছা যায় না: কেনা **বাতিল** (void) হয়। স্টকের প্রতিটা বদল শুধু-যোগ-হয় খাতায় (`movements`) থাকে।
+
+### `POST purchases`: কেনা তৈরি
+
+অনুমতি: `purchase.create` + `product.cost.view` (দাম লিখতে দাম দেখার অনুমতি লাগে)। ঐচ্ছিক header `Idempotency-Key` (অংশ ১১-এর মতো): একই ইউজার একই key আবার পাঠালে নতুন কেনা হয় না, আগেরটা 200-এ ফেরত আসে।
+
+```json
+{
+  "supplierReference": "AK-CHALLAN-5521",
+  "note": "Truck 12",
+  "items": [
+    { "productId": "01a1efa4-085a-7532-a66e-540998a1c2b1", "quantity": "500", "unitPrice": "570" },
+    { "productId": "01a1efa4-0861-7465-81f3-11c47699ba70", "quantity": "200", "unitPrice": "545.50" }
+  ]
+}
+```
+
+| ঘর | নিয়ম |
+|---|---|
+| `items` | ১–৫০টা লাইন; একটা পণ্য একবারই; পণ্য সক্রিয় ও এই ব্যবসার |
+| `items[].quantity` | শূন্যের বেশি, এককের দশমিক নিয়মে |
+| `items[].unitPrice` | টাকা, `0` বা বেশি |
+| `purchaseDate` | ঐচ্ছিক, না দিলে আজ। ভবিষ্যৎ নয়। `purchase.edit` না থাকলে শুধু শেষ ৭ দিন (ব্যবসার Settings: `backdateLimitDays`) |
+| `supplierId` | ঐচ্ছিক, না দিলে প্রিন্সিপাল সরবরাহকারী (Akij); সক্রিয় হতে হবে |
+| `note` (৫০০), `supplierReference` (৬৪) | ঐচ্ছিক |
+
+উত্তর 201 (`GET purchases/:id`-এর রূপ):
+
+```json
+{
+  "id": "01a1efa4-1f90-77eb-ae86-9f04b328a9f9",
+  "code": "PUR-0001",
+  "purchaseDate": "2026-11-18",
+  "supplier": { "id": "01a1efa4-078e-7f2f-93ce-db6c0c7f3452", "code": "S-001", "nameEn": "Akij Cement", "nameBn": "আকিজ সিমেন্ট" },
+  "paymentMethod": "cash",
+  "itemCount": 2,
+  "totalQuantity": "700",
+  "totalAmount": "394100.00",
+  "status": "active",
+  "supplierReference": "AK-CHALLAN-5521",
+  "createdBy": { "id": "01a1efa4-1e61-737e-a3b3-3e0915c6513c", "name": "Rahim Uddin" },
+  "createdAt": "2026-11-18T17:11:13.040Z",
+  "note": "Truck 12",
+  "version": 1,
+  "items": [
+    {
+      "id": "01a1efa4-1f93-701a-a8a7-68d4788e6b16",
+      "product": { "id": "01a1efa4-085a-7532-a66e-540998a1c2b1", "code": "P-0001", "nameEn": "Sample OPC 50kg", "nameBn": "নমুনা ওপিসি ৫০ কেজি", "unitKey": "bag" },
+      "quantity": "500",
+      "unitPrice": "570.00",
+      "lineTotal": "285000.00"
+    },
+    {
+      "id": "01a1efa4-1f93-701a-a8a7-6e5dc92aaa59",
+      "product": { "id": "01a1efa4-0861-7465-81f3-11c47699ba70", "code": "P-0003", "nameEn": "Sample PCC 50kg", "nameBn": "নমুনা পিসিসি ৫০ কেজি", "unitKey": "bag" },
+      "quantity": "200",
+      "unitPrice": "545.50",
+      "lineTotal": "109100.00"
+    }
+  ],
+  "voidedAt": null,
+  "voidReason": null,
+  "voidedBy": null,
+  "updatedAt": "2026-11-18T17:11:13.040Z"
+}
+```
+
+সেভ হয় এক transaction-এ। তার মধ্যে:
+- নম্বর (`PUR-0001`, ব্যবসা ধরে) নেওয়া হয়।
+- কেনা আর তার লাইন লেখা হয়।
+- প্রতিটা পণ্যের স্টক বাড়ে, খাতায় movement যোগ হয়।
+- পণ্যের শেষ কেনা-দাম বসে, যদি এটাই নতুনতম তারিখের কেনা হয়।
+- কেনার **মাসের** কাউন্টারে বস্তা যোগ হয়।
+
+এখনকার সংস্করণে কেনা সবসময় নগদ (`paymentMethod: "cash"`) ও পুরো পরিশোধিত।
+
+### `GET purchases?from=&to=&supplierId=&productId=&status=&page=`
+
+অনুমতি: `purchase.view`। ১০টা করে, কেনার তারিখ অনুযায়ী নতুন আগে।
+- `from`/`to` কেনার তারিখ, দুটোই অন্তর্ভুক্ত।
+- `productId` দিলে শুধু সেই পণ্যের লাইন আছে এমন কেনা আসে।
+- `status` হয় `active` বা `void`।
+
+তালিকার প্রতিটা সারিতে লাইন থাকে না (`items` নেই), শুধু `itemCount`।
+
+```json
+{
+  "items": [
+    {
+      "id": "01a1efa4-1f90-77eb-ae86-9f04b328a9f9",
+      "code": "PUR-0001",
+      "purchaseDate": "2026-11-18",
+      "supplier": { "id": "01a1efa4-078e-7f2f-93ce-db6c0c7f3452", "code": "S-001", "nameEn": "Akij Cement", "nameBn": "আকিজ সিমেন্ট" },
+      "paymentMethod": "cash",
+      "itemCount": 2,
+      "totalQuantity": "700",
+      "totalAmount": "394100.00",
+      "status": "active",
+      "supplierReference": "AK-CHALLAN-5521",
+      "createdBy": { "id": "01a1efa4-1e61-737e-a3b3-3e0915c6513c", "name": "Rahim Uddin" },
+      "createdAt": "2026-11-18T17:11:13.040Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 1
+}
+```
+
+### `GET purchases/:id`
+
+অনুমতি: `purchase.view`। উত্তর উপরের 201-এর রূপ। অন্য ব্যবসার বা না-থাকা id হলে 404 `PURCHASE_NOT_FOUND`।
+
+### কেনা বাতিল ও সংশোধন
+
+**ম্যানেজার** সংশোধন বা বাতিলের অনুরোধ পাঠান (অংশ ১১, `entityType: "purchase"`)। মালিক-স্তর সেটা অনুমোদন করেন, অথবা নিজে সরাসরি করেন। দুই পথেই একই নিয়ম, এক transaction-এ।
+
+**বাতিল:**
+- সরাসরি করার পথ: `POST purchases/:id/void`, body `{ "reason": "Entered twice" }` (৩–৫০০ অক্ষর)। অনুমতি `purchase.void`। উত্তর 200, কেনা `"status": "void"` অবস্থায়।
+- স্টক উল্টো এন্ট্রিতে কমে, তারিখ **বাতিলের দিন** (মূল এন্ট্রি অপরিবর্তিত)।
+- কাউন্টার থেকে বস্তা বাদ যায় **কেনার মাসে**।
+- শেষ কেনা-দাম আবার হিসাব হয় শেষ বৈধ কেনা থেকে, না থাকলে `null`।
+- এর মধ্যে মাল বেরিয়ে গিয়ে স্টক কম থাকলে বাতিল **আটকায়**: 409 `STOCK_INSUFFICIENT`। আগে থেকেই বাতিল হলে 409 `PURCHASE_ALREADY_VOID`।
+
+**সংশোধন:** সরাসরি করার পথ `PATCH purchases/:id`:
+
+```json
+{
+  "purchaseDate": "2026-11-17",
+  "items": [{ "id": "01a1efa4-1f93-701a-a8a7-68d4788e6b16", "quantity": "490", "unitPrice": "565" }],
+  "note": "Truck 12",
+  "reason": "Akij challan says 490 bags"
+}
+```
+
+| বদল | অনুমতি | কারণ |
+|---|---|---|
+| `note`, `supplierReference` | `purchase.create` | লাগে না |
+| `purchaseDate`, লাইনের `quantity`, `unitPrice` | `purchase.edit` (দামে + `product.cost.view`) | বাধ্যতামূলক |
+
+- লাইন যোগ, বাদ বা পণ্য বদল হয় না। তার জন্য বাতিল করে নতুন কেনা।
+- স্টক শুধু পার্থক্যটুকু বদলায়, movement `purchase_edit` হিসেবে, **সংশোধনের দিনের** তারিখে। কমাতে গিয়ে স্টক না থাকলে 409 `STOCK_INSUFFICIENT` (`field`: `items.<id>.quantity`)।
+- মোট, লাইন-মোট আর শেষ কেনা-দাম আবার হিসাব হয়।
+- তারিখের মাস বদলালে বস্তা পুরনো মাসের কাউন্টার থেকে নতুন মাসে যায়।
+
+**অনুরোধে ঘরের নাম:** `purchaseDate`, `note`, `supplierReference`, আর লাইনের জন্য `items.<itemId>.quantity` / `items.<itemId>.unitPrice` (`itemId` = লাইনের `id`)। যেমন:
+
+```json
+{
+  "entityType": "purchase",
+  "entityId": "01a1efa4-1f90-77eb-ae86-9f04b328a9f9",
+  "kind": "edit",
+  "reason": "Akij challan says 490 bags",
+  "proposedChange": { "items.01a1efa4-1f93-701a-a8a7-68d4788e6b16.quantity": "490" }
+}
+```
+
+প্রভাবের পূর্বরূপ (`impact`), মালিকের চোখে:
+
+```json
+[
+  { "key": "stock.01a1efa4-085a-7532-a66e-540998a1c2b1", "label": "Stock P-0001", "before": "497", "after": "487", "delta": "-10", "unit": "bag" },
+  { "key": "purchase.totalAmount", "label": "Purchase total", "before": "394100.00", "after": "388400.00", "delta": "-5700.00" },
+  { "key": "purchaseCounter.2026-11", "label": "Bags bought in 2026-11", "delta": "-10" }
+]
+```
+
+লাইনের `key`:
+- `stock.<productId>`
+- `purchase.totalAmount` (`product.cost.view`)
+- `lastPurchasePrice.<productId>` (`product.cost.view`)
+- `purchaseCounter.<YYYY-MM>`: শুধু `commission.view`, অর্থাৎ platform owner। ম্যানেজারের উত্তরে এই লাইন **থাকে না**।
+
+### `GET stock?search=&categoryId=&active=&page=`
+
+অনুমতি: `stock.view`। পণ্য ধরে বর্তমান স্টক, ১০টা করে, নাম অনুযায়ী। অনুসন্ধান নাম (ইংরেজি/বাংলা) ও কোডে।
+
+```json
+{
+  "items": [
+    {
+      "id": "01a1efa4-085a-7532-a66e-540998a1c2b1",
+      "code": "P-0001",
+      "nameEn": "Sample OPC 50kg",
+      "nameBn": "নমুনা ওপিসি ৫০ কেজি",
+      "unitKey": "bag",
+      "category": { "id": "01a1efa4-0853-714b-b709-2a3817325e1b", "nameEn": "OPC", "nameBn": "ওপিসি" },
+      "currentStock": "500",
+      "isActive": true,
+      "lastPurchasePrice": "570.00",
+      "lastPurchasedAt": "2026-11-17T18:00:00.000Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 1
+}
+```
+
+বিক্রয়কর্মীর উত্তর একই, শুধু `lastPurchasePrice` ও `lastPurchasedAt` থাকে না। `lastPurchasedAt` হলো কেনার তারিখের শুরু, Asia/Dhaka-তে (উপরে ১৮ নভেম্বরের কেনা, তাই `2026-11-17T18:00:00.000Z`)।
+
+### `GET stock/:productId/movements?from=&to=&kind=&page=`
+
+অনুমতি: `stock.view`। একটা পণ্যের স্টক-ইতিহাস, নতুন আগে, ১০টা করে। সাথে পণ্যের বর্তমান অবস্থা (`product`)।
+- `kind` হয় `purchase`, `purchase_edit`, `purchase_void` বা `adjustment`। Step 5b-তে যোগ হবে `delivery`, `delivery_void`।
+- `from`/`to` হলো `movementDate`।
+
+```json
+{
+  "product": { "id": "01a1efa4-085a-7532-a66e-540998a1c2b1", "code": "P-0001", "nameEn": "Sample OPC 50kg", "nameBn": "নমুনা ওপিসি ৫০ কেজি", "unitKey": "bag", "category": { "id": "01a1efa4-0853-714b-b709-2a3817325e1b", "nameEn": "OPC", "nameBn": "ওপিসি" }, "currentStock": "497", "isActive": true },
+  "items": [
+    {
+      "id": "01a1efa4-2092-72b2-858e-72fd735a49a6",
+      "kind": "adjustment",
+      "quantity": "-3",
+      "balanceAfter": "497",
+      "movementDate": "2026-11-18",
+      "source": { "type": "adjustment", "id": null, "code": null },
+      "reason": "Three bags torn while unloading",
+      "createdBy": { "id": "01a1efa4-1e61-737e-a3b3-3e0915c6513c", "name": "Rahim Uddin" },
+      "createdAt": "2026-11-18T17:11:13.298Z"
+    },
+    {
+      "id": "01a1efa4-1f9a-74a2-9b0b-079020266c28",
+      "kind": "purchase",
+      "quantity": "500",
+      "balanceAfter": "500",
+      "movementDate": "2026-11-18",
+      "source": { "type": "purchase", "id": "01a1efa4-1f90-77eb-ae86-9f04b328a9f9", "code": "PUR-0001" },
+      "reason": null,
+      "createdBy": { "id": "01a1efa4-1e61-737e-a3b3-3e0915c6513c", "name": "Rahim Uddin" },
+      "createdAt": "2026-11-18T17:11:13.050Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 2
+}
+```
+
+- `quantity` চিহ্নসহ।
+- `balanceAfter` হলো এই movement-এর পরের স্টক।
+- `movementDate` হলো যে ব্যবসার দিনে গোনা হয়: কেনায় কেনার তারিখ, বাতিল, সংশোধন বা সমন্বয়ে সেই দিন।
+
+### `POST stock/adjustments`: স্টক সমন্বয়
+
+অনুমতি: `stock.adjust`। ছেঁড়া বা পাওয়া বস্তার জন্য।
+
+```json
+{ "productId": "01a1efa4-085a-7532-a66e-540998a1c2b1", "quantity": "-3", "reason": "Three bags torn while unloading" }
+```
+
+- `quantity` চিহ্নসহ, শূন্য নয়।
+- `reason` বাধ্যতামূলক, ৩–৫০০ অক্ষর।
+- উত্তর 201, পণ্যের স্টকের সারি (`GET stock`-এর একটা item)।
+- audit-এ আগে আর পরের সংখ্যা লেখা হয়।
+
+**সীমা:**
+- `stock.adjust.large` নেই এমন ইউজার **একটা পণ্যে একদিনে** (Dhaka) মোট সর্বোচ্চ ১০ বস্তা সমন্বয় করতে পারেন (ব্যবসার Settings: `stockAdjustmentLimit`)। হিসাব হয় সব সমন্বয়ের পরম মান যোগ করে, তাই ভাগ ভাগ করে সীমা এড়ানো যায় না।
+- সীমা পার হলে 403 `ADJUSTMENT_APPROVAL_REQUIRED`:
+
+```json
+{
+  "statusCode": 403,
+  "error": "Forbidden",
+  "message": "This adjustment is above your daily limit; send a change request instead",
+  "code": "ADJUSTMENT_APPROVAL_REQUIRED",
+  "field": "quantity",
+  "errors": [{ "field": "quantity", "code": "ADJUSTMENT_APPROVAL_REQUIRED", "message": "This adjustment is above your daily limit; send a change request instead" }],
+  "details": { "limit": "10", "usedToday": "3" }
+}
+```
+
+তখন অনুরোধ পাঠান (অংশ ১১):
+
+```json
+{
+  "entityType": "product_stock",
+  "entityId": "<productId>",
+  "kind": "edit",
+  "reason": "Thirty bags spoiled by water in the store",
+  "proposedChange": { "adjustBy": "-30" }
+}
+```
+
+- `adjustBy` একটা চিহ্নসহ **পরিমাণ**, লক্ষ্য-সংখ্যা নয়। তাই এর মধ্যে কেনা হলেও অনুরোধ stale হয় না।
+- অনুমোদন দিতে লাগে `stock.adjust.large` (মালিক-স্তর)।
+
+### `GET purchase-counters?year=`
+
+অনুমতি: `commission.view` (**owner-only**: শুধু platform owner)। কেনার তারিখের মাস ধরে মোট কেনা বস্তা (সব পণ্য মিলিয়ে), বাতিল বাদে। সবসময় ১২টা মাস আসে:
+
+```json
+{
+  "year": 2026,
+  "months": [
+    { "month": "2026-01", "quantity": "0" },
+    { "month": "2026-11", "quantity": "700" },
+    { "month": "2026-12", "quantity": "0" }
+  ]
+}
+```
+
+(সংক্ষিপ্ত; আসলে জানুয়ারি থেকে ডিসেম্বর সব মাস।) কমিশনের টাকার হিসাব পরের ধাপে।
+
+### ত্রুটি
+
+| Status | `code` (`field`) | কখন |
+|---|---|---|
+| 400 | `VALIDATION_FAILED` (`errors[]`, যেমন `items.0.quantity`) | body-র কাঠামো ভুল |
+| 400 | `PRODUCT_DUPLICATE` (`items.<n>.productId`) | এক কেনায় একই পণ্য দুবার |
+| 400 | `PRODUCT_NOT_FOUND_OR_INACTIVE` (`items.<n>.productId`) | পণ্য নেই, নিষ্ক্রিয় বা অন্য ব্যবসার |
+| 400 | `QUANTITY_INVALID` (`items.<n>.quantity` / `quantity`) | শূন্য বা এককের দশমিক নিয়ম ভাঙে |
+| 400 | `SUPPLIER_NOT_FOUND_OR_INACTIVE` (`supplierId`) | সরবরাহকারী নেই বা নিষ্ক্রিয় |
+| 400 | `PURCHASE_DATE_INVALID` / `PURCHASE_DATE_IN_FUTURE` / `PURCHASE_DATE_TOO_OLD` (`purchaseDate`) | আসল তারিখ নয় / ভবিষ্যৎ / অনুমতির বাইরে পুরনো |
+| 400 | `REASON_REQUIRED` (`reason`) | বস্তা, দাম বা তারিখ সংশোধনে কারণ নেই |
+| 403 | `ACCESS_DENIED` | অনুমতি নেই |
+| 403 | `ADJUSTMENT_APPROVAL_REQUIRED` (`quantity`) | দৈনিক সমন্বয়-সীমা পার |
+| 404 | `PURCHASE_NOT_FOUND`, `PRODUCT_NOT_FOUND` | নেই বা অন্য ব্যবসার |
+| 409 | `STOCK_INSUFFICIENT` | স্টক শূন্যের নিচে নামত (`details`-এ উপলব্ধ) |
+| 409 | `PURCHASE_ALREADY_VOID` | বাতিল কেনায় বাতিল বা সংশোধন |
+
+---
+
+## ১১. সংশোধনের অনুরোধ ও অনুমোদন
 
 স্টাফ সংবেদনশীল কিছু (দাম, বাকি, ক্রেডিট সীমা, নিষ্ক্রিয়; Step 5-এ বিক্রি ও কেনার সংশোধন ও বাতিল) সরাসরি বদলাতে পারেন না। তাঁরা কারণসহ **অনুরোধ** পাঠান; `change.approve` আছে এমন কেউ (সাধারণত মালিক) প্রভাব দেখে অনুমোদন বা প্রত্যাখ্যান করেন। অনুমোদন হলে বদল এক transaction-এ প্রয়োগ হয়। মালিক-স্তর আগের মতোই সরাসরি `PATCH` (কারণসহ) করতে পারেন।
 
@@ -840,6 +1187,11 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 | `customer` | `openingBalance`, `creditLimit` | `customer.due.view` | `customer.balance.edit` |
 | `customer` | `isActive` | - | `customer.deactivate` |
 | `product_category` | `isActive` | - | `product.deactivate` |
+| `purchase` | `purchaseDate`, `items.<itemId>.quantity` | - | `purchase.edit` |
+| `purchase` | `items.<itemId>.unitPrice` | `product.cost.view` | `purchase.edit` |
+| `purchase` | `note`, `supplierReference` | - | `purchase.create` |
+| `purchase` | বাতিল (`kind: "void"`) | - | `purchase.void` |
+| `product_stock` | `adjustBy` (চিহ্নসহ পরিমাণ) | - | `stock.adjust.large` |
 
 - টাকা স্ট্রিং বা সংখ্যা হিসেবে পাঠানো যায় (`"565"`), উত্তরে সবসময় দুই দশমিকের স্ট্রিং (`"565.00"`)। `creditLimit: null` মানে সীমা নেই।
 - নাম, ঠিকানা, ফোনের মতো সাধারণ বদল অনুরোধ ছাড়াই সরাসরি `PATCH`-এ (অংশ ৯)।
@@ -1013,7 +1365,7 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 ---
 
-## ১১. ত্রুটির রূপ ও কোড
+## ১২. ত্রুটির রূপ ও কোড
 
 ### রূপ
 
@@ -1130,7 +1482,22 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `CATEGORY_NOT_FOUND` | 404 | - | ক্যাটাগরি নেই (বা অন্য ব্যবসার) |
 | `CUSTOMER_NOT_FOUND` | 404 | - | গ্রাহক নেই (বা অন্য ব্যবসার) |
 | `SUPPLIER_NOT_FOUND` | 404 | - | সরবরাহকারী নেই (বা অন্য ব্যবসার) |
-| **সংশোধনের অনুরোধ** (অংশ ১০) | | | |
+| **কেনা ও স্টক** (অংশ ১০) | | | |
+| `PURCHASE_NOT_FOUND` | 404 | - | কেনা নেই (বা অন্য ব্যবসার) |
+| `PRODUCT_DUPLICATE` | 400 | `items.<n>.productId` | এক কেনায় একই পণ্য দুবার |
+| `PRODUCT_NOT_FOUND_OR_INACTIVE` | 400 | `items.<n>.productId` | কেনার লাইনের পণ্য নেই, নিষ্ক্রিয় বা অন্য ব্যবসার |
+| `QUANTITY_INVALID` | 400 | `items.<n>.quantity` / `quantity` / `proposedChange.items.<id>.quantity` | পরিমাণ শূন্য, বা এককের দশমিক নিয়ম ভাঙে (বস্তা পূর্ণসংখ্যা) |
+| `UNIT_PRICE_INVALID` | 400 | `items.<id>.unitPrice` (অনুরোধে `proposedChange.` সামনে) | সংশোধনের দাম টাকার রূপে নয় |
+| `SUPPLIER_NOT_FOUND_OR_INACTIVE` | 400 | `supplierId` (প্রিন্সিপাল না থাকলে নেই) | সরবরাহকারী নেই বা নিষ্ক্রিয় |
+| `PURCHASE_DATE_INVALID` | 400 | `purchaseDate` | ক্যালেন্ডারে নেই এমন তারিখ (যেমন ৩০ ফেব্রুয়ারি) |
+| `PURCHASE_DATE_IN_FUTURE` | 400 | `purchaseDate` | আজকের (ব্যবসার সময়-অঞ্চলে) পরের তারিখ |
+| `PURCHASE_DATE_TOO_OLD` | 400 | `purchaseDate` | `purchase.edit` ছাড়া শেষ ৭ দিনের (Settings) আগের তারিখ |
+| `PURCHASE_ALREADY_VOID` | 409 | - | বাতিল কেনা আবার বাতিল বা সংশোধনের চেষ্টা |
+| `STOCK_INSUFFICIENT` | 409 | সংশোধনে `items.<id>.quantity`, সমন্বয়ে `quantity`, বাতিলে নেই | স্টক শূন্যের নিচে নামত; `details`: `productId`, `available`, `required` |
+| `ADJUSTMENT_APPROVAL_REQUIRED` | 403 | `quantity` | আজ এই পণ্যে নিজের সমন্বয়ের মোট দৈনিক সীমা পার; `details`: `limit`, `usedToday`; অনুরোধ পাঠাতে হবে |
+| `ADJUST_BY_INVALID` | 400 | `proposedChange.adjustBy` | বড় সমন্বয়ের অনুরোধে পরিমাণ শূন্য বা এককের নিয়ম ভাঙে |
+| `NOTE_INVALID` / `SUPPLIER_REFERENCE_INVALID` | 400 | `proposedChange.note` / `.supplierReference` | অনুরোধে লেখা খুব লম্বা বা লেখা নয় |
+| **সংশোধনের অনুরোধ** (অংশ ১১) | | | |
 | `ENTITY_TYPE_UNKNOWN` | 400 | `entityType` | এই ধরনের রেকর্ডের অনুরোধ হয় না |
 | `VOID_NOT_SUPPORTED` | 400 | `kind` | এই রেকর্ড বাতিল হয় না; নিষ্ক্রিয় করুন |
 | `PROPOSED_CHANGE_EMPTY` | 400 | `proposedChange` | বদলের অনুরোধে কোনো ঘর নেই |
@@ -1158,7 +1525,7 @@ Retry-After: 60
 
 ---
 
-## ১২. রোল ও অনুমতি
+## ১৩. রোল ও অনুমতি
 
 ### রোল
 
@@ -1200,11 +1567,13 @@ Retry-After: 60
 | `customer.deactivate` | dealership | | | | | গ্রাহক নিষ্ক্রিয়/সক্রিয় (কারণসহ) |
 | `collection.create` | dealership | | ✓ | ✓ | | বাকি আদায়ের এন্ট্রি |
 | `supplier.view` | dealership | | ✓ | | | সরবরাহকারী দেখা |
-| `purchase.view` | dealership | | ✓ | | | কেনা দেখা |
-| `purchase.create` | dealership | | ✓ | | | কেনার এন্ট্রি |
-| `purchase.void` | dealership | | | | | কেনা বাতিল |
-| `stock.view` | dealership | | ✓ | | ✓ | স্টকের পরিমাণ (দাম নয়) |
-| `stock.adjust` | dealership | | ✓ | | | স্টক adjustment |
+| `purchase.view` | dealership | | ✓ | | | কেনা দেখা (দাম শুধু `product.cost.view`-এ) |
+| `purchase.create` | dealership | | ✓ | | | কেনার এন্ট্রি, নোট ও রেফারেন্স সংশোধন |
+| `purchase.edit` | dealership | | | | | কেনার তারিখ, বস্তা, দাম সংশোধন সরাসরি বা অনুমোদন; ৭ দিনের বেশি পুরনো তারিখে কেনা |
+| `purchase.void` | dealership | | | | | কেনা বাতিল সরাসরি বা অনুমোদন |
+| `stock.view` | dealership | | ✓ | | ✓ | স্টকের পরিমাণ ও ইতিহাস (দাম নয়) |
+| `stock.adjust` | dealership | | ✓ | | | দৈনিক সীমার মধ্যে স্টক সমন্বয় |
+| `stock.adjust.large` | dealership | | | | | সীমা ছাড়া সমন্বয়, বড় সমন্বয়ের অনুমোদন |
 | `sale.create` | dealership | | ✓ | | ✓ | বিক্রির invoice |
 | `sale.view.all` | dealership | | ✓ | | | সব বিক্রি দেখা |
 | `sale.view.own` | dealership | | | | ✓ | শুধু নিজের বিক্রি দেখা |
@@ -1219,9 +1588,9 @@ Retry-After: 60
 | `commission.manage` | dealership | **হ্যাঁ** | | | | কমিশন scheme |
 | `profit.view` | dealership | **হ্যাঁ** | | | | লাভ দেখা |
 
-`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা (পণ্য, গ্রাহক, সরবরাহকারী) তৈরি হয়েছে; কেনা, বিক্রি, স্টক, খাতা ও কমিশনের অনুমতি আগে থেকে ঘোষণা করা আছে, যাতে Settings-এর ছক এখনই তৈরি করা যায়।
+`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা আর কেনা ও স্টক (অংশ ১০) তৈরি হয়েছে; বিক্রি, খাতা ও কমিশনের অনুমতি আগে থেকে ঘোষণা করা আছে, যাতে Settings-এর ছক এখনই তৈরি করা যায়।
 
-তৈরির পরে বাকি বা সীমা বদল আর নিষ্ক্রিয় করার তিনটা অনুমতি (`customer.balance.edit`, `product.deactivate`, `customer.deactivate`), আর `change.view.all` ও `change.approve`, কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)। স্টাফ এসব বদল অনুরোধের মাধ্যমে করেন (অংশ ১০)।
+তৈরির পরে বাকি বা সীমা বদল আর নিষ্ক্রিয় করার তিনটা অনুমতি (`customer.balance.edit`, `product.deactivate`, `customer.deactivate`), কেনার সংশোধন ও বাতিল (`purchase.edit`, `purchase.void`), বড় স্টক সমন্বয় (`stock.adjust.large`), আর `change.view.all` ও `change.approve`, কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)। স্টাফ এসব বদল অনুরোধের মাধ্যমে করেন (অংশ ১১)।
 
 ### frontend-এ কীভাবে ব্যবহার করবেন
 

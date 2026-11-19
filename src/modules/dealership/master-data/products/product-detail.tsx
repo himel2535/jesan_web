@@ -10,6 +10,7 @@ import { localizedName } from '@/core/auth/types';
 import { useFormat } from '@/core/i18n/use-format';
 import { Button } from '@/core/ui/button';
 import { PageHeader } from '@/core/ui/page-header';
+import { useProductStock } from '../../stock/api';
 import { useProduct, useSaveProduct, useUnits } from '../api';
 import { CorrectionSection, useProductRequestTarget } from '../shared/correction';
 import { DeactivateDialog } from '../shared/deactivate-dialog';
@@ -36,6 +37,8 @@ export function ProductDetail({
   const canSeeCost = useCan('product.cost.view');
   const query = useProduct(slug, businessId, id);
   const units = useUnits(slug, businessId);
+  const canSeeStock = useCan('stock.view');
+  const stock = useProductStock(slug, businessId, id);
   const save = useSaveProduct(slug, businessId);
   const requestTarget = useProductRequestTarget(query.data);
   const [confirming, setConfirming] = useState(false);
@@ -55,6 +58,28 @@ export function ProductDetail({
     { label: t('common.nameBn'), value: p.nameBn },
     { label: t('products.category'), value: nameOf(p.category) },
     { label: t('products.unit'), value: unit ? localizedName(unit, locale) : p.unitKey },
+    // Current stock (stock.view) from the first stock-history page, with a link to the history.
+    ...(canSeeStock && stock.data
+      ? [
+          {
+            label: t('products.currentStock'),
+            value: (
+              <span className="flex flex-wrap items-baseline gap-x-3">
+                <span className="tabular-nums">
+                  {format.quantity(stock.data.product.currentStock)}
+                </span>
+                <Link
+                  href={`/b/${encodeURIComponent(slug)}/stock/${p.id}`}
+                  prefetch={false}
+                  className="text-sm font-medium text-primary underline"
+                >
+                  {t('products.stockHistory')}
+                </Link>
+              </span>
+            ),
+          },
+        ]
+      : []),
     // Only when the API sent it (product.cost.view); otherwise the row does not exist at all.
     // Only with product.cost.view AND when the API sent it; read-only, set by purchases.
     ...(canSeeCost && 'lastPurchasePrice' in p

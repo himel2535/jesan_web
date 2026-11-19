@@ -34,6 +34,8 @@ const ENTITIES = {
   product: { path: 'products/:id', invalidate: ['products'] },
   customer: { path: 'customers/:id', invalidate: ['customers'] },
   product_category: { path: 'products/categories/:id', invalidate: ['categories', 'products'] },
+  purchase: { path: 'purchases/:id', invalidate: ['purchases', 'stock', 'products'] },
+  product_stock: { path: 'stock/:id', invalidate: ['stock'] },
 };
 const staffMe: Me = {
   ...managerMe,
@@ -321,5 +323,87 @@ describe('<ApprovalDetail>', () => {
     expect(noteError('reject', 'abc')).toBeNull();
     expect(noteError('approve', '')).toBeNull();
     expect(noteError('approve', 'x'.repeat(501))).toBe('tooLong');
+  });
+});
+
+describe('purchase and stock requests in the inbox', () => {
+  it('bags read as quantities, the date as a date; impact labels by key prefix; link to the purchase', async () => {
+    const pr = request({
+      entityType: 'purchase',
+      entityId: 'pu1',
+      entityLabel: 'PUR-0001',
+      requestedBy: { id: 'u77', name: 'Other' },
+      summary: 'Bags changed',
+      snapshot: { 'items.01a1efa4-6b16.quantity': '500', purchaseDate: '2026-11-18' },
+      proposedChange: { 'items.01a1efa4-6b16.quantity': '490', purchaseDate: '2026-11-17' },
+      impact: [
+        {
+          key: 'stock.p1',
+          label: 'Stock P-0001',
+          before: '497',
+          after: '487',
+          delta: '-10',
+          unit: 'bag',
+        },
+        {
+          key: 'purchase.totalAmount',
+          label: 'Purchase total',
+          before: '394100.00',
+          after: '388400.00',
+          delta: '-5700.00',
+        },
+        { key: 'purchaseCounter.2026-11', label: 'Bags bought in 2026-11', delta: '-10' },
+      ],
+    });
+    mockApi({ [`GET ${BASE}/cr1`]: () => json(200, pr) });
+    render(<ApprovalDetail slug="example-cement" id="cr1" />, owner);
+    const qty = (await screen.findByRole('rowheader', { name: 'Line quantity · …6b16' })).closest(
+      'tr',
+    )!;
+    expect(qty).toHaveTextContent('500');
+    expect(qty).toHaveTextContent('490');
+    expect(qty).not.toHaveTextContent('৳');
+    expect(
+      screen.getByRole('rowheader', { name: 'Purchase date' }).closest('tr'),
+    ).toHaveTextContent('17 Nov 2026');
+    const stock = screen.getByText('Stock P-0001').closest('li')!;
+    expect(stock).toHaveTextContent('497 → 487');
+    expect(stock).not.toHaveTextContent('৳');
+    expect(screen.getByText('Purchase total').closest('li')).toHaveTextContent('৳3,94,100.00');
+    expect(screen.getByText('Bags bought in 2026-11').closest('li')).toHaveTextContent('(-10)');
+    expect(screen.getByRole('link', { name: 'Open the record' })).toHaveAttribute(
+      'href',
+      '/b/example-cement/purchases/pu1',
+    );
+  });
+
+  it('a void request on a purchase; approval refreshes purchases, stock and products', async () => {
+    const pr = request({
+      entityType: 'purchase',
+      entityId: 'pu1',
+      entityLabel: 'PUR-0001',
+      kind: 'void',
+      requestedBy: { id: 'u77', name: 'Other' },
+      snapshot: null,
+      proposedChange: null,
+      impact: [],
+    });
+    mockApi({
+      [`GET ${BASE}/cr1`]: () => json(200, pr),
+      [`POST ${BASE}/cr1/approve`]: () => json(200, { ...pr, status: 'approved', impact: null }),
+    });
+    const { invalidate } = render(<ApprovalDetail slug="example-cement" id="cr1" />, owner);
+    expect(await screen.findByText('Asks to void this record.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Approve' }),
+    );
+    expect(await screen.findByText('Approved; the change is now in effect.')).toBeInTheDocument();
+    expect(invalidate.mock.calls.map(([f]) => JSON.stringify(f?.queryKey))).toEqual([
+      JSON.stringify(['dealership', 'b1', 'change-requests']),
+      JSON.stringify(['dealership', 'b1', 'purchases']),
+      JSON.stringify(['dealership', 'b1', 'stock']),
+      JSON.stringify(['dealership', 'b1', 'products']),
+    ]);
   });
 });

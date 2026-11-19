@@ -47,6 +47,9 @@ const OWNER = [
   'commission.view',
   'commission.manage',
   'profit.view',
+  'purchase.void',
+  'purchase.edit',
+  'stock.adjust.large',
   'change.view.all',
   'change.approve',
 ];
@@ -264,6 +267,158 @@ const money = (v) => {
 };
 const INACTIVE_NOTE = 'While inactive it cannot be chosen for new entries; existing records stay.';
 
+// ---- Purchases and stock (docs/API.md §10), in memory ----
+const purchases = [];
+const movements = [];
+const stockOf = new Map(); // productId → current stock (integer bags, as a number internally)
+const seededLast = new Map(); // productId → seeded last purchase (kept when no purchase remains)
+const adjustedToday = new Map(); // `${email}:${productId}` → absolute bags adjusted today
+const purchaseIdempotency = new Map();
+const ADJUST_LIMIT = 10;
+const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+const qtyString = (n) => String(n);
+const lineTotal = (q, price) => (Math.round(Number(q) * Number(price) * 100) / 100).toFixed(2);
+const sumMoneyStr = (list) =>
+  (list.reduce((a, v) => a + Math.round(Number(v) * 100), 0) / 100).toFixed(2);
+const productRef = (p) => ({
+  id: p.id,
+  code: p.code,
+  nameEn: p.nameEn,
+  nameBn: p.nameBn,
+  unitKey: p.unitKey,
+});
+const supplierRef = (s) => ({ id: s.id, code: s.code, nameEn: s.nameEn, nameBn: s.nameBn });
+
+/** Change stock (no negative stock: returns the STOCK_INSUFFICIENT details instead). */
+function moveStock(product, delta, kind, source, reason, user) {
+  const current = stockOf.get(product.id) ?? 0;
+  if (current + delta < 0)
+    return { productId: product.id, available: qtyString(current), required: qtyString(-delta) };
+  stockOf.set(product.id, current + delta);
+  movements.unshift({
+    id: `mv${movements.length + 1}`,
+    productId: product.id,
+    kind,
+    quantity: qtyString(delta),
+    balanceAfter: qtyString(current + delta),
+    movementDate: today(),
+    source,
+    reason: reason ?? null,
+    createdBy: { id: user.id, name: user.name },
+    createdAt: new Date().toISOString(),
+  });
+  return null;
+}
+
+/** The last valid purchase sets a product's last purchase price; else the seeded value. */
+function recomputeLast(productId) {
+  const p = products.find((x) => x.id === productId);
+  const latest = purchases
+    .filter((pu) => pu.status === 'active' && pu.items.some((i) => i.productId === productId))
+    .sort((a, b) => (a.purchaseDate < b.purchaseDate ? 1 : -1))[0];
+  if (latest) {
+    p.lastPurchasePrice = latest.items.find((i) => i.productId === productId).unitPrice;
+    p.lastPurchasedAt = `${latest.purchaseDate}T00:00:00.000+06:00`;
+  } else {
+    const seed = seededLast.get(productId);
+    p.lastPurchasePrice = seed.price;
+    p.lastPurchasedAt = seed.at;
+  }
+}
+
+function purchaseSummary(pu, perms) {
+  const out = {
+    id: pu.id,
+    code: pu.code,
+    purchaseDate: pu.purchaseDate,
+    supplier: supplierRef(suppliers.find((x) => x.id === pu.supplierId)),
+    paymentMethod: 'cash',
+    itemCount: pu.items.length,
+    totalQuantity: qtyString(pu.items.reduce((a, i) => a + Number(i.quantity), 0)),
+    totalAmount: sumMoneyStr(pu.items.map((i) => lineTotal(i.quantity, i.unitPrice))),
+    status: pu.status,
+    supplierReference: pu.supplierReference,
+    createdBy: pu.createdBy,
+    createdAt: pu.createdAt,
+  };
+  if (!perms.includes('product.cost.view')) delete out.totalAmount;
+  return out;
+}
+
+function purchaseView(pu, perms) {
+  const cost = perms.includes('product.cost.view');
+  return {
+    ...purchaseSummary(pu, perms),
+    note: pu.note,
+    version: pu.version,
+    items: pu.items.map((i) => {
+      const item = {
+        id: i.id,
+        product: productRef(products.find((x) => x.id === i.productId)),
+        quantity: i.quantity,
+      };
+      if (cost) {
+        item.unitPrice = i.unitPrice;
+        item.lineTotal = lineTotal(i.quantity, i.unitPrice);
+      }
+      return item;
+    }),
+    voidedAt: pu.voidedAt,
+    voidReason: pu.voidReason,
+    voidedBy: pu.voidedBy,
+    updatedAt: pu.updatedAt,
+  };
+}
+
+function stockRow(p, perms) {
+  const row = {
+    id: p.id,
+    code: p.code,
+    nameEn: p.nameEn,
+    nameBn: p.nameBn,
+    unitKey: p.unitKey,
+    category: p.category,
+    currentStock: qtyString(stockOf.get(p.id) ?? 0),
+    isActive: p.isActive,
+    lastPurchasePrice: p.lastPurchasePrice,
+    lastPurchasedAt: p.lastPurchasedAt,
+  };
+  return hide(perms, row, ['lastPurchasePrice', 'lastPurchasedAt'], 'product.cost.view');
+}
+
+/** Void a purchase: stock back down (fails without stock), counters/last price recomputed. */
+function voidPurchase(pu, reason, user) {
+  for (const i of pu.items) {
+    const p = products.find((x) => x.id === i.productId);
+    if ((stockOf.get(p.id) ?? 0) < Number(i.quantity))
+      return {
+        productId: p.id,
+        available: qtyString(stockOf.get(p.id) ?? 0),
+        required: i.quantity,
+      };
+  }
+  for (const i of pu.items) {
+    const p = products.find((x) => x.id === i.productId);
+    moveStock(
+      p,
+      -Number(i.quantity),
+      'purchase_void',
+      { type: 'purchase', id: pu.id, code: pu.code },
+      reason,
+      user,
+    );
+  }
+  pu.status = 'void';
+  pu.voidedAt = new Date().toISOString();
+  pu.voidReason = reason;
+  pu.voidedBy = { id: user.id, name: user.name };
+  pu.updatedAt = pu.voidedAt;
+  for (const i of pu.items) recomputeLast(i.productId);
+  return null;
+}
+for (const p of products)
+  seededLast.set(p.id, { price: p.lastPurchasePrice, at: p.lastPurchasedAt });
+
 /** Someone with an account in another business only (for "add existing user"). */
 const OUTSIDER = {
   id: 'u4',
@@ -435,19 +590,337 @@ http
         products.push(p);
         return send(res, 201, hide(perms, p, COST_FIELDS, 'product.cost.view'));
       }
+      // ---- Purchases ----
+      if (rest === 'purchases' && req.method === 'POST') {
+        if (!need('purchase.create') || !need('product.cost.view')) return;
+        const key = req.headers['idempotency-key'];
+        const seen = key && purchaseIdempotency.get(`${email}:${key}`);
+        if (seen) return send(res, 200, purchaseView(seen, perms));
+        const items = Array.isArray(body.items) ? body.items : [];
+        if (items.length < 1 || items.length > 50)
+          return err(res, 400, 'items must contain 1 to 50 lines', 'ITEMS_INVALID', 'items');
+        const date = body.purchaseDate ?? today();
+        if (date > today())
+          return err(
+            res,
+            400,
+            'Purchase date is in the future',
+            'PURCHASE_DATE_IN_FUTURE',
+            'purchaseDate',
+          );
+        const seenIds = new Set();
+        for (const [n, line] of items.entries()) {
+          if (seenIds.has(line.productId))
+            return err(res, 400, 'Duplicate product', 'PRODUCT_DUPLICATE', `items.${n}.productId`);
+          seenIds.add(line.productId);
+          const prod = products.find((x) => x.id === line.productId && x.isActive);
+          if (!prod)
+            return err(
+              res,
+              400,
+              'Product not found or inactive',
+              'PRODUCT_NOT_FOUND_OR_INACTIVE',
+              `items.${n}.productId`,
+            );
+          if (!/^[1-9]\d*$/.test(String(line.quantity)))
+            return err(
+              res,
+              400,
+              'Quantity is not valid',
+              'QUANTITY_INVALID',
+              `items.${n}.quantity`,
+            );
+          if (!/^\d{1,12}(\.\d{1,2})?$/.test(String(line.unitPrice)))
+            return invalid(res, [
+              { field: `items.${n}.unitPrice`, code: 'UNIT_PRICE_INVALID', message: 'x' },
+            ]);
+        }
+        const supplier = suppliers.find(
+          (x) => x.id === (body.supplierId ?? suppliers.find((y) => y.isPrincipal).id),
+        );
+        if (!supplier?.isActive)
+          return err(
+            res,
+            400,
+            'Supplier not found or inactive',
+            'SUPPLIER_NOT_FOUND_OR_INACTIVE',
+            'supplierId',
+          );
+        const n = purchases.length + 1;
+        const nowIso = new Date().toISOString();
+        const pu = {
+          id: `pu${n}`,
+          code: `PUR-${String(n).padStart(4, '0')}`,
+          purchaseDate: date,
+          supplierId: supplier.id,
+          status: 'active',
+          supplierReference: body.supplierReference ?? null,
+          note: body.note ?? null,
+          version: 1,
+          createdBy: { id: me.user.id, name: me.user.name },
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          voidedAt: null,
+          voidReason: null,
+          voidedBy: null,
+          items: items.map((line, i) => ({
+            id: `it${n}-${i + 1}`,
+            productId: line.productId,
+            quantity: String(line.quantity),
+            unitPrice: money(line.unitPrice),
+          })),
+        };
+        purchases.unshift(pu);
+        for (const i of pu.items) {
+          moveStock(
+            products.find((x) => x.id === i.productId),
+            Number(i.quantity),
+            'purchase',
+            { type: 'purchase', id: pu.id, code: pu.code },
+            null,
+            me.user,
+          );
+          recomputeLast(i.productId);
+        }
+        if (key) purchaseIdempotency.set(`${email}:${key}`, pu);
+        return send(res, 201, purchaseView(pu, perms));
+      }
+      if (rest === 'purchases' && req.method === 'GET') {
+        if (!need('purchase.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const list = purchases.filter(
+          (pu) =>
+            (!f.from || pu.purchaseDate >= f.from) &&
+            (!f.to || pu.purchaseDate <= f.to) &&
+            (!f.supplierId || pu.supplierId === f.supplierId) &&
+            (!f.status || pu.status === f.status) &&
+            (!f.productId || pu.items.some((i) => i.productId === f.productId)),
+        );
+        const pg = pageOf(list, page);
+        return send(res, 200, { ...pg, items: pg.items.map((pu) => purchaseSummary(pu, perms)) });
+      }
+      let pm = rest.match(/^purchases\/([^/]+)(\/void)?$/);
+      if (pm) {
+        const pu = purchases.find((x) => x.id === pm[1]);
+        if (!need('purchase.view')) return;
+        if (!pu) return err(res, 404, 'Purchase not found', 'PURCHASE_NOT_FOUND');
+        if (req.method === 'GET' && !pm[2]) return send(res, 200, purchaseView(pu, perms));
+        if (req.method === 'POST' && pm[2]) {
+          if (!need('purchase.void')) return;
+          if (pu.status === 'void') return err(res, 409, 'Already void', 'PURCHASE_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          const short = voidPurchase(pu, body.reason.trim(), me.user);
+          if (short)
+            return send(res, 409, {
+              statusCode: 409,
+              message: 'Not enough stock',
+              code: 'STOCK_INSUFFICIENT',
+              details: short,
+            });
+          return send(res, 200, purchaseView(pu, perms));
+        }
+        if (req.method === 'PATCH') {
+          if (pu.status === 'void') return err(res, 409, 'Already void', 'PURCHASE_ALREADY_VOID');
+          const sensitive = 'purchaseDate' in body || Array.isArray(body.items);
+          if (sensitive && !need('purchase.edit')) return;
+          if (!sensitive && !need('purchase.create')) return;
+          if (sensitive && (!body.reason || body.reason.trim().length < 3))
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          for (const change of body.items ?? []) {
+            const item = pu.items.find((i) => i.id === change.id);
+            if (change.quantity !== undefined) {
+              const delta = Number(change.quantity) - Number(item.quantity);
+              const short = moveStock(
+                products.find((x) => x.id === item.productId),
+                delta,
+                'purchase_edit',
+                { type: 'purchase', id: pu.id, code: pu.code },
+                body.reason,
+                me.user,
+              );
+              if (short)
+                return send(res, 409, {
+                  statusCode: 409,
+                  message: 'Not enough stock',
+                  code: 'STOCK_INSUFFICIENT',
+                  field: `items.${item.id}.quantity`,
+                  errors: [
+                    {
+                      field: `items.${item.id}.quantity`,
+                      code: 'STOCK_INSUFFICIENT',
+                      message: 'x',
+                    },
+                  ],
+                  details: short,
+                });
+              item.quantity = String(change.quantity);
+            }
+            if (change.unitPrice !== undefined) item.unitPrice = money(change.unitPrice);
+          }
+          for (const k of ['purchaseDate', 'note', 'supplierReference'])
+            if (k in body) pu[k] = body[k];
+          pu.version += 1;
+          pu.updatedAt = new Date().toISOString();
+          for (const i of pu.items) recomputeLast(i.productId);
+          return send(res, 200, purchaseView(pu, perms));
+        }
+      }
+      // ---- Stock ----
+      if (rest === 'stock' && req.method === 'GET') {
+        if (!need('stock.view')) return;
+        const cat = url.searchParams.get('categoryId');
+        const list = products
+          .filter(
+            (p) =>
+              activeOk(p) &&
+              (!cat || p.category.id === cat) &&
+              match(search, p.nameEn, p.nameBn, p.code),
+          )
+          .sort((a, b) => (a.nameEn < b.nameEn ? -1 : 1));
+        const pg = pageOf(list, page);
+        return send(res, 200, { ...pg, items: pg.items.map((p) => stockRow(p, perms)) });
+      }
+      let sm = rest.match(/^stock\/([^/]+)\/movements$/);
+      if (sm && req.method === 'GET') {
+        if (!need('stock.view')) return;
+        const p = products.find((x) => x.id === sm[1]);
+        if (!p) return err(res, 404, 'Product not found', 'PRODUCT_NOT_FOUND');
+        const kind = url.searchParams.get('kind');
+        const list = movements.filter((m) => m.productId === p.id && (!kind || m.kind === kind));
+        const pg = pageOf(list, page);
+        const row = stockRow(p, perms);
+        delete row.lastPurchasePrice;
+        delete row.lastPurchasedAt;
+        return send(res, 200, {
+          product: row,
+          ...pg,
+          items: pg.items.map((m) => {
+            const copy = { ...m };
+            delete copy.productId;
+            return copy;
+          }),
+        });
+      }
+      if (rest === 'stock/adjustments' && req.method === 'POST') {
+        if (!need('stock.adjust')) return;
+        const p = products.find((x) => x.id === body.productId);
+        if (!p) return err(res, 404, 'Product not found', 'PRODUCT_NOT_FOUND');
+        if (!/^-?[1-9]\d*$/.test(String(body.quantity ?? '')))
+          return err(res, 400, 'Quantity is not valid', 'QUANTITY_INVALID', 'quantity');
+        if (!body.reason || body.reason.trim().length < 3)
+          return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+        const q = Number(body.quantity);
+        const used = adjustedToday.get(`${email}:${p.id}`) ?? 0;
+        if (!perms.includes('stock.adjust.large') && used + Math.abs(q) > ADJUST_LIMIT)
+          return send(res, 403, {
+            statusCode: 403,
+            message: 'This adjustment is above your daily limit; send a change request instead',
+            code: 'ADJUSTMENT_APPROVAL_REQUIRED',
+            field: 'quantity',
+            errors: [{ field: 'quantity', code: 'ADJUSTMENT_APPROVAL_REQUIRED', message: 'x' }],
+            details: { limit: String(ADJUST_LIMIT), usedToday: String(used) },
+          });
+        const short = moveStock(
+          p,
+          q,
+          'adjustment',
+          { type: 'adjustment', id: null, code: null },
+          body.reason.trim(),
+          me.user,
+        );
+        if (short)
+          return send(res, 409, {
+            statusCode: 409,
+            message: 'Not enough stock',
+            code: 'STOCK_INSUFFICIENT',
+            field: 'quantity',
+            errors: [{ field: 'quantity', code: 'STOCK_INSUFFICIENT', message: 'x' }],
+            details: short,
+          });
+        adjustedToday.set(`${email}:${p.id}`, used + Math.abs(q));
+        return send(res, 201, stockRow(p, perms));
+      }
       if (rest === 'change-requests' || rest.startsWith('change-requests/')) {
         const sub = rest.slice('change-requests'.length).replace(/^\//, '');
-        const records = { product: products, customer: customers, product_category: categories };
+        const records = {
+          product: products,
+          customer: customers,
+          product_category: categories,
+          purchase: purchases,
+          product_stock: products,
+        };
+        /** Field rules, including the dynamic purchase line fields (items.<id>.quantity). */
+        const ruleOf = (type, field) => {
+          if (type === 'purchase') {
+            if (field === 'purchaseDate')
+              return { see: null, apply: 'purchase.edit', label: 'Purchase date' };
+            if (field === 'note' || field === 'supplierReference')
+              return {
+                see: null,
+                apply: 'purchase.create',
+                label: field === 'note' ? 'Note' : 'Paper number',
+              };
+            const m = /^items\.([^.]+)\.(quantity|unitPrice)$/.exec(field);
+            if (m)
+              return m[2] === 'quantity'
+                ? { see: null, apply: 'purchase.edit', label: 'Bags' }
+                : { see: 'product.cost.view', apply: 'purchase.edit', label: 'Price' };
+            return undefined;
+          }
+          if (type === 'product_stock')
+            return field === 'adjustBy'
+              ? { see: null, apply: 'stock.adjust.large', label: 'Stock change' }
+              : undefined;
+          return CHANGE_FIELDS[type]?.[field];
+        };
+        const valueOf = (type, rec, field) => {
+          const m = type === 'purchase' && /^items\.([^.]+)\.(quantity|unitPrice)$/.exec(field);
+          if (m) return rec.items.find((i) => i.id === m[1])?.[m[2]];
+          if (type === 'product_stock') return null;
+          return rec[field];
+        };
         const visible = (type, field) => {
-          const rule = CHANGE_FIELDS[type]?.[field];
+          const rule = ruleOf(type, field);
           return rule && (!rule.see || perms.includes(rule.see));
         };
         const only = (type, obj) =>
           obj && Object.fromEntries(Object.entries(obj).filter(([k]) => visible(type, k)));
         const labelOf = (type, rec) =>
-          type === 'product_category' ? rec.nameEn : `${rec.code} ${rec.nameEn}`;
-        const impactOf = (type, rec, change) =>
-          Object.entries(only(type, change)).flatMap(([field, after]) => {
+          type === 'product_category'
+            ? rec.nameEn
+            : type === 'purchase'
+              ? rec.code
+              : `${rec.code} ${rec.nameEn}`;
+        const stockLine = (product, delta) => {
+          const before = stockOf.get(product.id) ?? 0;
+          return {
+            key: `stock.${product.id}`,
+            label: `Stock ${product.code}`,
+            before: qtyString(before),
+            after: qtyString(before + delta),
+            delta: `${delta >= 0 ? '+' : ''}${delta}`,
+            unit: product.unitKey,
+          };
+        };
+        const impactOf = (type, rec, change, kind = 'edit') => {
+          if (type === 'purchase') {
+            const lines = [];
+            for (const item of rec.items) {
+              const product = products.find((x) => x.id === item.productId);
+              const q = change[`items.${item.id}.quantity`];
+              const delta =
+                kind === 'void'
+                  ? -Number(item.quantity)
+                  : q !== undefined
+                    ? Number(q) - Number(item.quantity)
+                    : 0;
+              if (delta !== 0) lines.push(stockLine(product, delta));
+            }
+            return lines;
+          }
+          if (type === 'product_stock') return [stockLine(rec, Number(change.adjustBy))];
+          return Object.entries(only(type, change)).flatMap(([field, after]) => {
             const before = rec[field];
             const line = {
               key: `${type}.${field}`,
@@ -469,12 +942,13 @@ http
             }
             return lines;
           });
+        };
         const summaryOf = (type, snap, change) =>
           Object.keys(change ?? {})
             .map((f) =>
               visible(type, f)
-                ? `${CHANGE_FIELDS[type][f].label}: ${snap[f]} → ${change[f]}`
-                : `${CHANGE_FIELDS[type][f].label} changed`,
+                ? `${ruleOf(type, f).label}: ${snap[f]} → ${change[f]}`
+                : `${ruleOf(type, f).label} changed`,
             )
             .join('; ');
         const view = (cr, full) => {
@@ -484,8 +958,11 @@ http
             entityType: cr.entityType,
             entityId: cr.entityId,
             entityLabel: cr.entityLabel,
-            kind: 'edit',
-            summary: summaryOf(cr.entityType, cr.snapshot, cr.proposedChange),
+            kind: cr.kind,
+            summary:
+              cr.kind === 'void'
+                ? 'Void purchase'
+                : summaryOf(cr.entityType, cr.snapshot, cr.proposedChange),
             status: cr.status,
             requestedBy: cr.requestedBy,
             requestedAt: cr.requestedAt,
@@ -494,14 +971,19 @@ http
           };
           if (!full) return base;
           const stale =
-            cr.status === 'stale' || (cr.status === 'pending' && rec.updatedAt > cr.requestedAt);
+            cr.status === 'stale' ||
+            (cr.status === 'pending' &&
+              cr.entityType !== 'product_stock' &&
+              rec.updatedAt > cr.requestedAt);
           return {
             ...base,
             reason: cr.reason,
-            snapshot: only(cr.entityType, cr.snapshot),
-            proposedChange: only(cr.entityType, cr.proposedChange),
+            snapshot: cr.kind === 'void' ? null : only(cr.entityType, cr.snapshot),
+            proposedChange: cr.kind === 'void' ? null : only(cr.entityType, cr.proposedChange),
             impact:
-              cr.status === 'pending' ? impactOf(cr.entityType, rec, cr.proposedChange) : null,
+              cr.status === 'pending'
+                ? impactOf(cr.entityType, rec, cr.proposedChange ?? {}, cr.kind)
+                : null,
             isStale: stale,
             decisionNote: cr.decisionNote,
             appliedAt: cr.appliedAt,
@@ -519,8 +1001,14 @@ http
           if (!rec)
             return [null, err(res, 404, 'Record not found', 'RECORD_NOT_FOUND', 'entityId')];
           const change = {};
+          const kind = body.kind === 'void' ? 'void' : 'edit';
+          if (kind === 'void') {
+            if (type !== 'purchase')
+              return [null, err(res, 400, 'Cannot be voided', 'VOID_NOT_SUPPORTED', 'kind')];
+            return [{ type, rec, change, kind }, null];
+          }
           for (const [k, v] of Object.entries(body.proposedChange ?? {})) {
-            if (!CHANGE_FIELDS[type][k])
+            if (!ruleOf(type, k))
               return [
                 null,
                 err(
@@ -532,11 +1020,16 @@ http
                 ),
               ];
             if (!visible(type, k)) return [null, err(res, 403, 'Access denied', 'ACCESS_DENIED')];
-            change[k] = k === 'isActive' ? v : money(v);
+            const asIs =
+              k === 'isActive' ||
+              k === 'adjustBy' ||
+              k.endsWith('.quantity') ||
+              ['purchaseDate', 'note', 'supplierReference'].includes(k);
+            change[k] = asIs ? v : money(v);
           }
           if (!Object.keys(change).length)
             return [null, err(res, 400, 'Empty change', 'PROPOSED_CHANGE_EMPTY', 'proposedChange')];
-          return [{ type, rec, change }, null];
+          return [{ type, rec, change, kind }, null];
         };
 
         if (sub === 'preview' && req.method === 'POST') {
@@ -546,7 +1039,7 @@ http
           if (!ok) return;
           return send(res, 200, {
             entityLabel: labelOf(ok.type, ok.rec),
-            impact: impactOf(ok.type, ok.rec, ok.change),
+            impact: impactOf(ok.type, ok.rec, ok.change, ok.kind),
           });
         }
         if (sub === '' && req.method === 'POST') {
@@ -583,8 +1076,11 @@ http
             entityType: ok.type,
             entityId: ok.rec.id,
             entityLabel: labelOf(ok.type, ok.rec),
-            snapshot: Object.fromEntries(Object.keys(ok.change).map((k) => [k, ok.rec[k]])),
-            proposedChange: ok.change,
+            kind: ok.kind,
+            snapshot: Object.fromEntries(
+              Object.keys(ok.change).map((k) => [k, valueOf(ok.type, ok.rec, k)]),
+            ),
+            proposedChange: ok.kind === 'void' ? null : ok.change,
             status: 'pending',
             reason: body.reason.trim(),
             requestedBy: { id: me.user.id, name: me.user.name },
@@ -671,14 +1167,60 @@ http
           decided();
           return send(res, 200, view(cr, true));
         }
-        if (rec.updatedAt > cr.requestedAt) {
+        if (cr.entityType !== 'product_stock' && rec.updatedAt > cr.requestedAt) {
           cr.status = 'stale';
           return err(res, 409, 'The record changed after this request was made', 'STALE_REQUEST');
         }
-        for (const f of Object.keys(cr.proposedChange))
-          if (!perms.includes(CHANGE_FIELDS[cr.entityType][f].apply))
-            return err(res, 403, 'Access denied');
-        Object.assign(rec, cr.proposedChange, { updatedAt: new Date().toISOString() });
+        const stockShort = (details) =>
+          send(res, 409, {
+            statusCode: 409,
+            message: 'Not enough stock',
+            code: 'STOCK_INSUFFICIENT',
+            details,
+          });
+        if (cr.kind === 'void') {
+          if (!need('purchase.void')) return;
+          const short = voidPurchase(rec, cr.reason, cr.requestedBy);
+          if (short) return stockShort(short);
+        } else {
+          for (const f of Object.keys(cr.proposedChange))
+            if (!perms.includes(ruleOf(cr.entityType, f).apply))
+              return err(res, 403, 'Access denied');
+          if (cr.entityType === 'product_stock') {
+            const short = moveStock(
+              rec,
+              Number(cr.proposedChange.adjustBy),
+              'adjustment',
+              { type: 'adjustment', id: null, code: null },
+              cr.reason,
+              cr.requestedBy,
+            );
+            if (short) return stockShort(short);
+          } else if (cr.entityType === 'purchase') {
+            for (const [f, v] of Object.entries(cr.proposedChange)) {
+              const m = /^items\.([^.]+)\.(quantity|unitPrice)$/.exec(f);
+              if (!m) rec[f] = v;
+              else if (m[2] === 'unitPrice') rec.items.find((i) => i.id === m[1]).unitPrice = v;
+              else {
+                const item = rec.items.find((i) => i.id === m[1]);
+                const short = moveStock(
+                  products.find((x) => x.id === item.productId),
+                  Number(v) - Number(item.quantity),
+                  'purchase_edit',
+                  { type: 'purchase', id: rec.id, code: rec.code },
+                  cr.reason,
+                  cr.requestedBy,
+                );
+                if (short) return stockShort(short);
+                item.quantity = String(v);
+              }
+            }
+            rec.updatedAt = new Date().toISOString();
+            for (const i of rec.items) recomputeLast(i.productId);
+          } else {
+            Object.assign(rec, cr.proposedChange, { updatedAt: new Date().toISOString() });
+          }
+        }
         cr.status = 'approved';
         decided();
         cr.appliedAt = cr.decidedAt;

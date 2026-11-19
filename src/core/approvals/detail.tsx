@@ -17,7 +17,14 @@ import { Field, describedBy, inputClass } from '@/core/ui/text-field';
 import { cn } from '@/core/ui/cn';
 import { useChangeRequest, useDecide, type Decision } from './api';
 import { recordHref, useChangeEntities } from './context';
-import { StatusPill, fieldOfImpact, useChangeLabels, useDeltaText, useValueText } from './display';
+import {
+  StatusPill,
+  fieldOfImpact,
+  kindOfImpact,
+  useChangeLabels,
+  useDeltaText,
+  useValueText,
+} from './display';
 import { LoadFailed } from './list';
 import type { ChangeRequest } from './types';
 
@@ -379,19 +386,22 @@ export function ImpactList({
       <ul className="divide-y divide-border rounded-card border border-border bg-surface">
         {impact.map((line) => {
           const field = fieldOfImpact(line.key);
+          const kind = kindOfImpact(line);
           const note = labels.note(line);
           return (
             <li key={line.key} className="space-y-1 px-4 py-3 text-sm">
               <p className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="font-medium">{labels.impact(line)}</span>
                 <span className="tabular-nums">
-                  {'before' in line ? valueText(field, line.before) : null}
+                  {'before' in line ? valueText(field, line.before, kind) : null}
                   {'before' in line && 'after' in line ? ' → ' : null}
                   {'after' in line ? (
-                    <span className="font-semibold">{valueText(field, line.after)}</span>
+                    <span className="font-semibold">{valueText(field, line.after, kind)}</span>
                   ) : null}
                   {line.delta ? (
-                    <span className="ml-2 text-xs text-fg-muted">({deltaText(line.delta)})</span>
+                    <span className="ml-2 text-xs text-fg-muted">
+                      ({deltaText(line.delta, kind)})
+                    </span>
                   ) : null}
                 </span>
               </p>
