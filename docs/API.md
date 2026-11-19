@@ -16,9 +16,10 @@ API বদলালে এই ফাইলও একই PR-এ হালনা�
 8. [Settings API](#৮-settings-api)
 9. [মাস্টার ডেটা (dealership)](#৯-মাস্টার-ডেটা-dealership)
 10. [কেনা ও স্টক](#১০-কেনা-ও-স্টক)
-11. [সংশোধনের অনুরোধ ও অনুমোদন](#১১-সংশোধনের-অনুরোধ-ও-অনুমোদন)
-12. [ত্রুটির রূপ ও কোড](#১২-ত্রুটির-রূপ-ও-কোড)
-13. [রোল ও অনুমতি](#১৩-রোল-ও-অনুমতি)
+11. [অর্ডার, ডেলিভারি ও আদায়](#১১-অর্ডার-ডেলিভারি-ও-আদায়)
+12. [সংশোধনের অনুরোধ ও অনুমোদন](#১২-সংশোধনের-অনুরোধ-ও-অনুমোদন)
+13. [ত্রুটির রূপ ও কোড](#১৩-ত্রুটির-রূপ-ও-কোড)
+14. [রোল ও অনুমতি](#১৪-রোল-ও-অনুমতি)
 
 ---
 
@@ -172,6 +173,23 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | GET | `/b/:businessSlug/stock/:productId/movements?from=&to=&kind=&page=` | হ্যাঁ | `stock.view` | 200 |
 | POST | `/b/:businessSlug/stock/adjustments` | হ্যাঁ | `stock.adjust` (দৈনিক সীমার বেশি হলে `stock.adjust.large`) | 201 |
 | GET | `/b/:businessSlug/purchase-counters?year=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
+| POST | `/b/:businessSlug/orders` | হ্যাঁ | `sale.create` | 201 (একই `Idempotency-Key`: 200) |
+| GET | `/b/:businessSlug/orders?status=&customerId=&from=&to=&page=` | হ্যাঁ | `sale.view.all` বা নিজের অর্ডারে `sale.view.own` | 200 |
+| GET | `/b/:businessSlug/orders/:id` | হ্যাঁ | `sale.view.all` বা নিজের অর্ডারে `sale.view.own` | 200 |
+| PATCH | `/b/:businessSlug/orders/:id` | হ্যাঁ | `sale.edit` + `reason` | 200 |
+| POST | `/b/:businessSlug/orders/:id/void` | হ্যাঁ | `sale.void` | 200 |
+| POST | `/b/:businessSlug/deliveries` | হ্যাঁ | `delivery.create` (block মোডে সীমা পারে `delivery.credit.override`) | 201 (একই key: 200) |
+| GET | `/b/:businessSlug/deliveries?orderId=&customerId=&status=&from=&to=&page=` | হ্যাঁ | `delivery.view` | 200 |
+| GET | `/b/:businessSlug/deliveries/:id` | হ্যাঁ | `delivery.view` | 200 |
+| PATCH | `/b/:businessSlug/deliveries/:id` | হ্যাঁ | `delivery.edit` + `reason` | 200 |
+| POST | `/b/:businessSlug/deliveries/:id/void` | হ্যাঁ | `delivery.void` | 200 |
+| POST | `/b/:businessSlug/collections` | হ্যাঁ | `collection.create` | 201 (একই key: 200) |
+| GET | `/b/:businessSlug/collections?customerId=&orderId=&method=&status=&from=&to=&page=` | হ্যাঁ | `collection.view` | 200 |
+| GET | `/b/:businessSlug/collections/:id` | হ্যাঁ | `collection.view` | 200 |
+| PATCH | `/b/:businessSlug/collections/:id` | হ্যাঁ | `collection.edit` + `reason` | 200 |
+| POST | `/b/:businessSlug/collections/:id/void` | হ্যাঁ | `collection.void` | 200 |
+| GET | `/b/:businessSlug/collection-methods` | হ্যাঁ | `collection.create` | 200 |
+| GET | `/b/:businessSlug/customers/:id/ledger?from=&to=&page=` | হ্যাঁ | `customer.due.view` | 200 |
 | POST | `/b/:businessSlug/change-requests/preview` | হ্যাঁ | `change.request` বা `change.approve` | 200 |
 | POST | `/b/:businessSlug/change-requests` | হ্যাঁ | `change.request` (+ রেকর্ড দেখার অনুমতি) | 201 (একই `Idempotency-Key` আবার: 200) |
 | GET | `/b/:businessSlug/change-requests/mine?status=&page=` | হ্যাঁ | `change.view.own` | 200 |
@@ -241,7 +259,7 @@ Response 200 (সাথে দুটো `Set-Cookie`, অংশ ২ দেখু
 ```
 
 - পরপর ৫ বার ভুল পাসওয়ার্ডে অ্যাকাউন্ট ১৫ মিনিট লক; লক অবস্থায় সঠিক পাসওয়ার্ডেও ওই একই 401। frontend কারণ জানতে পারে না, তাই বার্তা হিসেবে "ইমেইল/ফোন বা পাসওয়ার্ড ভুল, অথবা অ্যাকাউন্ট সাময়িকভাবে বন্ধ" দেখানো ভালো।
-- এক IP থেকে প্রতি মিনিটে ১০টার বেশি চেষ্টায় **429** (অংশ ১২)।
+- এক IP থেকে প্রতি মিনিটে ১০টার বেশি চেষ্টায় **429** (অংশ ১৩)।
 - লগইনের পর ব্যবসা ও অনুমতি পেতে `GET /auth/me` ডাকুন।
 
 ### `POST /auth/refresh`
@@ -300,6 +318,9 @@ Response: **204**, body নেই।
         "change.view.all",
         "change.view.own",
         "collection.create",
+        "collection.edit",
+        "collection.view",
+        "collection.void",
         "commission.manage",
         "commission.view",
         "customer.balance.edit",
@@ -307,6 +328,11 @@ Response: **204**, body নেই।
         "customer.due.view",
         "customer.manage",
         "customer.view",
+        "delivery.create",
+        "delivery.credit.override",
+        "delivery.edit",
+        "delivery.view",
+        "delivery.void",
         "expense.create",
         "ledger.entry.create",
         "ledger.view",
@@ -323,6 +349,7 @@ Response: **204**, body নেই।
         "reports.finance.view",
         "roles.manage",
         "sale.create",
+        "sale.edit",
         "sale.view.all",
         "sale.view.own",
         "sale.void",
@@ -370,9 +397,12 @@ Response: **204**, body নেই।
         "change.request",
         "change.view.own",
         "collection.create",
+        "collection.view",
         "customer.due.view",
         "customer.manage",
         "customer.view",
+        "delivery.create",
+        "delivery.view",
         "product.cost.view",
         "product.manage",
         "product.view",
@@ -405,7 +435,7 @@ Request:
 
 Response: **204**, body নেই।
 
-ত্রুটি: বর্তমান পাসওয়ার্ড ভুল হলে 400 `CURRENT_PASSWORD_INCORRECT` (`currentPassword`); নতুন পাসওয়ার্ড নিয়ম না মানলে 400 `PASSWORD_TOO_SHORT` / `PASSWORD_TOO_LONG` / `PASSWORD_MATCHES_IDENTITY` (`newPassword`)। সব code অংশ ১২-এ।
+ত্রুটি: বর্তমান পাসওয়ার্ড ভুল হলে 400 `CURRENT_PASSWORD_INCORRECT` (`currentPassword`); নতুন পাসওয়ার্ড নিয়ম না মানলে 400 `PASSWORD_TOO_SHORT` / `PASSWORD_TOO_LONG` / `PASSWORD_MATCHES_IDENTITY` (`newPassword`)। সব code অংশ ১৩-এ।
 
 **পাসওয়ার্ডের নিয়ম:** ১০ থেকে ১২৮ অক্ষর; ইউজারের নিজের email বা phone হতে পারবে না; চিহ্ন বা বড় হাতের অক্ষর বাধ্যতামূলক নয়।
 
@@ -423,7 +453,7 @@ Response: **204**, body নেই।
 - `roles`: চারটা রোল, Settings-এর কলামের ক্রমে। প্রতিটায় চালু অনুমতির তালিকা।
 - `locked: true` (শুধু `owner` রোলে): এই রোলের অনুমতি বদলানো যায় না; সবসময় সব owner-only-বহির্ভূত অনুমতি।
 
-Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৪১টা, অংশ ১৩-এর টেবিলে সব):
+Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৫০টা, অংশ ১৪-এর টেবিলে সব):
 
 ```json
 {
@@ -445,28 +475,28 @@ Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৪১ট�
       "nameEn": "Owner",
       "nameBn": "মালিক",
       "locked": true,
-      "permissions": ["collection.create", "customer.due.view", "...", "users.view"]
+      "permissions": ["change.approve", "change.request", "...", "users.view"]
     },
     {
       "key": "manager",
       "nameEn": "Manager",
       "nameBn": "ম্যানেজার",
       "locked": false,
-      "permissions": ["collection.create", "customer.due.view", "...", "users.view"]
+      "permissions": ["change.request", "change.view.own", "...", "users.view"]
     },
     {
       "key": "accountant",
       "nameEn": "Accountant",
       "nameBn": "হিসাবরক্ষক",
       "locked": false,
-      "permissions": ["collection.create", "customer.due.view", "customer.view", "expense.create", "ledger.entry.create", "ledger.view", "payment.create", "settings.view"]
+      "permissions": ["change.request", "change.view.own", "collection.create", "collection.view", "customer.due.view", "customer.view", "expense.create", "ledger.entry.create", "ledger.view", "payment.create", "settings.view"]
     },
     {
       "key": "salesman",
       "nameEn": "Salesman",
       "nameBn": "বিক্রয়কর্মী",
       "locked": false,
-      "permissions": ["customer.manage", "customer.view", "product.view", "sale.create", "sale.view.own", "stock.view"]
+      "permissions": ["change.request", "change.view.own", "customer.manage", "customer.view", "product.view", "sale.create", "sale.view.own", "stock.view"]
     }
   ]
 }
@@ -645,7 +675,7 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 - **অনুসন্ধান:** অংশ মিললেই হয়, বড়-ছোট হাতের অক্ষর ধরা হয় না। পণ্য: ইংরেজি নাম, বাংলা নাম, কোড। গ্রাহক: ইংরেজি নাম, বাংলা নাম, ফোন, কোড। ফোন `01712...` লিখলেও `+8801712...`-তে মেলে।
 - **সাজানো:** ইংরেজি নাম অনুযায়ী (ক্যাটাগরি `sortOrder` অনুযায়ী; সরবরাহকারীতে প্রিন্সিপাল আগে)।
 - **কোড:** স্বয়ংক্রিয়, বদলানো যায় না: পণ্য `P-0001`, গ্রাহক `C-00001`, সরবরাহকারী `S-001` (prefix ব্যবসার settings থেকে, যেমন অন্য ব্যবসায় `R-0001`)। একসাথে অনেক তৈরি হলেও কখনো ডুপ্লিকেট হয় না।
-- **সংবেদনশীল সংশোধন:** তৈরির পরে শুরুর বাকি, ক্রেডিট সীমা বদলানো আর নিষ্ক্রিয়/সক্রিয় করা শুধু মালিক-স্তরের (platform owner ও `owner` রোল; অনুমতি `product.deactivate`, `customer.balance.edit`, `customer.deactivate`)। পণ্যে কোনো দাম হাতে বসানো বা বদলানো যায় না। এতে body-তে `reason` (৩-৫০০ অক্ষর) বাধ্যতামূলক, আর audit log-এ আগের ও পরের মান লেখা হয়। নাম, ঠিকানা, ফোন, ক্যাটাগরির বদল `product.manage` / `customer.manage` দিয়েই চলে। ম্যানেজার সংবেদনশীল বদলের জন্য "সংশোধনের অনুরোধ" পাঠান (অংশ ১১)।
+- **সংবেদনশীল সংশোধন:** তৈরির পরে শুরুর বাকি, ক্রেডিট সীমা বদলানো আর নিষ্ক্রিয়/সক্রিয় করা শুধু মালিক-স্তরের (platform owner ও `owner` রোল; অনুমতি `product.deactivate`, `customer.balance.edit`, `customer.deactivate`)। পণ্যে কোনো দাম হাতে বসানো বা বদলানো যায় না। এতে body-তে `reason` (৩-৫০০ অক্ষর) বাধ্যতামূলক, আর audit log-এ আগের ও পরের মান লেখা হয়। নাম, ঠিকানা, ফোন, ক্যাটাগরির বদল `product.manage` / `customer.manage` দিয়েই চলে। ম্যানেজার সংবেদনশীল বদলের জন্য "সংশোধনের অনুরোধ" পাঠান (অংশ ১২)।
 - **PATCH:** শুধু যা বদলাবেন সেটা পাঠান। আগের মানের সমান মান পাঠালে সেটা বদল ধরা হয় না (অনুমতিও লাগে না)। কিছুই না বদলালে 400 `Nothing to change`।
 - **লুকানো ফিল্ড:** শেষ কেনা-দাম ও তারিখ (`lastPurchasePrice`, `lastPurchasedAt`) `product.cost.view` ছাড়া, আর গ্রাহকের `openingBalance`, `currentBalance`, `creditLimit` `customer.due.view` ছাড়া response-এ থাকেই না। অনুমতি ছাড়া এগুলো পাঠালে 403।
 
@@ -719,7 +749,7 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 
 বিক্রয়কর্মীর উত্তর একই, শুধু `lastPurchasePrice` আর `lastPurchasedAt` ফিল্ড দুটো **নেই**। `GET products/:id` একটা পণ্য, একই রূপে।
 
-**শেষ কেনা-দাম শুধু-পড়া।** `lastPurchasePrice` (টাকার স্ট্রিং) আর `lastPurchasedAt` (ISO সময়) হলো শেষ বৈধ কেনার দাম ও সময়। কেনা নিশ্চিত হলে একই transaction-এ বসে; কেনা বাতিল বা সংশোধন হলে শেষ বৈধ কেনা থেকে আবার হিসাব হয় (কেনা আসবে Step 5a-তে)। কোনো কেনা না হলে দুটোই `null`; দুটো সবসময় একসাথে থাকে বা একসাথে `null`। তৈরি বা সম্পাদনায় কেনা-দাম নেওয়া হয় না: `purchasePrice` পাঠালে 400 `PURCHASE_PRICE_NOT_ALLOWED`, `lastPurchasePrice` পাঠালে 400 `LAST_PURCHASE_PRICE_NOT_ALLOWED`। কেনার ভুল দাম ঠিক হবে কেনার রেকর্ডের সংশোধনে (`purchase.edit`, অংশ ১১-এর অনুরোধ)।
+**শেষ কেনা-দাম শুধু-পড়া।** `lastPurchasePrice` (টাকার স্ট্রিং) আর `lastPurchasedAt` (ISO সময়) হলো শেষ বৈধ কেনার দাম ও সময়। কেনা নিশ্চিত হলে একই transaction-এ বসে; কেনা বাতিল বা সংশোধন হলে শেষ বৈধ কেনা থেকে আবার হিসাব হয় (কেনা আসবে Step 5a-তে)। কোনো কেনা না হলে দুটোই `null`; দুটো সবসময় একসাথে থাকে বা একসাথে `null`। তৈরি বা সম্পাদনায় কেনা-দাম নেওয়া হয় না: `purchasePrice` পাঠালে 400 `PURCHASE_PRICE_NOT_ALLOWED`, `lastPurchasePrice` পাঠালে 400 `LAST_PURCHASE_PRICE_NOT_ALLOWED`। কেনার ভুল দাম ঠিক হবে কেনার রেকর্ডের সংশোধনে (`purchase.edit`, অংশ ১২-এর অনুরোধ)।
 
 `POST products` (`unitKey` না দিলে ব্যবসার প্রধান একক):
 
@@ -761,6 +791,9 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
       "openingBalance": "12500.00",
       "currentBalance": "12500.00",
       "creditLimit": null,
+      "pendingDeliveryQuantity": "0",
+      "deliveredAmount": "0.00",
+      "collectedAmount": "0.00",
       "isActive": true,
       "createdAt": "2026-11-17T08:38:04.236Z",
       "updatedAt": "2026-11-17T08:38:04.236Z"
@@ -772,9 +805,9 @@ Request: `{ "newPassword": "<new password>" }` → Response: **204**। ইউ�
 }
 ```
 
-- বিক্রয়কর্মীর উত্তরে `openingBalance`, `currentBalance`, `creditLimit` **নেই**।
+- বিক্রয়কর্মীর উত্তরে `openingBalance`, `currentBalance`, `creditLimit`, `deliveredAmount`, `collectedAmount` **নেই**; `pendingDeliveryQuantity` (ডেলিভারি বাকি বস্তা) সবাই দেখেন (অংশ ১১)।
 - বাকি: ধনাত্মক = গ্রাহক আমাদের কাছে দেনা; **ঋণাত্মক = অগ্রিম** (আমরা তার কাছে দেনা)।
-- `currentBalance` সার্ভার নিজে হালনাগাদ রাখে (পরের ধাপে বিক্রি ও আদায়ে); frontend কখনো হিসাব করবে না।
+- `currentBalance` সার্ভার নিজে হালনাগাদ রাখে (ডেলিভারি ও আদায়ে, অংশ ১১); সবসময় `openingBalance + deliveredAmount − collectedAmount`। frontend কখনো হিসাব করবে না।
 - `creditLimit: null` মানে কোনো সীমা নেই।
 
 `POST customers` (ফোন বাধ্যতামূলক, ব্যবসায় unique; বিক্রয়কর্মী শুধু নাম-ফোন-ঠিকানা দিয়ে যোগ করতে পারেন):
@@ -842,7 +875,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ### `POST purchases`: কেনা তৈরি
 
-অনুমতি: `purchase.create` + `product.cost.view` (দাম লিখতে দাম দেখার অনুমতি লাগে)। ঐচ্ছিক header `Idempotency-Key` (অংশ ১১-এর মতো): একই ইউজার একই key আবার পাঠালে নতুন কেনা হয় না, আগেরটা 200-এ ফেরত আসে।
+অনুমতি: `purchase.create` + `product.cost.view` (দাম লিখতে দাম দেখার অনুমতি লাগে)। ঐচ্ছিক header `Idempotency-Key` (অংশ ১২-এর মতো): একই ইউজার একই key আবার পাঠালে নতুন কেনা হয় না, আগেরটা 200-এ ফেরত আসে।
 
 ```json
 {
@@ -953,7 +986,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ### কেনা বাতিল ও সংশোধন
 
-**ম্যানেজার** সংশোধন বা বাতিলের অনুরোধ পাঠান (অংশ ১১, `entityType: "purchase"`)। মালিক-স্তর সেটা অনুমোদন করেন, অথবা নিজে সরাসরি করেন। দুই পথেই একই নিয়ম, এক transaction-এ।
+**ম্যানেজার** সংশোধন বা বাতিলের অনুরোধ পাঠান (অংশ ১২, `entityType: "purchase"`)। মালিক-স্তর সেটা অনুমোদন করেন, অথবা নিজে সরাসরি করেন। দুই পথেই একই নিয়ম, এক transaction-এ।
 
 **বাতিল:**
 - সরাসরি করার পথ: `POST purchases/:id/void`, body `{ "reason": "Entered twice" }` (৩–৫০০ অক্ষর)। অনুমতি `purchase.void`। উত্তর 200, কেনা `"status": "void"` অবস্থায়।
@@ -1111,7 +1144,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 }
 ```
 
-তখন অনুরোধ পাঠান (অংশ ১১):
+তখন অনুরোধ পাঠান (অংশ ১২):
 
 ```json
 {
@@ -1162,7 +1195,338 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ---
 
-## ১১. সংশোধনের অনুরোধ ও অনুমোদন
+## ১১. অর্ডার, ডেলিভারি ও আদায়
+
+গ্রাহকের অর্ডার, তার আংশিক বা পুরো ডেলিভারি, আর টাকা আদায়। সব পথ `/api/v1/b/:businessSlug/...`-এর নিচে।
+
+### প্রবাহ
+
+1. **অর্ডার:** দাম বসে অর্ডারেই। অর্ডারে **স্টক বা টাকা বদলায় না**। শুধু গ্রাহকের "ডেলিভারি বাকি" বস্তা (`pendingDeliveryQuantity`) বাড়ে।
+2. **ডেলিভারি:** একটা অর্ডারের আংশিক বা পুরো। একই transaction-এ:
+   - স্টক কমে।
+   - অর্ডারের ডেলিভারি-হওয়া বস্তা বাড়ে।
+   - গ্রাহকের পাওনা বাড়ে (বস্তা × অর্ডারের দাম)।
+   - গ্রাহকের খাতায় লাইন যোগ হয়।
+3. **আদায়:** গ্রাহকের ব্যালেন্সে সরাসরি যায়।
+   - অর্ডারের রেফারেন্স (`orderId`) ঐচ্ছিক, শুধু "কোন অর্ডারের জন্য অগ্রিম" জানাতে। **অর্ডারে বরাদ্দ হয় না।**
+   - পাওনার বেশি আদায় চলে: ব্যালেন্স ঋণাত্মক হয়, অর্থাৎ অগ্রিম।
+
+**গ্রাহকের সারাংশ** (অংশ ৯-এর গ্রাহকের উত্তরে নতুন ঘর):
+
+| ঘর | মানে | দেখতে লাগে |
+|---|---|---|
+| `pendingDeliveryQuantity` | সক্রিয় অর্ডারে এখনো ডেলিভারি বাকি বস্তা | সবাই (`customer.view`) |
+| `deliveredAmount` | সক্রিয় ডেলিভারির মোট মূল্য | `customer.due.view` |
+| `collectedAmount` | সক্রিয় আদায়ের মোট | `customer.due.view` |
+
+সবসময় `currentBalance = openingBalance + deliveredAmount − collectedAmount`। ঋণাত্মক মানে অগ্রিম।
+
+**বাতিল ও সংশোধন:** অর্ডার, ডেলিভারি আর আদায় তিনটাই বাতিল বা সংশোধন হয় মালিক-স্তরে, সরাসরি (`PATCH` / `.../void`) অথবা ম্যানেজারের অনুরোধে (অংশ ১২)। উল্টো এন্ট্রি (স্টক ও খাতা) বসে বাতিল বা সংশোধনের **দিনের তারিখে**; মূল এন্ট্রি অপরিবর্তিত থাকে। সরাসরি `PATCH` আর বাতিলে `reason` (৩–৫০০ অক্ষর) বাধ্যতামূলক।
+
+**তারিখ** (`orderDate`, `deliveryDate`, `collectionDate`):
+- না দিলে আজ (ব্যবসার সময়-অঞ্চলে)।
+- ভবিষ্যৎ নয়।
+- সংশোধনের অনুমতি (`sale.edit` / `delivery.edit` / `collection.edit`) না থাকলে শুধু শেষ ৭ দিন।
+- ডেলিভারি অর্ডারের তারিখের আগে হতে পারে না।
+
+সব তৈরিতে ঐচ্ছিক `Idempotency-Key` header (অংশ ১২-এর মতো): একই key আবার এলে আগেরটাই 200-এ ফেরত আসে।
+
+### `POST orders`: অর্ডার তৈরি
+
+অনুমতি: `sale.create` (ম্যানেজার, বিক্রয়কর্মী)।
+
+```json
+{
+  "customerId": "01a1f347-c33b-7546-b92d-f977780d6726",
+  "deliveryWindow": "two_days",
+  "deliverBy": "2026-11-21",
+  "note": "Deliver to the back gate",
+  "items": [{ "productId": "01a1f347-c333-775c-b5f9-0803c3d1f1d8", "quantity": "100", "unitPrice": "565" }]
+}
+```
+
+| ঘর | নিয়ম |
+|---|---|
+| `customerId` | সক্রিয় গ্রাহক |
+| `deliveryWindow` | `today`, `two_days` বা `one_week` |
+| `deliverBy` | ঐচ্ছিক নির্দিষ্ট তারিখ, অর্ডারের তারিখের দিন বা পরে |
+| `items` | ১–৫০ লাইন; একটা পণ্য একবারই; বস্তা এককের নিয়মে; দাম টাকা |
+
+উত্তর 201 (`GET orders/:id`-এর রূপ):
+
+```json
+{
+  "id": "01a1f347-cb0f-70c4-8cca-67ced2e7839b",
+  "code": "ORD-0001",
+  "customer": { "id": "01a1f347-c33b-7546-b92d-f977780d6726", "code": "C-00002", "nameEn": "Sample Store Two", "nameBn": "নমুনা স্টোর দুই" },
+  "orderDate": "2026-11-19",
+  "deliveryWindow": "two_days",
+  "deliverBy": "2026-11-21",
+  "totalQuantity": "100",
+  "deliveredQuantity": "0",
+  "remainingQuantity": "100",
+  "totalAmount": "56500.00",
+  "status": "active",
+  "deliveryStatus": "pending",
+  "createdBy": { "id": "01a1f347-c9a5-7078-a656-d3136dadcaad", "name": "Karim Mia" },
+  "createdAt": "2026-11-19T10:08:50.959Z",
+  "note": "Deliver to the back gate",
+  "version": 1,
+  "items": [
+    {
+      "id": "01a1f347-cb12-73d3-a3c4-2404751d778d",
+      "product": { "id": "01a1f347-c333-775c-b5f9-0803c3d1f1d8", "code": "P-0001", "nameEn": "Sample OPC 50kg", "nameBn": "নমুনা ওপিসি ৫০ কেজি", "unitKey": "bag" },
+      "quantity": "100",
+      "deliveredQuantity": "0",
+      "remainingQuantity": "100",
+      "unitPrice": "565.00",
+      "lineTotal": "56500.00"
+    }
+  ],
+  "deliveries": [],
+  "voidedAt": null,
+  "voidReason": null,
+  "voidedBy": null,
+  "updatedAt": "2026-11-19T10:08:50.959Z"
+}
+```
+
+- `status` হয় `active` বা `void`।
+- `deliveryStatus` হয় `pending` (কিছুই যায়নি), `partial` বা `delivered`।
+- `deliveries` হলো এই অর্ডারের ডেলিভারির সারাংশ (`id`, `code`, `deliveryDate`, `totalQuantity`, `totalAmount`, `status`)। বিক্রয়কর্মী নিজের অর্ডারের ডেলিভারি এখান থেকেই দেখেন।
+
+### `GET orders?status=&customerId=&from=&to=&page=` ও `GET orders/:id`
+
+- `sale.view.all` (ম্যানেজার) সব অর্ডার দেখেন; `sale.view.own` (বিক্রয়কর্মী) শুধু নিজের তৈরি অর্ডার। অন্যের অর্ডার বা অন্য ব্যবসার id হলে 404 `ORDER_NOT_FOUND`।
+- `status` হয় `open` (pending বা partial), `pending`, `partial`, `delivered` বা `void`।
+- ১০টা করে, অর্ডারের তারিখ অনুযায়ী নতুন আগে।
+- তালিকায় `items`, `deliveries`, `note` থাকে না।
+
+### `POST deliveries`: ডেলিভারি
+
+অনুমতি: `delivery.create` (ম্যানেজার)।
+
+```json
+{
+  "orderId": "01a1f347-cb0f-70c4-8cca-67ced2e7839b",
+  "transportReference": "Truck DHA-11-2233",
+  "items": [{ "orderItemId": "01a1f347-cb12-73d3-a3c4-2404751d778d", "quantity": "40" }]
+}
+```
+
+- `orderItemId` = অর্ডারের লাইনের `id`। একটা ডেলিভারি একটাই অর্ডারের।
+- `transportReference` ঐচ্ছিক (৬৪ অক্ষর): পরিবহনের ট্রিপ বা ট্রাকের নম্বর। ভাড়া গ্রাহকের কাছ থেকে নেওয়া হয় না।
+
+উত্তর 201:
+
+```json
+{
+  "id": "01a1f347-cb7f-764a-9ddb-43f5102e159f",
+  "code": "DEL-0001",
+  "order": { "id": "01a1f347-cb0f-70c4-8cca-67ced2e7839b", "code": "ORD-0001" },
+  "customer": { "id": "01a1f347-c33b-7546-b92d-f977780d6726", "code": "C-00002", "nameEn": "Sample Store Two", "nameBn": "নমুনা স্টোর দুই" },
+  "deliveryDate": "2026-11-19",
+  "transportReference": "Truck DHA-11-2233",
+  "totalQuantity": "40",
+  "totalAmount": "22600.00",
+  "creditLimitExceeded": true,
+  "status": "active",
+  "createdBy": { "id": "01a1f347-c91e-77e4-8e99-9c0de5cc42b0", "name": "Rahim Uddin" },
+  "createdAt": "2026-11-19T10:08:51.071Z",
+  "note": null,
+  "version": 1,
+  "items": [
+    {
+      "id": "01a1f347-cb82-77fa-bfff-15695043c505",
+      "orderItemId": "01a1f347-cb12-73d3-a3c4-2404751d778d",
+      "product": { "id": "01a1f347-c333-775c-b5f9-0803c3d1f1d8", "code": "P-0001", "nameEn": "Sample OPC 50kg", "nameBn": "নমুনা ওপিসি ৫০ কেজি", "unitKey": "bag" },
+      "quantity": "40",
+      "unitPrice": "565.00",
+      "lineTotal": "22600.00"
+    }
+  ],
+  "voidedAt": null,
+  "voidReason": null,
+  "voidedBy": null,
+  "updatedAt": "2026-11-19T10:08:51.071Z"
+}
+```
+
+**ক্রেডিট সীমা:** ডেলিভারির পরের ব্যালেন্স গ্রাহকের `creditLimit` ছাড়ালে কী হয়, তা ব্যবসার Settings-এর `creditLimitMode` ঠিক করে।
+- `warn` (ডিফল্ট): ডেলিভারি হয়, উত্তরে `creditLimitExceeded: true` থাকে। frontend সতর্কবার্তা দেখাবে। উপরের নমুনায় শুরুর বাকি ১২,৫০০ + ২২,৬০০ = ৩৫,১০০ > সীমা ৩০,০০০।
+- `block`: 409 `CREDIT_LIMIT_EXCEEDED` (`field: "items"`, `details: { creditLimit, balanceAfter }`)। `delivery.credit.override` (মালিক-স্তর) থাকলে তবুও ডেলিভারি হয়, পতাকাসহ।
+- `creditLimitExceeded` শুধু `customer.due.view` থাকলে উত্তরে আসে।
+
+**আটকায়:**
+- অর্ডার-লাইনের বাকির বেশি হলে 400 `DELIVERY_QUANTITY_TOO_LARGE` (`details.remaining`):
+
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "More than is left to deliver on this order line",
+  "code": "DELIVERY_QUANTITY_TOO_LARGE",
+  "field": "items.0.quantity",
+  "errors": [{ "field": "items.0.quantity", "code": "DELIVERY_QUANTITY_TOO_LARGE", "message": "More than is left to deliver on this order line" }],
+  "details": { "remaining": "60" }
+}
+```
+
+- স্টক কম হলে 409 `STOCK_INSUFFICIENT` (`field: "items.<n>.quantity"`)।
+- বাতিল অর্ডারে 409 `ORDER_ALREADY_VOID`।
+- দুজন একসাথে একই বাকির জন্য ডেলিভারি দিলে অর্ডার লক হয়; বাকির বেশি কখনো যায় না।
+
+### `GET deliveries?orderId=&customerId=&status=&from=&to=&page=` ও `GET deliveries/:id`
+
+অনুমতি: `delivery.view` (ম্যানেজার)। ১০টা করে, ডেলিভারির তারিখ অনুযায়ী নতুন আগে। তালিকায় `items` থাকে না। অন্য ব্যবসার id হলে 404 `DELIVERY_NOT_FOUND`।
+
+### `POST collections`: আদায়
+
+অনুমতি: `collection.create` (ম্যানেজার, হিসাবরক্ষক)।
+
+```json
+{
+  "customerId": "01a1f347-c33b-7546-b92d-f977780d6726",
+  "orderId": "01a1f347-cb0f-70c4-8cca-67ced2e7839b",
+  "method": "bkash",
+  "amount": "20000",
+  "reference": "TRX8XK2QW"
+}
+```
+
+| ঘর | নিয়ম |
+|---|---|
+| `method` | ব্যবসার তালিকার একটা (`GET collection-methods`) |
+| `amount` | শূন্যের বেশি |
+| `reference` | ঐচ্ছিক (৬৪): লেনদেনের id, চেকের নম্বর |
+| `orderId` | ঐচ্ছিক; একই গ্রাহকের অর্ডার হতে হবে |
+| `note` | ঐচ্ছিক (৫০০) |
+
+উত্তর 201:
+
+```json
+{
+  "id": "01a1f347-cbdc-74dd-a302-9386b165fc3c",
+  "code": "COL-0001",
+  "customer": { "id": "01a1f347-c33b-7546-b92d-f977780d6726", "code": "C-00002", "nameEn": "Sample Store Two", "nameBn": "নমুনা স্টোর দুই" },
+  "order": { "id": "01a1f347-cb0f-70c4-8cca-67ced2e7839b", "code": "ORD-0001" },
+  "collectionDate": "2026-11-19",
+  "method": "bkash",
+  "amount": "20000.00",
+  "reference": "TRX8XK2QW",
+  "note": null,
+  "status": "active",
+  "version": 1,
+  "createdBy": { "id": "01a1f347-ca28-757a-bb72-87856e1d9e0b", "name": "Salma Akter" },
+  "createdAt": "2026-11-19T10:08:51.164Z",
+  "voidedAt": null,
+  "voidReason": null,
+  "voidedBy": null,
+  "updatedAt": "2026-11-19T10:08:51.164Z"
+}
+```
+
+`GET collection-methods` (`collection.create`): `{ "items": ["cash", "bkash", "nagad", "bank", "cheque"] }`। তালিকা ব্যবসার Settings (`collectionMethods`) থেকে আসে।
+
+`GET collections?customerId=&orderId=&method=&status=&from=&to=&page=` ও `GET collections/:id`: অনুমতি `collection.view` (ম্যানেজার, হিসাবরক্ষক); ১০টা করে, নতুন আগে।
+
+**অগ্রিম ফেরত:** অর্ডার বাতিল হলে আদায় আপনা থেকে বদলায় না; অগ্রিম গ্রাহকের জমা (ঋণাত্মক ব্যালেন্স) হিসেবে থাকে। টাকা ফেরত দিলে সেই আদায় বাতিল করুন (`POST collections/:id/void`)। এতে খাতায় উল্টো লাইন বসে, বাতিলের দিনের তারিখে।
+
+### `GET customers/:id/ledger?from=&to=&page=`: গ্রাহকের খাতা
+
+অনুমতি: `customer.due.view`। ব্যালেন্সের প্রতিটা বদল, নতুন আগে, ১০টা করে, সাথে গ্রাহকের সারাংশ।
+
+```json
+{
+  "customer": {
+    "id": "01a1f347-c33b-7546-b92d-f977780d6726",
+    "code": "C-00002",
+    "nameEn": "Sample Store Two",
+    "openingBalance": "12500.00",
+    "deliveredAmount": "22600.00",
+    "collectedAmount": "20000.00",
+    "currentBalance": "15100.00",
+    "creditLimit": "30000.00"
+  },
+  "items": [
+    {
+      "id": "01a1f347-cbe3-77c0-b936-fd507c844417",
+      "kind": "collection",
+      "amount": "-20000.00",
+      "entryDate": "2026-11-19",
+      "source": { "type": "collection", "id": "01a1f347-cbdc-74dd-a302-9386b165fc3c", "code": "COL-0001" },
+      "reason": null,
+      "createdBy": { "id": "01a1f347-ca28-757a-bb72-87856e1d9e0b", "name": "Salma Akter" },
+      "createdAt": "2026-11-19T10:08:51.171Z"
+    },
+    {
+      "id": "01a1f347-cb90-76db-bd7a-e73074879778",
+      "kind": "delivery",
+      "amount": "22600.00",
+      "entryDate": "2026-11-19",
+      "source": { "type": "delivery", "id": "01a1f347-cb7f-764a-9ddb-43f5102e159f", "code": "DEL-0001" },
+      "reason": null,
+      "createdBy": { "id": "01a1f347-c91e-77e4-8e99-9c0de5cc42b0", "name": "Rahim Uddin" },
+      "createdAt": "2026-11-19T10:08:51.088Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 2
+}
+```
+
+- `amount` চিহ্নসহ: ধনাত্মক মানে পাওনা বাড়ে।
+- `kind` হয় `delivery`, `delivery_edit`, `delivery_void`, `collection`, `collection_edit` বা `collection_void`।
+- শুরুর বাকি খাতায় থাকে না (`customer.openingBalance`-এ আছে)।
+- খাতা শুধু-যোগ-হয়: বদলানো বা মোছা ডাটাবেসই আটকায়।
+
+### বাতিল ও সংশোধন
+
+| দলিল | সরাসরি (মালিক-স্তর) | অনুরোধে `entityType` ও ঘর | নিয়ম |
+|---|---|---|---|
+| অর্ডার | `PATCH orders/:id` (`sale.edit`), `POST orders/:id/void` (`sale.void`) | `sales_order`: `orderDate`, `deliveryWindow`, `deliverBy`, `note`, `items.<itemId>.quantity`, `items.<itemId>.unitPrice` | সক্রিয় ডেলিভারি থাকলে বাতিল 409 `DELIVERY_EXISTS`; বস্তা ডেলিভারি-হওয়ার নিচে নয় (`ORDER_QUANTITY_TOO_SMALL`); দাম বদলালে আগে ডেলিভারি-হওয়া অংশের মূল্য, ব্যালেন্স ও খাতাও বদলায় |
+| ডেলিভারি | `PATCH deliveries/:id` (`delivery.edit`), `POST deliveries/:id/void` (`delivery.void`) | `delivery`: `deliveryDate`, `transportReference`, `note`, `items.<itemId>.quantity` | বস্তা বাড়ানো বা কমানো (অর্ডারের বাকি পর্যন্ত); স্টক, অর্ডার, ব্যালেন্স, খাতা পার্থক্যে বদলায় |
+| আদায় | `PATCH collections/:id` (`collection.edit`), `POST collections/:id/void` (`collection.void`) | `collection`: `collectionDate`, `method`, `amount`, `reference`, `note` | টাকা বদলালে ব্যালেন্স ও খাতা পার্থক্যে |
+
+`PATCH`-এর body-তে লাইন থাকে `items: [{ "id": "<itemId>", "quantity": "...", "unitPrice": "..." }]` রূপে, সাথে `reason`।
+
+অর্ডারের দাম সংশোধনের অনুরোধের পূর্বরূপ (আগে ডেলিভারি হওয়া ১০০ বস্তার দাম ৫৬৫ থেকে ৫৬০):
+
+```json
+[
+  { "key": "order.totalAmount", "label": "Order total", "before": "56500.00", "after": "56000.00", "delta": "-500.00" },
+  { "key": "customer.currentBalance", "label": "Customer balance (delivered part re-priced)", "before": "49000.00", "after": "48500.00", "delta": "-500.00" }
+]
+```
+
+পূর্বরূপের লাইনের `key`:
+- `order.totalAmount`
+- `order.remainingQuantity`
+- `customer.pendingDeliveryQuantity`
+- `customer.currentBalance` (`customer.due.view`)
+- `stock.<productId>`
+
+### ত্রুটি
+
+| Status | `code` (`field`) | কখন |
+|---|---|---|
+| 400 | `CUSTOMER_NOT_FOUND_OR_INACTIVE` (`customerId`) | অর্ডারে গ্রাহক নেই বা নিষ্ক্রিয় |
+| 400 | `DELIVER_BY_INVALID` (`deliverBy`), `DELIVERY_WINDOW_INVALID` (`deliveryWindow`) | প্রতিশ্রুত তারিখ অর্ডারের আগে / অজানা সময়সীমা |
+| 400 | `ORDER_DATE_*`, `DELIVERY_DATE_*`, `COLLECTION_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের (ডেলিভারি অর্ডারের আগে হলে `_INVALID`) |
+| 400 | `ORDER_ITEM_NOT_FOUND` / `ORDER_ITEM_DUPLICATE` (`items.<n>.orderItemId`) | লাইন এই অর্ডারের নয় / একই লাইন দুবার |
+| 400 | `DELIVERY_QUANTITY_TOO_LARGE` (`items.<n>.quantity`) | অর্ডার-লাইনের বাকির বেশি (`details.remaining`) |
+| 400 | `ORDER_QUANTITY_TOO_SMALL` (`items.<id>.quantity`) | অর্ডারের বস্তা ডেলিভারি-হওয়ার নিচে নামানো |
+| 400 | `COLLECTION_METHOD_UNKNOWN` (`method`), `AMOUNT_TOO_SMALL` / `AMOUNT_INVALID` (`amount`) | পদ্ধতি তালিকায় নেই / টাকা শূন্য |
+| 404 | `ORDER_NOT_FOUND` (`orderId` যখন body-তে), `DELIVERY_NOT_FOUND`, `COLLECTION_NOT_FOUND`, `CUSTOMER_NOT_FOUND` (`customerId`) | নেই, অন্য ব্যবসার, বা (বিক্রয়কর্মীর) অন্যের অর্ডার |
+| 409 | `CREDIT_LIMIT_EXCEEDED` (`items`) | block মোডে ক্রেডিট সীমা পার (`details`) |
+| 409 | `STOCK_INSUFFICIENT` | স্টক কম |
+| 409 | `ORDER_ALREADY_VOID`, `DELIVERY_ALREADY_VOID`, `COLLECTION_ALREADY_VOID` | বাতিল দলিলে কাজ |
+| 409 | `DELIVERY_EXISTS` | সক্রিয় ডেলিভারি থাকা অর্ডার বাতিল |
+
+---
+
+## ১২. সংশোধনের অনুরোধ ও অনুমোদন
 
 স্টাফ সংবেদনশীল কিছু (দাম, বাকি, ক্রেডিট সীমা, নিষ্ক্রিয়; Step 5-এ বিক্রি ও কেনার সংশোধন ও বাতিল) সরাসরি বদলাতে পারেন না। তাঁরা কারণসহ **অনুরোধ** পাঠান; `change.approve` আছে এমন কেউ (সাধারণত মালিক) প্রভাব দেখে অনুমোদন বা প্রত্যাখ্যান করেন। অনুমোদন হলে বদল এক transaction-এ প্রয়োগ হয়। মালিক-স্তর আগের মতোই সরাসরি `PATCH` (কারণসহ) করতে পারেন।
 
@@ -1192,6 +1556,9 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 | `purchase` | `note`, `supplierReference` | - | `purchase.create` |
 | `purchase` | বাতিল (`kind: "void"`) | - | `purchase.void` |
 | `product_stock` | `adjustBy` (চিহ্নসহ পরিমাণ) | - | `stock.adjust.large` |
+| `sales_order` | `orderDate`, `deliveryWindow`, `deliverBy`, `note`, `items.<itemId>.quantity`, `items.<itemId>.unitPrice`; বাতিল | - | `sale.edit`; বাতিলে `sale.void` |
+| `delivery` | `deliveryDate`, `transportReference`, `note`, `items.<itemId>.quantity`; বাতিল | - | `delivery.edit`; বাতিলে `delivery.void` |
+| `collection` | `collectionDate`, `method`, `amount`, `reference`, `note`; বাতিল | `amount`: `collection.view` | `collection.edit`; বাতিলে `collection.void` |
 
 - টাকা স্ট্রিং বা সংখ্যা হিসেবে পাঠানো যায় (`"565"`), উত্তরে সবসময় দুই দশমিকের স্ট্রিং (`"565.00"`)। `creditLimit: null` মানে সীমা নেই।
 - নাম, ঠিকানা, ফোনের মতো সাধারণ বদল অনুরোধ ছাড়াই সরাসরি `PATCH`-এ (অংশ ৯)।
@@ -1365,7 +1732,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ---
 
-## ১২. ত্রুটির রূপ ও কোড
+## ১৩. ত্রুটির রূপ ও কোড
 
 ### রূপ
 
@@ -1497,7 +1864,30 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `ADJUSTMENT_APPROVAL_REQUIRED` | 403 | `quantity` | আজ এই পণ্যে নিজের সমন্বয়ের মোট দৈনিক সীমা পার; `details`: `limit`, `usedToday`; অনুরোধ পাঠাতে হবে |
 | `ADJUST_BY_INVALID` | 400 | `proposedChange.adjustBy` | বড় সমন্বয়ের অনুরোধে পরিমাণ শূন্য বা এককের নিয়ম ভাঙে |
 | `NOTE_INVALID` / `SUPPLIER_REFERENCE_INVALID` | 400 | `proposedChange.note` / `.supplierReference` | অনুরোধে লেখা খুব লম্বা বা লেখা নয় |
-| **সংশোধনের অনুরোধ** (অংশ ১১) | | | |
+| **অর্ডার, ডেলিভারি ও আদায়** (অংশ ১১) | | | |
+| `ORDER_NOT_FOUND` | 404 | `orderId` (body-তে থাকলে) | অর্ডার নেই, অন্য ব্যবসার, বা (বিক্রয়কর্মীর) অন্যের অর্ডার |
+| `DELIVERY_NOT_FOUND` | 404 | - | ডেলিভারি নেই বা অন্য ব্যবসার |
+| `COLLECTION_NOT_FOUND` | 404 | - | আদায় নেই বা অন্য ব্যবসার |
+| `CUSTOMER_NOT_FOUND` | 404 | `customerId` | আদায়ে বা খাতায় গ্রাহক নেই (বা অন্য ব্যবসার) |
+| `CUSTOMER_NOT_FOUND_OR_INACTIVE` | 400 | `customerId` | অর্ডারে গ্রাহক নেই বা নিষ্ক্রিয় |
+| `DELIVER_BY_INVALID` | 400 | `deliverBy` | প্রতিশ্রুত তারিখ আসল নয় বা অর্ডারের আগে |
+| `DELIVERY_WINDOW_INVALID` | 400 | `deliveryWindow` | সময়সীমা `today`, `two_days`, `one_week`-এর বাইরে |
+| `ORDER_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `orderDate` | অর্ডারের তারিখ আসল নয় (বা প্রথম ডেলিভারির পরে) / ভবিষ্যৎ / ৭ দিনের আগের |
+| `DELIVERY_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `deliveryDate` | ডেলিভারির তারিখ আসল নয় বা অর্ডারের আগে / ভবিষ্যৎ / ৭ দিনের আগের |
+| `COLLECTION_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `collectionDate` | আদায়ের তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
+| `ORDER_ITEM_NOT_FOUND` | 400 | `items.<n>.orderItemId` | ডেলিভারির লাইন এই অর্ডারের নয় |
+| `ORDER_ITEM_DUPLICATE` | 400 | `items.<n>.orderItemId` | একই অর্ডার-লাইন এক ডেলিভারিতে দুবার |
+| `DELIVERY_QUANTITY_TOO_LARGE` | 400 | `items.<n>.quantity` / `items.<id>.quantity` | অর্ডার-লাইনের বাকির বেশি; `details.remaining` |
+| `ORDER_QUANTITY_TOO_SMALL` | 400 | `items.<id>.quantity` | অর্ডারের বস্তা ডেলিভারি-হওয়ার নিচে নামানো |
+| `COLLECTION_METHOD_UNKNOWN` | 400 | `method` | পদ্ধতি ব্যবসার তালিকায় নেই |
+| `AMOUNT_TOO_SMALL` / `AMOUNT_INVALID` | 400 | `amount` | আদায়ের টাকা শূন্য / সংশোধনে টাকার রূপ ভুল |
+| `TRANSPORT_REFERENCE_INVALID` / `REFERENCE_INVALID` | 400 | অনুরোধের ঘর | লেখা খুব লম্বা |
+| `CREDIT_LIMIT_EXCEEDED` | 409 | `items` | block মোডে ক্রেডিট সীমা পার; `details`: `creditLimit`, `balanceAfter` |
+| `ORDER_ALREADY_VOID` | 409 | - | বাতিল অর্ডারে ডেলিভারি, সংশোধন বা বাতিল |
+| `DELIVERY_ALREADY_VOID` | 409 | - | বাতিল ডেলিভারিতে সংশোধন বা বাতিল |
+| `COLLECTION_ALREADY_VOID` | 409 | - | বাতিল আদায়ে সংশোধন বা বাতিল |
+| `DELIVERY_EXISTS` | 409 | - | সক্রিয় ডেলিভারি থাকা অর্ডার বাতিল; আগে ডেলিভারি বাতিল করুন |
+| **সংশোধনের অনুরোধ** (অংশ ১২) | | | |
 | `ENTITY_TYPE_UNKNOWN` | 400 | `entityType` | এই ধরনের রেকর্ডের অনুরোধ হয় না |
 | `VOID_NOT_SUPPORTED` | 400 | `kind` | এই রেকর্ড বাতিল হয় না; নিষ্ক্রিয় করুন |
 | `PROPOSED_CHANGE_EMPTY` | 400 | `proposedChange` | বদলের অনুরোধে কোনো ঘর নেই |
@@ -1525,7 +1915,7 @@ Retry-After: 60
 
 ---
 
-## ১৩. রোল ও অনুমতি
+## ১৪. রোল ও অনুমতি
 
 ### রোল
 
@@ -1565,7 +1955,10 @@ Retry-After: 60
 | `customer.due.view` | dealership | | ✓ | ✓ | | গ্রাহকের বাকি ও ক্রেডিট সীমা দেখা |
 | `customer.balance.edit` | dealership | | | | | তৈরির পরে শুরুর বাকি ও ক্রেডিট সীমা বদল (কারণসহ) |
 | `customer.deactivate` | dealership | | | | | গ্রাহক নিষ্ক্রিয়/সক্রিয় (কারণসহ) |
-| `collection.create` | dealership | | ✓ | ✓ | | বাকি আদায়ের এন্ট্রি |
+| `collection.create` | dealership | | ✓ | ✓ | | টাকা আদায়ের এন্ট্রি |
+| `collection.view` | dealership | | ✓ | ✓ | | আদায় দেখা |
+| `collection.edit` | dealership | | | | | আদায় সংশোধন সরাসরি বা অনুমোদন |
+| `collection.void` | dealership | | | | | আদায় বাতিল সরাসরি বা অনুমোদন |
 | `supplier.view` | dealership | | ✓ | | | সরবরাহকারী দেখা |
 | `purchase.view` | dealership | | ✓ | | | কেনা দেখা (দাম শুধু `product.cost.view`-এ) |
 | `purchase.create` | dealership | | ✓ | | | কেনার এন্ট্রি, নোট ও রেফারেন্স সংশোধন |
@@ -1574,10 +1967,16 @@ Retry-After: 60
 | `stock.view` | dealership | | ✓ | | ✓ | স্টকের পরিমাণ ও ইতিহাস (দাম নয়) |
 | `stock.adjust` | dealership | | ✓ | | | দৈনিক সীমার মধ্যে স্টক সমন্বয় |
 | `stock.adjust.large` | dealership | | | | | সীমা ছাড়া সমন্বয়, বড় সমন্বয়ের অনুমোদন |
-| `sale.create` | dealership | | ✓ | | ✓ | বিক্রির invoice |
-| `sale.view.all` | dealership | | ✓ | | | সব বিক্রি দেখা |
-| `sale.view.own` | dealership | | | | ✓ | শুধু নিজের বিক্রি দেখা |
-| `sale.void` | dealership | | | | | বিক্রি বাতিল |
+| `sale.create` | dealership | | ✓ | | ✓ | গ্রাহকের অর্ডার তৈরি |
+| `sale.view.all` | dealership | | ✓ | | | সব অর্ডার দেখা |
+| `sale.view.own` | dealership | | | | ✓ | শুধু নিজের অর্ডার দেখা |
+| `sale.edit` | dealership | | | | | অর্ডার সংশোধন (দাম, বস্তা, তারিখ, সময়সীমা) সরাসরি বা অনুমোদন |
+| `sale.void` | dealership | | | | | অর্ডার বাতিল সরাসরি বা অনুমোদন |
+| `delivery.view` | dealership | | ✓ | | | ডেলিভারি দেখা |
+| `delivery.create` | dealership | | ✓ | | | ডেলিভারি দেওয়া |
+| `delivery.edit` | dealership | | | | | ডেলিভারি সংশোধন সরাসরি বা অনুমোদন |
+| `delivery.void` | dealership | | | | | ডেলিভারি বাতিল সরাসরি বা অনুমোদন |
+| `delivery.credit.override` | dealership | | | | | block মোডে ক্রেডিট সীমা পার হয়েও ডেলিভারি |
 | `ledger.view` | dealership | | | ✓ | | খাতা দেখা |
 | `ledger.entry.create` | dealership | | | ✓ | | খাতায় এন্ট্রি |
 | `payment.create` | dealership | | | ✓ | | পেমেন্ট এন্ট্রি |
@@ -1588,9 +1987,9 @@ Retry-After: 60
 | `commission.manage` | dealership | **হ্যাঁ** | | | | কমিশন scheme |
 | `profit.view` | dealership | **হ্যাঁ** | | | | লাভ দেখা |
 
-`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা আর কেনা ও স্টক (অংশ ১০) তৈরি হয়েছে; বিক্রি, খাতা ও কমিশনের অনুমতি আগে থেকে ঘোষণা করা আছে, যাতে Settings-এর ছক এখনই তৈরি করা যায়।
+`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা, কেনা ও স্টক (অংশ ১০), আর অর্ডার, ডেলিভারি ও আদায় (অংশ ১১) তৈরি হয়েছে; খাতা ও কমিশনের অনুমতি আগে থেকে ঘোষণা করা আছে, যাতে Settings-এর ছক এখনই তৈরি করা যায়।
 
-তৈরির পরে বাকি বা সীমা বদল আর নিষ্ক্রিয় করার তিনটা অনুমতি (`customer.balance.edit`, `product.deactivate`, `customer.deactivate`), কেনার সংশোধন ও বাতিল (`purchase.edit`, `purchase.void`), বড় স্টক সমন্বয় (`stock.adjust.large`), আর `change.view.all` ও `change.approve`, কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)। স্টাফ এসব বদল অনুরোধের মাধ্যমে করেন (অংশ ১১)।
+তৈরির পরে বাকি বা সীমা বদল আর নিষ্ক্রিয় করার তিনটা অনুমতি (`customer.balance.edit`, `product.deactivate`, `customer.deactivate`), কেনার সংশোধন ও বাতিল (`purchase.edit`, `purchase.void`), বড় স্টক সমন্বয় (`stock.adjust.large`), অর্ডার, ডেলিভারি ও আদায়ের সংশোধন ও বাতিল (`sale.edit`, `sale.void`, `delivery.edit`, `delivery.void`, `collection.edit`, `collection.void`), ক্রেডিট সীমা পারের অনুমতি (`delivery.credit.override`), আর `change.view.all` ও `change.approve`, কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)। স্টাফ এসব বদল অনুরোধের মাধ্যমে করেন (অংশ ১২)।
 
 ### frontend-এ কীভাবে ব্যবহার করবেন
 
