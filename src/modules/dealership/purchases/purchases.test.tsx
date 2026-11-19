@@ -1,4 +1,4 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Me } from '@/core/auth/types';
@@ -112,7 +112,12 @@ const purchase = (o: Partial<Purchase> = {}, withCost = true): Purchase => {
     updatedAt: '2026-11-18T11:11:13.040Z',
     ...o,
   };
-  if (!withCost) for (const i of p.items) (delete i.unitPrice, delete i.lineTotal);
+  if (!withCost) {
+    for (const i of p.items) {
+      delete i.unitPrice;
+      delete i.lineTotal;
+    }
+  }
   return p;
 };
 const page = <T,>(items: T[]) => ({ items, page: 1, pageSize: 10, total: items.length });
