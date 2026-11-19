@@ -795,7 +795,11 @@ http
         return send(res, 200, {
           product: row,
           ...pg,
-          items: pg.items.map(({ productId: _p, ...m }) => m),
+          items: pg.items.map((m) => {
+            const copy = { ...m };
+            delete copy.productId;
+            return copy;
+          }),
         });
       }
       if (rest === 'stock/adjustments' && req.method === 'POST') {
