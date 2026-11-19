@@ -54,3 +54,9 @@ export function formatDate(
   const date = value instanceof Date ? value : new Date(value);
   return new Intl.DateTimeFormat(intlTag[locale], { timeZone: TIME_ZONE, ...options }).format(date);
 }
+
+/** Today's date (YYYY-MM-DD) in the business time zone, e.g. a purchase date's default and max. */
+export function businessToday(now: Date = new Date()): string {
+  // en-CA formats as YYYY-MM-DD; the time zone decides which day it is (Dhaka after midnight).
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(now);
+}
