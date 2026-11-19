@@ -923,7 +923,15 @@
       "viewPending": "See the pending request",
       "viewPendingList": "See pending requests for this record",
       "cancel": "Cancel",
-      "moneyInvalid": "Enter an amount like 570 or 570.50."
+      "moneyInvalid": "Enter an amount like 570 or 570.50.",
+      "mode": "What do you want to ask for?",
+      "modeEdit": "Change values",
+      "modeVoid": "Void this record",
+      "voidNote": "If approved, the record is voided: it stays visible as void and its effects are reversed.",
+      "quantityInvalid": "Enter a quantity above zero (bags are whole numbers).",
+      "signedQuantityInvalid": "Enter a non-zero quantity with sign, e.g. -30 (bags are whole numbers).",
+      "dateInvalid": "Choose a date.",
+      "textInvalid": "This is too long."
     }
   }
 }

@@ -17,7 +17,7 @@ Branch: `claude/purchases-stock-ui`। প্ল্যান: `docs/plans/step-5
 ## বাকি
 
 - [x] অংশ ২: কেনার তালিকা, নতুন কেনার ফর্ম (`ProductPicker`, BigInt-এ লাইন-মোট, Idempotency-Key), বিস্তারিত, route (`purchases`, `purchases/new`, `purchases/[id]`), `businessToday()`; টেস্ট `purchases/purchases.test.tsx`। `purchase-actions.tsx` এখনো ফাঁকা (অংশ ৩)।
-- [ ] অংশ ৩: বাতিল ও সংশোধন (সরাসরি ও অনুরোধ); core request dialog বাড়ানো (quantity/date/text, label, void, আগে বসানো মান)
+- [x] অংশ ৩: বাতিল ও সংশোধন (`purchase-actions.tsx`: সরাসরি বাতিল/সংশোধন, নইলে অনুরোধ); `stock-error.ts` (`STOCK_INSUFFICIENT` + উপলব্ধ পরিমাণ); core request dialog-এ quantity/signedQuantity/date/text, `label`, `voidable` (void mode), `initial`
 - [ ] অংশ ৪: স্টকের তালিকা, ইতিহাস, সমন্বয় (সীমা পার হলে অনুরোধ); পণ্যের তালিকা ও বিস্তারিতে স্টক
 - [ ] অংশ ৫: ইনবক্সে purchase/product_stock-এর প্রভাব ও ঘরের লেবেল
 - [ ] অংশ ৬: নকল API, Playwright, DECISIONS.md, CLAUDE.md; সব চেক, PR, merge

@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Me } from '@/core/auth/types';
@@ -374,5 +374,177 @@ describe('<PurchaseDetail>', () => {
     });
     expect(await screen.findByText('This purchase is void')).toBeInTheDocument();
     expect(screen.getByText('Entered twice')).toBeInTheDocument();
+  });
+});
+
+describe('void and correct (direct or by request)', () => {
+  const detail = (p: Purchase = purchase()) => ({
+    ...baseRoutes,
+    [`GET ${B}/purchases/pu1`]: () => json(200, p),
+  });
+  const render = (me: Me) =>
+    renderInBusiness(<PurchaseDetail slug="example-cement" businessId={BID} id="pu1" />, { me });
+
+  it('owner voids with a required reason; STOCK_INSUFFICIENT says how much there is', async () => {
+    let first = true;
+    const { calls } = mockApi({
+      ...detail(),
+      [`POST ${B}/purchases/pu1/void`]: () =>
+        first
+          ? ((first = false),
+            json(409, {
+              statusCode: 409,
+              message: 'x',
+              code: 'STOCK_INSUFFICIENT',
+              details: { productId: 'p1', available: '42', required: '500' },
+            }))
+          : json(200, purchase({ status: 'void' })),
+    });
+    const { invalidate } = render(ownerP);
+    await userEvent.click(await screen.findByRole('button', { name: 'Void purchase' }));
+    const dialog = screen.getByRole('dialog', { name: 'Void PUR-0001?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Void' }));
+    expect(calls.some((c) => c.path.endsWith('/void'))).toBe(false);
+    await userEvent.type(within(dialog).getByLabelText('Reason for the change'), 'Entered twice');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Void' }));
+    expect(
+      await within(dialog).findByText('Not enough stock: only 42 available.'),
+    ).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Void' }));
+    expect(await screen.findByText('Purchase voided.')).toBeInTheDocument();
+    expect(calls.filter((c) => c.path.endsWith('/void')).at(-1)!.body).toEqual({
+      reason: 'Entered twice',
+    });
+    const keys = invalidate.mock.calls.map(([f]) => JSON.stringify(f?.queryKey));
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        JSON.stringify(['dealership', BID, 'purchases']),
+        JSON.stringify(['dealership', BID, 'stock']),
+        JSON.stringify(['dealership', BID, 'products']),
+      ]),
+    );
+  });
+
+  it('owner corrects bags: only changed lines + a required reason; no request button', async () => {
+    const { calls } = mockApi({
+      ...detail(),
+      [`PATCH ${B}/purchases/pu1`]: () => json(200, purchase()),
+    });
+    render(ownerP);
+    await screen.findByRole('heading', { name: 'Purchase PUR-0001' });
+    expect(screen.queryByRole('button', { name: 'Request a correction' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Correct' }));
+    const dialog = screen.getByRole('dialog', { name: 'Correct PUR-0001' });
+    const qty = within(dialog).getAllByLabelText('Quantity')[0]!;
+    await userEvent.clear(qty);
+    await userEvent.type(qty, '490');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save correction' }));
+    expect(within(dialog).getByLabelText('Reason for the change')).toHaveAccessibleDescription(
+      /A reason is required when the date, bags or prices change/,
+    );
+    await userEvent.type(
+      within(dialog).getByLabelText('Reason for the change'),
+      'Challan says 490',
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save correction' }));
+    expect(await screen.findByText('Purchase corrected.')).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({
+      items: [{ id: 'it1', quantity: '490' }],
+      reason: 'Challan says 490',
+    });
+  });
+
+  it('manager: corrects note directly (no reason); asks to void through the request dialog', async () => {
+    const { calls } = mockApi({
+      ...detail(),
+      [`PATCH ${B}/purchases/pu1`]: () => json(200, purchase()),
+      [`POST ${B}/change-requests/preview`]: () =>
+        json(200, {
+          entityLabel: 'PUR-0001',
+          impact: [
+            {
+              key: 'stock.p1',
+              label: 'Stock P-0001',
+              before: '500',
+              after: '0',
+              delta: '-500',
+              unit: 'bag',
+            },
+          ],
+        }),
+      [`POST ${B}/change-requests`]: () => json(201, { id: 'cr1' }),
+    });
+    render(managerP);
+    await screen.findByRole('heading', { name: 'Purchase PUR-0001' });
+    expect(screen.queryByRole('button', { name: 'Void purchase' })).not.toBeInTheDocument();
+    // Direct: only the note and paper number (purchase.create).
+    await userEvent.click(screen.getByRole('button', { name: 'Correct' }));
+    let dialog = screen.getByRole('dialog', { name: 'Correct PUR-0001' });
+    expect(within(dialog).queryByLabelText('Quantity')).not.toBeInTheDocument();
+    await userEvent.clear(within(dialog).getByLabelText('Note'));
+    await userEvent.type(within(dialog).getByLabelText('Note'), 'Truck 13');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save correction' }));
+    expect(await screen.findByText('Purchase corrected.')).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ note: 'Truck 13' });
+
+    // Request: void.
+    await userEvent.click(screen.getByRole('button', { name: 'Request a correction' }));
+    dialog = screen.getByRole('dialog', { name: 'Request a correction: PUR-0001' });
+    expect(within(dialog).getByLabelText(/Change Quantity · P-0001/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByLabelText('Void this record'));
+    await userEvent.type(within(dialog).getByLabelText('Reason for the request'), 'Entered twice');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
+    expect(await within(dialog).findByText('Effect if approved')).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send request' }));
+    expect(
+      await screen.findByText('Request sent. It takes effect when the owner approves it.'),
+    ).toBeInTheDocument();
+    const sent = calls.find((c) => c.path === `${B}/change-requests`)!;
+    expect(sent.body).toEqual({
+      entityType: 'purchase',
+      entityId: 'pu1',
+      kind: 'void',
+      reason: 'Entered twice',
+    });
+  });
+
+  it('manager asks to change bags: items.<id>.quantity as a string', async () => {
+    const { calls } = mockApi({
+      ...detail(),
+      [`POST ${B}/change-requests/preview`]: () => json(200, { entityLabel: 'x', impact: [] }),
+      [`POST ${B}/change-requests`]: () => json(201, { id: 'cr1' }),
+    });
+    render(managerP);
+    await userEvent.click(await screen.findByRole('button', { name: 'Request a correction' }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.click(within(dialog).getByLabelText(/Change Quantity · P-0001/));
+    const input = within(dialog).getByLabelText(/New Quantity · P-0001/);
+    await userEvent.clear(input);
+    await userEvent.type(input, '12.5');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
+    expect(input).toHaveAccessibleDescription(/bags are whole numbers/);
+    await userEvent.clear(input);
+    await userEvent.type(input, '490');
+    await userEvent.type(within(dialog).getByLabelText('Reason for the request'), 'Challan');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
+    await userEvent.click(await within(dialog).findByRole('button', { name: 'Send request' }));
+    await vi.waitFor(() =>
+      expect(calls.find((c) => c.path === `${B}/change-requests`)!.body).toMatchObject({
+        kind: 'edit',
+        proposedChange: { 'items.it1.quantity': '490' },
+      }),
+    );
+  });
+
+  it('salesman (view only) and void purchases: no actions at all', async () => {
+    mockApi(detail(purchase({}, false)));
+    const { unmount } = render(salesmanP);
+    await screen.findByRole('heading', { name: 'Purchase PUR-0001' });
+    expect(screen.queryByRole('button', { name: /Void|Correct|Request/ })).not.toBeInTheDocument();
+    unmount();
+    mockApi(detail(purchase({ status: 'void' })));
+    render(ownerP);
+    await screen.findByText('This purchase is void');
+    expect(screen.queryByRole('button', { name: /Void purchase|Correct/ })).not.toBeInTheDocument();
   });
 });
