@@ -100,3 +100,7 @@ e2e/                      Playwright প্রবাহ ও নকল API (mock-
 ```
 
 প্রতিটা ফোল্ডারের README-তে তার দায়িত্ব লেখা আছে।
+
+### Mac-এ dev-এর ক্যাশ
+
+`npm run dev` নিজে থেকে dependency বা Node বদলালে dev ক্যাশ (`.next/dev`) মুছে নেয়। তবুও Turbopack-এর "Cannot find module" এলে `npm run dev:clean`, তারপর `npm run dev:webpack`। বিস্তারিত `docs/plans/mac-dev-cache.md`।

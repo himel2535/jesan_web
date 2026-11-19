@@ -7,7 +7,10 @@
     "node": ">=22.22.2"
   },
   "scripts": {
+    "predev": "node scripts/dev-cache-guard.mjs",
     "dev": "next dev",
+    "dev:clean": "node scripts/dev-cache-guard.mjs --force && next dev",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
