@@ -32,6 +32,8 @@ describe('dealership sidebar by permission', () => {
       'suppliers',
       'purchases',
       'sales',
+      'deliveries',
+      'collections',
       'stock',
       'settings',
     ]);
@@ -45,6 +47,8 @@ describe('dealership sidebar by permission', () => {
       'suppliers',
       'purchases',
       'sales',
+      'deliveries',
+      'collections',
       'stock',
       'accounts',
       'commission',

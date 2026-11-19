@@ -118,7 +118,7 @@
       "PURCHASE_ALREADY_VOID": "এই কেনা আগেই বাতিল হয়েছে; আবার বাতিল বা সংশোধন করা যায় না।",
       "PRODUCT_DUPLICATE": "এই পণ্য এই কেনার আরেকটা লাইনে আছে।",
       "PRODUCT_NOT_FOUND_OR_INACTIVE": "এই পণ্য নেই বা নিষ্ক্রিয়।",
-      "QUANTITY_INVALID": "শূন্যের বেশি পরিমাণ লিখুন (বস্তা পূর্ণসংখ্যা)।",
+      "QUANTITY_INVALID": "শূন্যের বেশি পরিমাণ লিখুন, এককের নিয়ম মেনে।",
       "UNIT_PRICE_INVALID": "দাম লিখুন যেমন 570 বা 570.50।",
       "SUPPLIER_NOT_FOUND_OR_INACTIVE": "এই সরবরাহকারী নেই বা নিষ্ক্রিয়।",
       "PURCHASE_DATE_INVALID": "এই তারিখ ক্যালেন্ডারে নেই।",
@@ -126,9 +126,38 @@
       "PURCHASE_DATE_TOO_OLD": "এত পুরনো তারিখ আপনি দিতে পারেন না।",
       "STOCK_INSUFFICIENT": "এর জন্য যথেষ্ট স্টক নেই।",
       "ADJUSTMENT_APPROVAL_REQUIRED": "এটা আপনার দৈনিক সমন্বয়-সীমার বেশি; অনুমোদনের জন্য পাঠান।",
-      "ADJUST_BY_INVALID": "শূন্য নয় এমন পরিমাণ লিখুন (বস্তা পূর্ণসংখ্যা)।",
+      "ADJUST_BY_INVALID": "শূন্য নয় এমন পরিমাণ লিখুন, এককের নিয়ম মেনে।",
       "NOTE_INVALID": "নোটটা সঠিক নয় বা বেশি লম্বা।",
-      "SUPPLIER_REFERENCE_INVALID": "কাগজের নম্বর সঠিক নয় বা বেশি লম্বা।"
+      "SUPPLIER_REFERENCE_INVALID": "কাগজের নম্বর সঠিক নয় বা বেশি লম্বা।",
+      "ORDER_NOT_FOUND": "এই অর্ডার পাওয়া যায়নি।",
+      "DELIVERY_NOT_FOUND": "এই ডেলিভারি পাওয়া যায়নি।",
+      "COLLECTION_NOT_FOUND": "এই আদায় পাওয়া যায়নি।",
+      "CUSTOMER_NOT_FOUND_OR_INACTIVE": "এই গ্রাহক নেই বা নিষ্ক্রিয়, তাই নতুন অর্ডার নেওয়া যাবে না।",
+      "DELIVER_BY_INVALID": "প্রতিশ্রুত তারিখ ঠিক নয়, বা অর্ডারের তারিখের আগে।",
+      "DELIVERY_WINDOW_INVALID": "দেওয়া জরুরিতার একটা বেছে নিন।",
+      "ORDER_DATE_INVALID": "এই তারিখ নেই, বা প্রথম ডেলিভারির পরের।",
+      "ORDER_DATE_IN_FUTURE": "অর্ডারের তারিখ ভবিষ্যতের হতে পারে না।",
+      "ORDER_DATE_TOO_OLD": "অর্ডারের এই তারিখ আপনার বসানোর সীমার চেয়ে পুরনো।",
+      "DELIVERY_DATE_INVALID": "ডেলিভারির এই তারিখ নেই, বা অর্ডারের তারিখের আগে।",
+      "DELIVERY_DATE_IN_FUTURE": "ডেলিভারির তারিখ ভবিষ্যতের হতে পারে না।",
+      "DELIVERY_DATE_TOO_OLD": "ডেলিভারির এই তারিখ আপনার বসানোর সীমার চেয়ে পুরনো।",
+      "COLLECTION_DATE_INVALID": "আদায়ের এই তারিখ নেই।",
+      "COLLECTION_DATE_IN_FUTURE": "আদায়ের তারিখ ভবিষ্যতের হতে পারে না।",
+      "COLLECTION_DATE_TOO_OLD": "আদায়ের এই তারিখ আপনার বসানোর সীমার চেয়ে পুরনো।",
+      "ORDER_ITEM_NOT_FOUND": "এই লাইন এই অর্ডারের নয়।",
+      "ORDER_ITEM_DUPLICATE": "এই অর্ডার-লাইন এই ডেলিভারির আরেকটা লাইনে আছে।",
+      "DELIVERY_QUANTITY_TOO_LARGE": "এই লাইনে যত বাকি, তার চেয়ে বেশি।",
+      "ORDER_QUANTITY_TOO_SMALL": "যত ডেলিভারি হয়ে গেছে, অর্ডার তার নিচে নামানো যাবে না।",
+      "COLLECTION_METHOD_UNKNOWN": "দেওয়া আদায়ের পদ্ধতিগুলোর একটা বেছে নিন।",
+      "AMOUNT_TOO_SMALL": "শূন্যের বেশি টাকা লিখুন।",
+      "AMOUNT_INVALID": "টাকা লিখুন ৫৭০ বা ৫৭০.৫০-এর মতো করে।",
+      "TRANSPORT_REFERENCE_INVALID": "পরিবহনের রেফারেন্স ঠিক নয় বা খুব লম্বা।",
+      "REFERENCE_INVALID": "রেফারেন্স ঠিক নয় বা খুব লম্বা।",
+      "CREDIT_LIMIT_EXCEEDED": "এই ডেলিভারিতে গ্রাহকের ক্রেডিট সীমা পেরিয়ে যেত।",
+      "ORDER_ALREADY_VOID": "এই অর্ডার বাতিল; এতে ডেলিভারি, সংশোধন বা আবার বাতিল হয় না।",
+      "DELIVERY_ALREADY_VOID": "এই ডেলিভারি আগেই বাতিল; আবার সংশোধন বা বাতিল হয় না।",
+      "COLLECTION_ALREADY_VOID": "এই আদায় আগেই বাতিল; আবার সংশোধন বা বাতিল হয় না।",
+      "DELIVERY_EXISTS": "এই অর্ডারে এখনো সক্রিয় ডেলিভারি আছে; আগে সেগুলো বাতিল করুন।"
     },
     "problems": {
       "REQUIRED": "এই ঘরটা পূরণ করুন।",
@@ -262,7 +291,9 @@
       "accounts": "হিসাব",
       "commission": "কমিশন",
       "reports": "রিপোর্ট",
-      "settings": "সেটিংস"
+      "settings": "সেটিংস",
+      "deliveries": "ডেলিভারি",
+      "collections": "আদায়"
     },
     "common": {
       "searchLabel": "খুঁজুন",
@@ -445,7 +476,7 @@
         "remove": "{name} বাদ দিন",
         "noLines": "অন্তত একটা পণ্য যোগ করুন।",
         "tooManyLines": "সর্বোচ্চ ৫০টা লাইন।",
-        "quantityInvalid": "শূন্যের বেশি পরিমাণ লিখুন (বস্তা পূর্ণসংখ্যা)।",
+        "quantityInvalid": "শূন্যের বেশি পরিমাণ লিখুন, এককের নিয়ম মেনে।",
         "priceInvalid": "দাম লিখুন যেমন 570 বা 570.50।",
         "required": "এই ঘরটা পূরণ করুন।",
         "grandTotal": "মোট (শুধু দেখানো; হিসাব সার্ভারের)",
@@ -472,14 +503,14 @@
       },
       "void": {
         "title": "{code} বাতিল করবেন?",
-        "body": "এই বস্তাগুলো স্টক থেকে আজকের তারিখে কমে যাবে। কেনাটা \"বাতিল\" হিসেবে দেখা যাবে।",
+        "body": "এই পরিমাণ স্টক থেকে আজকের তারিখে কমে যাবে। কেনাটা \"বাতিল\" হিসেবে দেখা যাবে।",
         "confirm": "বাতিল করুন",
         "done": "কেনা বাতিল হয়েছে।"
       },
       "correct": {
         "title": "{code} সংশোধন",
         "intro": "শুধু যা বদলাবেন তা-ই যাবে। লাইন যোগ, বাদ বা পণ্য বদল হয় না; তার জন্য বাতিল করে নতুন করে লিখুন।",
-        "reasonNeeded": "তারিখ, বস্তা বা দাম বদলালে কারণ লিখতে হবে।",
+        "reasonNeeded": "তারিখ, পরিমাণ বা দাম বদলালে কারণ লিখতে হবে।",
         "nothing": "কিছুই বদলানো হয়নি।",
         "done": "কেনা সংশোধন হয়েছে।",
         "save": "সংশোধন সেভ করুন",
@@ -532,10 +563,10 @@
       },
       "adjustDialog": {
         "title": "স্টক সমন্বয়: {name}",
-        "intro": "ছেঁড়া বা পাওয়া বস্তার জন্য। স্টক কমাতে মাইনাস চিহ্ন দিন, যেমন -3।",
+        "intro": "নষ্ট বা পাওয়া মালের জন্য। স্টক কমাতে মাইনাস চিহ্ন দিন, যেমন -৩।",
         "quantity": "পরিবর্তন (চিহ্নসহ)",
         "quantityHint": "এখন স্টকে: {quantity}। যেমন -3 বা 5।",
-        "quantityInvalid": "চিহ্নসহ শূন্য নয় এমন পরিমাণ লিখুন, যেমন -3 (বস্তা পূর্ণসংখ্যা)।",
+        "quantityInvalid": "চিহ্নসহ শূন্য নয় এমন পরিমাণ লিখুন, যেমন -৩, এককের নিয়ম মেনে।",
         "reason": "কারণ",
         "reasonHint": "কেন? (৩–৫০০ অক্ষর)",
         "reasonRequired": "কারণ লিখুন (৩–৫০০ অক্ষর)।",
@@ -551,6 +582,263 @@
       "notFoundDescription": "এই ব্যবসায় এমন কোনো পণ্য নেই।",
       "productStock": "বর্তমান স্টক",
       "productHistory": "স্টক-ইতিহাস"
+    },
+    "sales": {
+      "status": {
+        "label": "অবস্থা",
+        "all": "সব অবস্থা",
+        "active": "সক্রিয়",
+        "void": "বাতিল"
+      },
+      "deliveryStatus": {
+        "label": "ডেলিভারি",
+        "all": "সব",
+        "open": "শেষ হয়নি",
+        "pending": "শুরু হয়নি",
+        "partial": "আংশিক গেছে",
+        "delivered": "সব গেছে"
+      },
+      "window": {
+        "label": "জরুরিতা",
+        "today": "আজকের মধ্যে",
+        "two_days": "দুই দিনের মধ্যে",
+        "one_week": "এক সপ্তাহের মধ্যে"
+      },
+      "pick": {
+        "searchCustomers": "নাম, কোড বা ফোন",
+        "searchHint": "নাম, কোড বা ফোন নম্বরের অংশ লিখুন।",
+        "noCustomers": "কোনো গ্রাহক মেলেনি।",
+        "inactiveCustomer": "নিষ্ক্রিয়"
+      },
+      "filters": {
+        "from": "থেকে",
+        "to": "পর্যন্ত",
+        "customer": "গ্রাহক",
+        "customerAll": "সব গ্রাহক",
+        "chip": "গ্রাহক: {name}",
+        "clearCustomer": "গ্রাহকের ফিল্টার মুছুন",
+        "unknown": "বাছাই করা গ্রাহক"
+      },
+      "errors": {
+        "remainingOnly": "এই লাইনে আর মাত্র {remaining} {unit} বাকি।",
+        "stockOnly": "স্টকে আছে মাত্র {available} {unit}।",
+        "creditLimit": "ক্রেডিট সীমা {limit}; এই ডেলিভারির পরে বাকি হতো {after}।"
+      },
+      "common": {
+        "code": "কোড",
+        "date": "তারিখ",
+        "customer": "গ্রাহক",
+        "amount": "টাকা",
+        "quantity": "পরিমাণ",
+        "quantityWithUnit": "পরিমাণ ({unit})",
+        "unitPrice": "দর",
+        "lineTotal": "লাইনের মোট",
+        "totalQuantity": "মোট পরিমাণ",
+        "totalAmount": "মোট",
+        "note": "নোট",
+        "createdBy": "বসিয়েছেন",
+        "createdAt": "কখন",
+        "product": "পণ্য",
+        "order": "অর্ডার",
+        "saving": "সেভ হচ্ছে…",
+        "save": "সেভ করুন",
+        "cancel": "বাতিল",
+        "back": "ফিরে যান",
+        "required": "এই ঘরটা লাগবে।",
+        "quantityInvalid": "শূন্যের বেশি পরিমাণ লিখুন, এককের নিয়ম মেনে।",
+        "priceInvalid": "দর লিখুন ৫৭০ বা ৫৭০.৫০-এর মতো করে।",
+        "voidedTitle": "এই দলিল বাতিল",
+        "voidedBy": "{name} বাতিল করেছেন, {date}।",
+        "voidReason": "কারণ",
+        "nothing": "কিছু বদলানো হয়নি।",
+        "reasonNeeded": "কারণ লিখুন (৩–৫০০ অক্ষর)।"
+      },
+      "orders": {
+        "title": "অর্ডার",
+        "description": "{business}-এর গ্রাহকের অর্ডার: কী অর্ডার হলো, কী গেল, কত বাকি।",
+        "newTitle": "নতুন অর্ডার",
+        "new": "নতুন অর্ডার",
+        "emptyTitle": "এখনো কোনো অর্ডার নেই",
+        "emptyDescription": "নতুন অর্ডার এখানে দেখা যাবে।",
+        "deliveredQuantity": "গেছে",
+        "remainingQuantity": "বাকি",
+        "deliverBy": "প্রতিশ্রুত তারিখ",
+        "orderDate": "অর্ডারের তারিখ",
+        "form": {
+          "customer": "গ্রাহক",
+          "customerChosen": "গ্রাহক: {name}",
+          "changeCustomer": "অন্য গ্রাহক বাছুন",
+          "customerRequired": "একজন গ্রাহক বাছুন।",
+          "dateHint": "ডিফল্ট আজ; ভবিষ্যতের তারিখ চলবে না।",
+          "addProduct": "পণ্য যোগ করুন",
+          "remove": "{name} সরান",
+          "noLines": "অন্তত একটা পণ্য যোগ করুন।",
+          "tooManyLines": "সর্বোচ্চ ৫০টা লাইন।",
+          "grandTotal": "অর্ডারের মোট",
+          "advanceTitle": "এই অর্ডারের সঙ্গে অগ্রিম",
+          "advanceToggle": "এখনই অগ্রিম নিন",
+          "advanceHint": "ঐচ্ছিক। এটা এই অর্ডারের রেফারেন্সে আদায় হিসেবে বসে, অর্ডারে বরাদ্দ হয় না।",
+          "created": "অর্ডার সেভ হয়েছে।",
+          "createdNoAdvance": "অর্ডার সেভ হয়েছে, কিন্তু অগ্রিম বসেনি: {reason} এখান থেকে আবার আদায় নিন।",
+          "takeCollection": "আদায় নিন"
+        },
+        "detail": {
+          "title": "অর্ডার {code}",
+          "items": "লাইন",
+          "deliveries": "এই অর্ডারের ডেলিভারি",
+          "noDeliveries": "এখনো কিছু যায়নি।",
+          "collections": "এই অর্ডারের বিপরীতে আদায়",
+          "noCollections": "এই অর্ডারের বিপরীতে কোনো আদায় নেই।",
+          "back": "অর্ডারের তালিকায়",
+          "deliver": "ডেলিভারি দিন"
+        },
+        "actions": {
+          "correct": "সংশোধন",
+          "void": "বাতিল"
+        },
+        "void": {
+          "title": "অর্ডার {code} বাতিল করবেন?",
+          "body": "অর্ডারটা বাতিল হবে, এর বিপরীতে আর কিছু ডেলিভারি দেওয়া যাবে না।",
+          "advanceNote": "আগে নেওয়া টাকা আপনা থেকে ফেরত যায় না; সেটা গ্রাহকের অগ্রিম হিসেবে জমা থাকে। টাকা ফেরত দিলে সেই আদায় আলাদা করে বাতিল করুন।",
+          "confirm": "অর্ডার বাতিল করুন",
+          "done": "অর্ডার বাতিল হয়েছে।"
+        },
+        "correct": {
+          "title": "অর্ডার {code} সংশোধন",
+          "intro": "শুধু যা বদলেছেন তা-ই যাবে। কারণ বদলের সঙ্গে রাখা হয়।",
+          "save": "সংশোধন সেভ করুন",
+          "saving": "সেভ হচ্ছে…",
+          "done": "অর্ডার সংশোধন হয়েছে।"
+        }
+      },
+      "deliveries": {
+        "title": "ডেলিভারি",
+        "description": "{business}-এর ডেলিভারি: কোন অর্ডারের বিপরীতে কী গেল।",
+        "newTitle": "নতুন ডেলিভারি",
+        "emptyTitle": "এখনো কোনো ডেলিভারি নেই",
+        "emptyDescription": "অর্ডারের বিপরীতে ডেলিভারি এখানে দেখা যাবে।",
+        "deliveryDate": "ডেলিভারির তারিখ",
+        "transportReference": "পরিবহনের রেফারেন্স",
+        "transportReferenceHint": "ট্রিপ বা ট্রাকের নম্বর। ভাড়া গ্রাহকের কাছ থেকে নেওয়া হয় না।",
+        "creditWarning": "এই ডেলিভারিতে গ্রাহকের ক্রেডিট সীমা পেরিয়ে গেছে।",
+        "form": {
+          "orderRequired": "কোনো অর্ডার থেকে ডেলিভারি খুলুন।",
+          "intro": "এই অর্ডারের পুরো বা অংশ ডেলিভারি দিন। যে লাইনের কিছু যাবে না, সেটা ফাঁকা রাখুন।",
+          "remaining": "এই লাইনে বাকি",
+          "fillAll": "সব বাকি বসান",
+          "noLines": "অন্তত একটা লাইনে পরিমাণ লিখুন।",
+          "tooLarge": "এই লাইনে যত বাকি, তার চেয়ে বেশি।",
+          "created": "ডেলিভারি সেভ হয়েছে।",
+          "nothingLeft": "এই অর্ডারের সব ডেলিভারি হয়ে গেছে।"
+        },
+        "detail": {
+          "title": "ডেলিভারি {code}",
+          "items": "লাইন",
+          "back": "ডেলিভারির তালিকায়"
+        },
+        "actions": {
+          "correct": "সংশোধন",
+          "void": "বাতিল"
+        },
+        "void": {
+          "title": "ডেলিভারি {code} বাতিল করবেন?",
+          "body": "মাল স্টকে ফিরবে আর গ্রাহকের পাওনা কমবে, আজকের তারিখে।",
+          "confirm": "ডেলিভারি বাতিল করুন",
+          "done": "ডেলিভারি বাতিল হয়েছে।"
+        },
+        "correct": {
+          "title": "ডেলিভারি {code} সংশোধন",
+          "intro": "শুধু যা বদলেছেন তা-ই যাবে। স্টক, অর্ডার ও খাতা পার্থক্য অনুযায়ী বদলাবে।",
+          "save": "সংশোধন সেভ করুন",
+          "done": "ডেলিভারি সংশোধন হয়েছে।"
+        }
+      },
+      "collections": {
+        "title": "আদায়",
+        "description": "{business}-এর গ্রাহকের কাছ থেকে আদায় করা টাকা।",
+        "newTitle": "আদায় নিন",
+        "new": "আদায় নিন",
+        "emptyTitle": "এখনো কোনো আদায় নেই",
+        "emptyDescription": "গ্রাহকের কাছ থেকে আদায় এখানে দেখা যাবে।",
+        "collectionDate": "আদায়ের তারিখ",
+        "method": "পদ্ধতি",
+        "methodAll": "সব পদ্ধতি",
+        "reference": "রেফারেন্স",
+        "referenceHint": "লেনদেনের id, চেকের নম্বর।",
+        "againstOrder": "কোন অর্ডারের বিপরীতে",
+        "againstOrderNone": "কোনো অর্ডার নয় (সাধারণ অগ্রিম)",
+        "againstOrderHint": "শুধু রেফারেন্স: টাকা কোনো অর্ডারে বরাদ্দ হয় না।",
+        "amountInvalid": "শূন্যের বেশি টাকা লিখুন, ৫৭০ বা ৫৭০.৫০-এর মতো করে।",
+        "methodRequired": "একটা পদ্ধতি বাছুন।",
+        "advance": "পাওনার বেশি আদায় চলে; তখন ব্যালেন্স অগ্রিম হয়ে যায়।",
+        "form": {
+          "created": "আদায় সেভ হয়েছে।"
+        },
+        "detail": {
+          "title": "আদায় {code}",
+          "back": "আদায়ের তালিকায়"
+        },
+        "actions": {
+          "correct": "সংশোধন",
+          "void": "বাতিল"
+        },
+        "void": {
+          "title": "আদায় {code} বাতিল করবেন?",
+          "body": "খাতায় আজকের তারিখে উল্টো লাইন বসবে আর গ্রাহকের পাওনা আবার বাড়বে।",
+          "confirm": "আদায় বাতিল করুন",
+          "done": "আদায় বাতিল হয়েছে।"
+        },
+        "correct": {
+          "title": "আদায় {code} সংশোধন",
+          "intro": "শুধু যা বদলেছেন তা-ই যাবে। ব্যালেন্স ও খাতা পার্থক্য অনুযায়ী বদলাবে।",
+          "save": "সংশোধন সেভ করুন",
+          "done": "আদায় সংশোধন হয়েছে।"
+        },
+        "methodNames": {
+          "cash": "নগদ টাকা",
+          "bkash": "বিকাশ",
+          "nagad": "নগদ",
+          "rocket": "রকেট",
+          "bank": "ব্যাংক ট্রান্সফার",
+          "cheque": "চেক",
+          "card": "কার্ড"
+        }
+      },
+      "ledger": {
+        "title": "খাতা",
+        "tabDetails": "বিস্তারিত",
+        "tabLedger": "খাতা",
+        "tabActivity": "অর্ডার ও ডেলিভারি",
+        "tabsLabel": "গ্রাহকের অংশ",
+        "openingBalance": "শুরুর বাকি",
+        "deliveredAmount": "ডেলিভারির মোট",
+        "collectedAmount": "আদায়ের মোট",
+        "currentBalance": "চলমান বাকি",
+        "creditLimit": "ক্রেডিট সীমা",
+        "noLimit": "সীমা নেই",
+        "pendingDeliveryQuantity": "ডেলিভারি বাকি",
+        "entryDate": "তারিখ",
+        "kind": "ধরন",
+        "source": "দলিল",
+        "reason": "কারণ",
+        "amountHint": "ধনাত্মক মানে পাওনা বাড়ে, ঋণাত্মক মানে কমে।",
+        "emptyTitle": "খাতা খালি",
+        "emptyDescription": "ডেলিভারি ও আদায় এখানে দেখা যাবে।",
+        "kinds": {
+          "delivery": "ডেলিভারি",
+          "delivery_edit": "ডেলিভারি সংশোধন",
+          "delivery_void": "ডেলিভারি বাতিল",
+          "collection": "আদায়",
+          "collection_edit": "আদায় সংশোধন",
+          "collection_void": "আদায় বাতিল"
+        },
+        "activity": {
+          "orders": "অর্ডার",
+          "deliveries": "ডেলিভারি",
+          "noOrders": "এই গ্রাহকের কোনো অর্ডার নেই।",
+          "noDeliveries": "এই গ্রাহকের কোনো ডেলিভারি নেই।"
+        }
+      }
     }
   },
   "settings": {
@@ -733,7 +1021,8 @@
       "reports": "রিপোর্ট",
       "commission": "কমিশন",
       "profit": "লাভ",
-      "change": "সংশোধনের অনুরোধ"
+      "change": "সংশোধনের অনুরোধ",
+      "delivery": "ডেলিভারি"
     },
     "items": {
       "settings_view": "সেটিংস দেখা",
@@ -749,10 +1038,13 @@
       "customer_manage": "গ্রাহক যোগ ও বদল",
       "customer_due_view": "গ্রাহকের বাকি ও ক্রেডিট সীমা দেখা",
       "collection_create": "বাকি আদায়ের এন্ট্রি",
+      "collection_view": "আদায় দেখা",
+      "collection_edit": "আদায় সংশোধন সরাসরি বা অনুমোদনে",
+      "collection_void": "আদায় বাতিল সরাসরি বা অনুমোদনে",
       "supplier_view": "সরবরাহকারী দেখা",
       "purchase_view": "কেনা দেখা",
       "purchase_create": "কেনার এন্ট্রি",
-      "purchase_edit": "কেনা সংশোধন (তারিখ, বস্তা, দাম)",
+      "purchase_edit": "কেনা সংশোধন (তারিখ, পরিমাণ, দাম)",
       "purchase_void": "কেনা বাতিল",
       "stock_view": "স্টকের পরিমাণ দেখা (দাম নয়)",
       "stock_adjust": "স্টক adjustment",
@@ -760,7 +1052,13 @@
       "sale_create": "বিক্রির invoice তৈরি",
       "sale_view_all": "সব বিক্রি দেখা",
       "sale_view_own": "শুধু নিজের বিক্রি দেখা",
+      "sale_edit": "অর্ডার সংশোধন সরাসরি বা অনুমোদনে",
       "sale_void": "বিক্রি বাতিল",
+      "delivery_view": "ডেলিভারি দেখা",
+      "delivery_create": "অর্ডারের বিপরীতে ডেলিভারি দেওয়া",
+      "delivery_edit": "ডেলিভারি সংশোধন সরাসরি বা অনুমোদনে",
+      "delivery_void": "ডেলিভারি বাতিল সরাসরি বা অনুমোদনে",
+      "delivery_credit_override": "block মোডে ক্রেডিট সীমা পার হয়েও ডেলিভারি",
       "ledger_view": "খাতা দেখা",
       "ledger_entry_create": "খাতায় এন্ট্রি",
       "payment_create": "পেমেন্ট এন্ট্রি",
@@ -804,7 +1102,10 @@
       "customer": "গ্রাহক",
       "product_category": "ক্যাটাগরি",
       "purchase": "কেনা",
-      "product_stock": "স্টক"
+      "product_stock": "স্টক",
+      "sales_order": "অর্ডার",
+      "delivery": "ডেলিভারি",
+      "collection": "আদায়"
     },
     "kind": {
       "edit": "বদল",
@@ -861,7 +1162,16 @@
       "supplierReference": "কাগজের নম্বর",
       "adjustBy": "স্টক পরিবর্তন",
       "line_quantity": "লাইনের পরিমাণ",
-      "line_unitPrice": "লাইনের দাম"
+      "line_unitPrice": "লাইনের দাম",
+      "orderDate": "অর্ডারের তারিখ",
+      "deliverBy": "প্রতিশ্রুত তারিখ",
+      "deliveryWindow": "জরুরিতা",
+      "deliveryDate": "ডেলিভারির তারিখ",
+      "collectionDate": "আদায়ের তারিখ",
+      "transportReference": "পরিবহনের রেফারেন্স",
+      "reference": "রেফারেন্স",
+      "method": "পদ্ধতি",
+      "amount": "টাকা"
     },
     "values": {
       "active": "সক্রিয়",
@@ -876,7 +1186,12 @@
       "customer_creditLimit": "ঋণসীমা",
       "customer_isActive": "গ্রাহকের অবস্থা",
       "product_category_isActive": "ক্যাটাগরির অবস্থা",
-      "purchase_totalAmount": "কেনার মোট"
+      "purchase_totalAmount": "কেনার মোট",
+      "order_totalAmount": "অর্ডারের মোট",
+      "order_remainingQuantity": "ডেলিভারি বাকি",
+      "customer_pendingDeliveryQuantity": "ডেলিভারি বাকি",
+      "delivery_totalAmount": "ডেলিভারির মোট",
+      "collection_amount": "আদায়ের টাকা"
     },
     "notes": {
       "inactive": "নিষ্ক্রিয় থাকলে নতুন কাজে বাছাই করা যাবে না; পুরনো রেকর্ড যেমন আছে থাকবে।"
@@ -941,15 +1256,15 @@
       "modeEdit": "মান বদল",
       "modeVoid": "এই রেকর্ড বাতিল",
       "voidNote": "অনুমোদন হলে রেকর্ডটা বাতিল হবে: \"বাতিল\" হিসেবে দেখা যাবে, আর এর প্রভাব উল্টে যাবে।",
-      "quantityInvalid": "শূন্যের বেশি পরিমাণ লিখুন (বস্তা পূর্ণসংখ্যা)।",
-      "signedQuantityInvalid": "চিহ্নসহ শূন্য নয় এমন পরিমাণ লিখুন, যেমন -30 (বস্তা পূর্ণসংখ্যা)।",
+      "quantityInvalid": "শূন্যের বেশি পরিমাণ লিখুন, এককের নিয়ম মেনে।",
+      "signedQuantityInvalid": "চিহ্নসহ শূন্য নয় এমন পরিমাণ লিখুন, যেমন -৩, এককের নিয়ম মেনে।",
       "dateInvalid": "একটা তারিখ বাছাই করুন।",
       "textInvalid": "লেখাটা বেশি লম্বা।"
     },
     "impactPrefix": {
       "stock": "স্টক",
       "lastPurchasePrice": "শেষ কেনা-দাম",
-      "purchaseCounter": "মাসে কেনা বস্তা"
+      "purchaseCounter": "মাসে কেনা পরিমাণ"
     }
   }
 }

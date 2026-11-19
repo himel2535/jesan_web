@@ -22,6 +22,13 @@ export const dealershipManifest = {
       icon: 'receipt',
       permission: { anyOf: ['sale.view.all', 'sale.view.own'] },
     },
+    {
+      key: 'deliveries',
+      path: 'deliveries',
+      icon: 'truck',
+      permission: 'delivery.view',
+    },
+    { key: 'collections', path: 'collections', icon: 'wallet', permission: 'collection.view' },
     { key: 'stock', path: 'stock', icon: 'boxes', permission: 'stock.view' },
     { key: 'accounts', path: 'accounts', icon: 'wallet', permission: 'ledger.view' },
     { key: 'commission', path: 'commission', icon: 'percent', permission: 'commission.view' },
@@ -37,5 +44,16 @@ export const dealershipManifest = {
     // A purchase changes stock and last purchase prices; a large adjustment only the stock.
     purchase: { path: 'purchases/:id', invalidate: ['purchases', 'stock', 'products'] },
     product_stock: { path: 'stock/:id', invalidate: ['stock'] },
+    // An order holds the prices, so correcting one re-prices its delivered lines and the ledger.
+    sales_order: {
+      path: 'sales/:id',
+      invalidate: ['orders', 'deliveries', 'customers', 'ledger'],
+    },
+    // A delivery moves stock and the customer's balance.
+    delivery: {
+      path: 'deliveries/:id',
+      invalidate: ['deliveries', 'orders', 'stock', 'customers', 'ledger'],
+    },
+    collection: { path: 'collections/:id', invalidate: ['collections', 'customers', 'ledger'] },
   },
 } as const satisfies ModuleManifest;

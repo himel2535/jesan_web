@@ -282,7 +282,7 @@ describe('<PurchaseForm>', () => {
     await userEvent.type(screen.getByLabelText('Unit price'), '12.345');
     await userEvent.click(screen.getByRole('button', { name: 'Save purchase' }));
     expect(screen.getByLabelText('Quantity (Bag)')).toHaveAccessibleDescription(
-      'Enter a quantity above zero (bags are whole numbers).',
+      'Enter a quantity above zero that fits the unit’s rule.',
     );
     expect(screen.getByLabelText('Unit price')).toHaveAccessibleDescription(
       'Enter the price like 570 or 570.50.',
@@ -295,7 +295,7 @@ describe('<PurchaseForm>', () => {
     await userEvent.type(screen.getByLabelText('Unit price'), '570');
     await userEvent.click(screen.getByRole('button', { name: 'Save purchase' }));
     expect(
-      await screen.findByText('Enter a quantity above zero (bags are whole numbers).'),
+      await screen.findByText('Enter a quantity above zero that fits the unit’s rule.'),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Quantity (Bag)')).toHaveValue('10');
     fail = false;
@@ -440,7 +440,7 @@ describe('void and correct (direct or by request)', () => {
     await userEvent.type(qty, '490');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save correction' }));
     expect(within(dialog).getByLabelText('Reason for the change')).toHaveAccessibleDescription(
-      /A reason is required when the date, bags or prices change/,
+      /A reason is required when the date, quantities or prices change/,
     );
     await userEvent.type(
       within(dialog).getByLabelText('Reason for the change'),
@@ -522,7 +522,7 @@ describe('void and correct (direct or by request)', () => {
     await userEvent.clear(input);
     await userEvent.type(input, '12.5');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
-    expect(input).toHaveAccessibleDescription(/bags are whole numbers/);
+    expect(input).toHaveAccessibleDescription(/fits the unit’s rule/);
     await userEvent.clear(input);
     await userEvent.type(input, '490');
     await userEvent.type(within(dialog).getByLabelText('Reason for the request'), 'Challan');

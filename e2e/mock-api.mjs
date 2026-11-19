@@ -7,6 +7,9 @@ const ORIGINS = ['http://localhost:3000'];
 
 const MANAGER = [
   'collection.create',
+  'collection.view',
+  'delivery.create',
+  'delivery.view',
   'customer.due.view',
   'customer.manage',
   'customer.view',
@@ -49,6 +52,13 @@ const OWNER = [
   'profit.view',
   'purchase.void',
   'purchase.edit',
+  'sale.edit',
+  'sale.void',
+  'delivery.edit',
+  'delivery.void',
+  'delivery.credit.override',
+  'collection.edit',
+  'collection.void',
   'stock.adjust.large',
   'change.view.all',
   'change.approve',
@@ -154,6 +164,9 @@ const customers = [
     openingBalance: '12500.00',
     currentBalance: '1250000.00',
     creditLimit: null,
+    pendingDeliveryQuantity: '0',
+    deliveredAmount: '0.00',
+    collectedAmount: '0.00',
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -169,6 +182,9 @@ const customers = [
     openingBalance: '-200.50',
     currentBalance: '-200.50',
     creditLimit: '50000.00',
+    pendingDeliveryQuantity: '0',
+    deliveredAmount: '0.00',
+    collectedAmount: '0.00',
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -418,6 +434,245 @@ function voidPurchase(pu, reason, user) {
 }
 for (const p of products)
   seededLast.set(p.id, { price: p.lastPurchasePrice, at: p.lastPurchasedAt });
+
+// ---- Orders, deliveries, collections and the customer ledger (docs/API.md §11) ----
+const orders = [];
+const deliveries = [];
+const collections = [];
+const ledger = []; // append-only; newest first
+const salesIdempotency = new Map();
+const COLLECTION_METHODS = ['cash', 'bkash', 'nagad', 'bank', 'cheque'];
+const CREDIT_LIMIT_MODE = 'warn';
+const customerRef = (c) => ({ id: c.id, code: c.code, nameEn: c.nameEn, nameBn: c.nameBn });
+const addMoney = (a, b) => (Math.round(Number(a) * 100) + Math.round(Number(b) * 100)) / 100;
+const fixed = (n) => n.toFixed(2);
+
+/** The customer's balance and counters, always recomputed from the active documents. */
+function refreshCustomer(customer) {
+  const delivered = deliveries
+    .filter((d) => d.status === 'active' && d.customerId === customer.id)
+    .flatMap((d) => d.items.map((i) => lineTotal(i.quantity, i.unitPrice)));
+  const collected = collections
+    .filter((c) => c.status === 'active' && c.customerId === customer.id)
+    .map((c) => c.amount);
+  customer.deliveredAmount = sumMoneyStr(delivered);
+  customer.collectedAmount = sumMoneyStr(collected);
+  customer.currentBalance = fixed(
+    addMoney(
+      addMoney(customer.openingBalance, customer.deliveredAmount),
+      -customer.collectedAmount,
+    ),
+  );
+  customer.pendingDeliveryQuantity = qtyString(
+    orders
+      .filter((o) => o.status === 'active' && o.customerId === customer.id)
+      .reduce(
+        (a, o) =>
+          a + o.items.reduce((b, i) => b + (Number(i.quantity) - Number(i.deliveredQuantity)), 0),
+        0,
+      ),
+  );
+}
+
+function ledgerAdd(customer, kind, amount, source, reason, user) {
+  ledger.unshift({
+    id: `le${ledger.length + 1}`,
+    customerId: customer.id,
+    kind,
+    amount,
+    entryDate: today(),
+    source,
+    reason: reason ?? null,
+    createdBy: { id: user.id, name: user.name },
+    createdAt: new Date().toISOString(),
+  });
+  refreshCustomer(customer);
+}
+
+const orderStatusOf = (o) => {
+  const delivered = o.items.reduce((a, i) => a + Number(i.deliveredQuantity), 0);
+  const total = o.items.reduce((a, i) => a + Number(i.quantity), 0);
+  return delivered === 0 ? 'pending' : delivered < total ? 'partial' : 'delivered';
+};
+
+function orderSummaryView(o, perms) {
+  const customer = customers.find((c) => c.id === o.customerId);
+  const out = {
+    id: o.id,
+    code: o.code,
+    customer: customerRef(customer),
+    orderDate: o.orderDate,
+    deliveryWindow: o.deliveryWindow,
+    deliverBy: o.deliverBy,
+    totalQuantity: qtyString(o.items.reduce((a, i) => a + Number(i.quantity), 0)),
+    deliveredQuantity: qtyString(o.items.reduce((a, i) => a + Number(i.deliveredQuantity), 0)),
+    remainingQuantity: qtyString(
+      o.items.reduce((a, i) => a + Number(i.quantity) - Number(i.deliveredQuantity), 0),
+    ),
+    totalAmount: sumMoneyStr(o.items.map((i) => lineTotal(i.quantity, i.unitPrice))),
+    status: o.status,
+    deliveryStatus: o.status === 'void' ? 'pending' : orderStatusOf(o),
+    createdBy: o.createdBy,
+    createdAt: o.createdAt,
+  };
+  void perms;
+  return out;
+}
+
+function orderView(o, perms) {
+  return {
+    ...orderSummaryView(o, perms),
+    note: o.note,
+    version: o.version,
+    items: o.items.map((i) => ({
+      id: i.id,
+      product: productRef(products.find((p) => p.id === i.productId)),
+      quantity: i.quantity,
+      deliveredQuantity: i.deliveredQuantity,
+      remainingQuantity: qtyString(Number(i.quantity) - Number(i.deliveredQuantity)),
+      unitPrice: i.unitPrice,
+      lineTotal: lineTotal(i.quantity, i.unitPrice),
+    })),
+    deliveries: deliveries
+      .filter((d) => d.orderId === o.id)
+      .map((d) => ({
+        id: d.id,
+        code: d.code,
+        deliveryDate: d.deliveryDate,
+        totalQuantity: qtyString(d.items.reduce((a, i) => a + Number(i.quantity), 0)),
+        totalAmount: sumMoneyStr(d.items.map((i) => lineTotal(i.quantity, i.unitPrice))),
+        status: d.status,
+      })),
+    voidedAt: o.voidedAt,
+    voidReason: o.voidReason,
+    voidedBy: o.voidedBy,
+    updatedAt: o.updatedAt,
+  };
+}
+
+function deliveryView(d, perms, full) {
+  const order = orders.find((o) => o.id === d.orderId);
+  const customer = customers.find((c) => c.id === d.customerId);
+  const out = {
+    id: d.id,
+    code: d.code,
+    order: { id: order.id, code: order.code },
+    customer: customerRef(customer),
+    deliveryDate: d.deliveryDate,
+    transportReference: d.transportReference,
+    totalQuantity: qtyString(d.items.reduce((a, i) => a + Number(i.quantity), 0)),
+    totalAmount: sumMoneyStr(d.items.map((i) => lineTotal(i.quantity, i.unitPrice))),
+    status: d.status,
+    createdBy: d.createdBy,
+    createdAt: d.createdAt,
+  };
+  // The flag is money-sensitive: only for someone who may see the due.
+  if (perms.includes('customer.due.view')) out.creditLimitExceeded = d.creditLimitExceeded;
+  if (!full) return out;
+  return {
+    ...out,
+    note: d.note,
+    version: d.version,
+    items: d.items.map((i) => ({
+      id: i.id,
+      orderItemId: i.orderItemId,
+      product: productRef(products.find((p) => p.id === i.productId)),
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      lineTotal: lineTotal(i.quantity, i.unitPrice),
+    })),
+    voidedAt: d.voidedAt,
+    voidReason: d.voidReason,
+    voidedBy: d.voidedBy,
+    updatedAt: d.updatedAt,
+  };
+}
+
+function collectionView(c) {
+  const customer = customers.find((x) => x.id === c.customerId);
+  const order = c.orderId ? orders.find((o) => o.id === c.orderId) : null;
+  return {
+    id: c.id,
+    code: c.code,
+    customer: customerRef(customer),
+    order: order ? { id: order.id, code: order.code } : null,
+    collectionDate: c.collectionDate,
+    method: c.method,
+    amount: c.amount,
+    reference: c.reference,
+    note: c.note,
+    status: c.status,
+    version: c.version,
+    createdBy: c.createdBy,
+    createdAt: c.createdAt,
+    voidedAt: c.voidedAt,
+    voidReason: c.voidReason,
+    voidedBy: c.voidedBy,
+    updatedAt: c.updatedAt,
+  };
+}
+
+/** Void a delivery: stock back up, the order's delivered count down, a reversing ledger line. */
+function voidDelivery(d, reason, user) {
+  const customer = customers.find((c) => c.id === d.customerId);
+  const order = orders.find((o) => o.id === d.orderId);
+  for (const i of d.items) {
+    moveStock(
+      products.find((p) => p.id === i.productId),
+      Number(i.quantity),
+      'delivery_void',
+      { type: 'delivery', id: d.id, code: d.code },
+      reason,
+      user,
+    );
+    const line = order.items.find((x) => x.id === i.orderItemId);
+    line.deliveredQuantity = qtyString(Number(line.deliveredQuantity) - Number(i.quantity));
+  }
+  d.status = 'void';
+  d.voidedAt = new Date().toISOString();
+  d.voidReason = reason;
+  d.voidedBy = { id: user.id, name: user.name };
+  d.updatedAt = d.voidedAt;
+  order.updatedAt = d.voidedAt;
+  ledgerAdd(
+    customer,
+    'delivery_void',
+    fixed(-Number(sumMoneyStr(d.items.map((i) => lineTotal(i.quantity, i.unitPrice))))),
+    { type: 'delivery', id: d.id, code: d.code },
+    reason,
+    user,
+  );
+}
+
+function voidCollection(c, reason, user) {
+  const customer = customers.find((x) => x.id === c.customerId);
+  c.status = 'void';
+  c.voidedAt = new Date().toISOString();
+  c.voidReason = reason;
+  c.voidedBy = { id: user.id, name: user.name };
+  c.updatedAt = c.voidedAt;
+  ledgerAdd(
+    customer,
+    'collection_void',
+    c.amount,
+    { type: 'collection', id: c.id, code: c.code },
+    reason,
+    user,
+  );
+}
+
+function voidOrder(o, reason, user) {
+  if (deliveries.some((d) => d.orderId === o.id && d.status === 'active')) return 'DELIVERY_EXISTS';
+  o.status = 'void';
+  o.voidedAt = new Date().toISOString();
+  o.voidReason = reason;
+  o.voidedBy = { id: user.id, name: user.name };
+  o.updatedAt = o.voidedAt;
+  // Money already collected stays as the customer's advance (step-5b decision 3).
+  refreshCustomer(customers.find((c) => c.id === o.customerId));
+  return null;
+}
+for (const c of customers) refreshCustomer(c);
 
 /** Someone with an account in another business only (for "add existing user"). */
 const OUTSIDER = {
@@ -766,6 +1021,563 @@ http
           return send(res, 200, purchaseView(pu, perms));
         }
       }
+      // ---- Orders, deliveries and collections (docs/API.md §11) ----
+      if (rest === 'collection-methods' && req.method === 'GET')
+        return need('collection.create') && send(res, 200, { items: COLLECTION_METHODS });
+      if (rest === 'orders' && req.method === 'POST') {
+        if (!need('sale.create')) return;
+        const key = req.headers['idempotency-key'];
+        const seen = key && salesIdempotency.get(`${email}:${key}`);
+        if (seen) return send(res, 200, orderView(seen, perms));
+        const customer = customers.find((c) => c.id === body.customerId && c.isActive);
+        if (!customer)
+          return err(
+            res,
+            400,
+            'Customer not found or inactive',
+            'CUSTOMER_NOT_FOUND_OR_INACTIVE',
+            'customerId',
+          );
+        if (!['today', 'two_days', 'one_week'].includes(body.deliveryWindow))
+          return err(
+            res,
+            400,
+            'Unknown delivery window',
+            'DELIVERY_WINDOW_INVALID',
+            'deliveryWindow',
+          );
+        const items = Array.isArray(body.items) ? body.items : [];
+        if (items.length < 1 || items.length > 50)
+          return err(res, 400, 'items must contain 1 to 50 lines', 'ITEMS_INVALID', 'items');
+        const date = body.orderDate ?? today();
+        if (date > today())
+          return err(res, 400, 'Order date is in the future', 'ORDER_DATE_IN_FUTURE', 'orderDate');
+        if (body.deliverBy && body.deliverBy < date)
+          return err(
+            res,
+            400,
+            'Promised date is before the order',
+            'DELIVER_BY_INVALID',
+            'deliverBy',
+          );
+        const seenIds = new Set();
+        for (const [n, line] of items.entries()) {
+          if (seenIds.has(line.productId))
+            return err(res, 400, 'Duplicate product', 'PRODUCT_DUPLICATE', `items.${n}.productId`);
+          seenIds.add(line.productId);
+          const product = products.find((x) => x.id === line.productId && x.isActive);
+          if (!product)
+            return err(
+              res,
+              400,
+              'Product not found or inactive',
+              'PRODUCT_NOT_FOUND_OR_INACTIVE',
+              `items.${n}.productId`,
+            );
+          if (!/^[1-9]\d*$/.test(String(line.quantity)))
+            return err(
+              res,
+              400,
+              'Quantity is not valid',
+              'QUANTITY_INVALID',
+              `items.${n}.quantity`,
+            );
+          if (!/^\d{1,12}(\.\d{1,2})?$/.test(String(line.unitPrice)))
+            return invalid(res, [
+              { field: `items.${n}.unitPrice`, code: 'UNIT_PRICE_INVALID', message: 'x' },
+            ]);
+        }
+        const n = orders.length + 1;
+        const nowIso = new Date().toISOString();
+        const o = {
+          id: `o${n}`,
+          code: `ORD-${String(n).padStart(4, '0')}`,
+          customerId: customer.id,
+          orderDate: date,
+          deliveryWindow: body.deliveryWindow,
+          deliverBy: body.deliverBy ?? null,
+          note: body.note ?? null,
+          status: 'active',
+          version: 1,
+          createdBy: { id: me.user.id, name: me.user.name },
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          voidedAt: null,
+          voidReason: null,
+          voidedBy: null,
+          items: items.map((line, i) => ({
+            id: `oi${n}-${i + 1}`,
+            productId: line.productId,
+            quantity: String(line.quantity),
+            deliveredQuantity: '0',
+            unitPrice: money(line.unitPrice),
+          })),
+        };
+        orders.unshift(o);
+        refreshCustomer(customer);
+        if (key) salesIdempotency.set(`${email}:${key}`, o);
+        return send(res, 201, orderView(o, perms));
+      }
+      if (rest === 'orders' && req.method === 'GET') {
+        if (!perms.includes('sale.view.all') && !perms.includes('sale.view.own'))
+          return err(res, 403, 'Access denied');
+        const f = Object.fromEntries(url.searchParams);
+        const mine = !perms.includes('sale.view.all');
+        const list = orders.filter((o) => {
+          const status = o.status === 'void' ? 'void' : orderStatusOf(o);
+          return (
+            (!mine || o.createdBy.id === me.user.id) &&
+            (!f.customerId || o.customerId === f.customerId) &&
+            (!f.from || o.orderDate >= f.from) &&
+            (!f.to || o.orderDate <= f.to) &&
+            (!f.status ||
+              (f.status === 'open'
+                ? o.status === 'active' && status !== 'delivered'
+                : f.status === status))
+          );
+        });
+        const pg = pageOf(list, page);
+        return send(res, 200, {
+          ...pg,
+          items: pg.items.map((o) => orderSummaryView(o, perms)),
+        });
+      }
+      let om = rest.match(/^orders\/([^/]+)(\/void)?$/);
+      if (om) {
+        const o = orders.find((x) => x.id === om[1]);
+        if (!perms.includes('sale.view.all') && !perms.includes('sale.view.own'))
+          return err(res, 403, 'Access denied');
+        const mine = !perms.includes('sale.view.all');
+        if (!o || (mine && o.createdBy.id !== me.user.id))
+          return err(res, 404, 'Order not found', 'ORDER_NOT_FOUND');
+        if (req.method === 'GET' && !om[2]) return send(res, 200, orderView(o, perms));
+        if (req.method === 'POST' && om[2]) {
+          if (!need('sale.void')) return;
+          if (o.status === 'void') return err(res, 409, 'Already void', 'ORDER_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          const blocked = voidOrder(o, body.reason.trim(), me.user);
+          if (blocked) return err(res, 409, 'Active deliveries exist', blocked);
+          return send(res, 200, orderView(o, perms));
+        }
+        if (req.method === 'PATCH') {
+          if (!need('sale.edit')) return;
+          if (o.status === 'void') return err(res, 409, 'Already void', 'ORDER_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          for (const change of body.items ?? []) {
+            const line = o.items.find((i) => i.id === change.id);
+            if (!line)
+              return err(
+                res,
+                400,
+                'Line not found',
+                'ORDER_ITEM_NOT_FOUND',
+                `items.${change.id}.quantity`,
+              );
+            if (change.quantity !== undefined) {
+              if (Number(change.quantity) < Number(line.deliveredQuantity))
+                return err(
+                  res,
+                  400,
+                  'Below what is delivered',
+                  'ORDER_QUANTITY_TOO_SMALL',
+                  `items.${line.id}.quantity`,
+                );
+              line.quantity = String(change.quantity);
+            }
+            if (change.unitPrice !== undefined) line.unitPrice = money(change.unitPrice);
+          }
+          for (const k of ['orderDate', 'deliveryWindow', 'deliverBy', 'note'])
+            if (k in body) o[k] = body[k];
+          o.version += 1;
+          o.updatedAt = new Date().toISOString();
+          refreshCustomer(customers.find((c) => c.id === o.customerId));
+          return send(res, 200, orderView(o, perms));
+        }
+      }
+      if (rest === 'deliveries' && req.method === 'POST') {
+        if (!need('delivery.create')) return;
+        const key = req.headers['idempotency-key'];
+        const seen = key && salesIdempotency.get(`${email}:${key}`);
+        if (seen) return send(res, 200, deliveryView(seen, perms, true));
+        const o = orders.find((x) => x.id === body.orderId);
+        if (!o) return err(res, 404, 'Order not found', 'ORDER_NOT_FOUND', 'orderId');
+        if (o.status === 'void') return err(res, 409, 'Order is void', 'ORDER_ALREADY_VOID');
+        const customer = customers.find((c) => c.id === o.customerId);
+        const date = body.deliveryDate ?? today();
+        if (date > today())
+          return err(res, 400, 'In the future', 'DELIVERY_DATE_IN_FUTURE', 'deliveryDate');
+        if (date < o.orderDate)
+          return err(res, 400, 'Before the order', 'DELIVERY_DATE_INVALID', 'deliveryDate');
+        const items = Array.isArray(body.items) ? body.items : [];
+        if (items.length < 1)
+          return err(res, 400, 'items must contain 1 line at least', 'ITEMS_INVALID', 'items');
+        const seenLines = new Set();
+        for (const [n, line] of items.entries()) {
+          const orderItem = o.items.find((i) => i.id === line.orderItemId);
+          if (!orderItem)
+            return err(
+              res,
+              400,
+              'Not this order',
+              'ORDER_ITEM_NOT_FOUND',
+              `items.${n}.orderItemId`,
+            );
+          if (seenLines.has(line.orderItemId))
+            return err(res, 400, 'Twice', 'ORDER_ITEM_DUPLICATE', `items.${n}.orderItemId`);
+          seenLines.add(line.orderItemId);
+          if (!/^[1-9]\d*$/.test(String(line.quantity)))
+            return err(
+              res,
+              400,
+              'Quantity is not valid',
+              'QUANTITY_INVALID',
+              `items.${n}.quantity`,
+            );
+          const remaining = Number(orderItem.quantity) - Number(orderItem.deliveredQuantity);
+          if (Number(line.quantity) > remaining)
+            return send(res, 400, {
+              statusCode: 400,
+              message: 'More than is left to deliver on this order line',
+              code: 'DELIVERY_QUANTITY_TOO_LARGE',
+              field: `items.${n}.quantity`,
+              errors: [
+                { field: `items.${n}.quantity`, code: 'DELIVERY_QUANTITY_TOO_LARGE', message: 'x' },
+              ],
+              details: { remaining: qtyString(remaining) },
+            });
+          const available = stockOf.get(orderItem.productId) ?? 0;
+          if (Number(line.quantity) > available)
+            return send(res, 409, {
+              statusCode: 409,
+              message: 'Not enough stock',
+              code: 'STOCK_INSUFFICIENT',
+              field: `items.${n}.quantity`,
+              errors: [{ field: `items.${n}.quantity`, code: 'STOCK_INSUFFICIENT', message: 'x' }],
+              details: {
+                productId: orderItem.productId,
+                available: qtyString(available),
+                required: String(line.quantity),
+              },
+            });
+        }
+        const lines = items.map((line, i) => {
+          const orderItem = o.items.find((x) => x.id === line.orderItemId);
+          return {
+            id: `di${deliveries.length + 1}-${i + 1}`,
+            orderItemId: orderItem.id,
+            productId: orderItem.productId,
+            quantity: String(line.quantity),
+            unitPrice: orderItem.unitPrice,
+          };
+        });
+        const amount = sumMoneyStr(lines.map((i) => lineTotal(i.quantity, i.unitPrice)));
+        const balanceAfter = fixed(addMoney(customer.currentBalance, amount));
+        const overLimit =
+          customer.creditLimit !== null && Number(balanceAfter) > Number(customer.creditLimit);
+        if (
+          overLimit &&
+          CREDIT_LIMIT_MODE === 'block' &&
+          !perms.includes('delivery.credit.override')
+        )
+          return send(res, 409, {
+            statusCode: 409,
+            message: 'Credit limit exceeded',
+            code: 'CREDIT_LIMIT_EXCEEDED',
+            field: 'items',
+            errors: [{ field: 'items', code: 'CREDIT_LIMIT_EXCEEDED', message: 'x' }],
+            details: { creditLimit: customer.creditLimit, balanceAfter },
+          });
+        const n = deliveries.length + 1;
+        const nowIso = new Date().toISOString();
+        const d = {
+          id: `d${n}`,
+          code: `DEL-${String(n).padStart(4, '0')}`,
+          orderId: o.id,
+          customerId: customer.id,
+          deliveryDate: date,
+          transportReference: body.transportReference ?? null,
+          note: body.note ?? null,
+          status: 'active',
+          creditLimitExceeded: overLimit,
+          version: 1,
+          createdBy: { id: me.user.id, name: me.user.name },
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          voidedAt: null,
+          voidReason: null,
+          voidedBy: null,
+          items: lines,
+        };
+        deliveries.unshift(d);
+        for (const i of d.items) {
+          moveStock(
+            products.find((p) => p.id === i.productId),
+            -Number(i.quantity),
+            'delivery',
+            { type: 'delivery', id: d.id, code: d.code },
+            null,
+            me.user,
+          );
+          const line = o.items.find((x) => x.id === i.orderItemId);
+          line.deliveredQuantity = qtyString(Number(line.deliveredQuantity) + Number(i.quantity));
+        }
+        o.updatedAt = nowIso;
+        ledgerAdd(
+          customer,
+          'delivery',
+          amount,
+          { type: 'delivery', id: d.id, code: d.code },
+          null,
+          me.user,
+        );
+        if (key) salesIdempotency.set(`${email}:${key}`, d);
+        return send(res, 201, deliveryView(d, perms, true));
+      }
+      if (rest === 'deliveries' && req.method === 'GET') {
+        if (!need('delivery.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const list = deliveries.filter(
+          (d) =>
+            (!f.orderId || d.orderId === f.orderId) &&
+            (!f.customerId || d.customerId === f.customerId) &&
+            (!f.status || d.status === f.status) &&
+            (!f.from || d.deliveryDate >= f.from) &&
+            (!f.to || d.deliveryDate <= f.to),
+        );
+        const pg = pageOf(list, page);
+        return send(res, 200, { ...pg, items: pg.items.map((d) => deliveryView(d, perms, false)) });
+      }
+      let dm = rest.match(/^deliveries\/([^/]+)(\/void)?$/);
+      if (dm) {
+        if (!need('delivery.view')) return;
+        const d = deliveries.find((x) => x.id === dm[1]);
+        if (!d) return err(res, 404, 'Delivery not found', 'DELIVERY_NOT_FOUND');
+        if (req.method === 'GET' && !dm[2]) return send(res, 200, deliveryView(d, perms, true));
+        if (req.method === 'POST' && dm[2]) {
+          if (!need('delivery.void')) return;
+          if (d.status === 'void') return err(res, 409, 'Already void', 'DELIVERY_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          voidDelivery(d, body.reason.trim(), me.user);
+          return send(res, 200, deliveryView(d, perms, true));
+        }
+        if (req.method === 'PATCH') {
+          if (!need('delivery.edit')) return;
+          if (d.status === 'void') return err(res, 409, 'Already void', 'DELIVERY_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          const o = orders.find((x) => x.id === d.orderId);
+          const customer = customers.find((c) => c.id === d.customerId);
+          const before = sumMoneyStr(d.items.map((i) => lineTotal(i.quantity, i.unitPrice)));
+          for (const change of body.items ?? []) {
+            const line = d.items.find((i) => i.id === change.id);
+            if (!line) continue;
+            const delta = Number(change.quantity) - Number(line.quantity);
+            const orderLine = o.items.find((x) => x.id === line.orderItemId);
+            const remaining =
+              Number(orderLine.quantity) - Number(orderLine.deliveredQuantity) - delta;
+            if (remaining < 0)
+              return send(res, 400, {
+                statusCode: 400,
+                message: 'More than is left',
+                code: 'DELIVERY_QUANTITY_TOO_LARGE',
+                field: `items.${line.id}.quantity`,
+                errors: [
+                  {
+                    field: `items.${line.id}.quantity`,
+                    code: 'DELIVERY_QUANTITY_TOO_LARGE',
+                    message: 'x',
+                  },
+                ],
+                details: {
+                  remaining: qtyString(
+                    Number(orderLine.quantity) - Number(orderLine.deliveredQuantity),
+                  ),
+                },
+              });
+            const short = moveStock(
+              products.find((p) => p.id === line.productId),
+              -delta,
+              'delivery_edit',
+              { type: 'delivery', id: d.id, code: d.code },
+              body.reason,
+              me.user,
+            );
+            if (short)
+              return send(res, 409, {
+                statusCode: 409,
+                message: 'Not enough stock',
+                code: 'STOCK_INSUFFICIENT',
+                field: `items.${line.id}.quantity`,
+                errors: [
+                  { field: `items.${line.id}.quantity`, code: 'STOCK_INSUFFICIENT', message: 'x' },
+                ],
+                details: short,
+              });
+            line.quantity = String(change.quantity);
+            orderLine.deliveredQuantity = qtyString(Number(orderLine.deliveredQuantity) + delta);
+          }
+          for (const k of ['deliveryDate', 'transportReference', 'note'])
+            if (k in body) d[k] = body[k];
+          d.version += 1;
+          d.updatedAt = new Date().toISOString();
+          const after = sumMoneyStr(d.items.map((i) => lineTotal(i.quantity, i.unitPrice)));
+          if (after !== before)
+            ledgerAdd(
+              customer,
+              'delivery_edit',
+              fixed(addMoney(after, -before)),
+              { type: 'delivery', id: d.id, code: d.code },
+              body.reason,
+              me.user,
+            );
+          else refreshCustomer(customer);
+          return send(res, 200, deliveryView(d, perms, true));
+        }
+      }
+      if (rest === 'collections' && req.method === 'POST') {
+        if (!need('collection.create')) return;
+        const key = req.headers['idempotency-key'];
+        const seen = key && salesIdempotency.get(`${email}:${key}`);
+        if (seen) return send(res, 200, collectionView(seen));
+        // An inactive customer may still pay off an older order (step-5b decision 8).
+        const customer = customers.find((c) => c.id === body.customerId);
+        if (!customer)
+          return err(res, 404, 'Customer not found', 'CUSTOMER_NOT_FOUND', 'customerId');
+        if (!COLLECTION_METHODS.includes(body.method))
+          return err(res, 400, 'Unknown method', 'COLLECTION_METHOD_UNKNOWN', 'method');
+        if (!/^\d{1,12}(\.\d{1,2})?$/.test(String(body.amount ?? '')) || Number(body.amount) <= 0)
+          return err(res, 400, 'Amount is too small', 'AMOUNT_TOO_SMALL', 'amount');
+        const date = body.collectionDate ?? today();
+        if (date > today())
+          return err(res, 400, 'In the future', 'COLLECTION_DATE_IN_FUTURE', 'collectionDate');
+        if (body.orderId) {
+          const o = orders.find((x) => x.id === body.orderId && x.customerId === customer.id);
+          if (!o) return err(res, 404, 'Order not found', 'ORDER_NOT_FOUND', 'orderId');
+        }
+        const n = collections.length + 1;
+        const nowIso = new Date().toISOString();
+        const c = {
+          id: `col${n}`,
+          code: `COL-${String(n).padStart(4, '0')}`,
+          customerId: customer.id,
+          orderId: body.orderId ?? null,
+          collectionDate: date,
+          method: body.method,
+          amount: money(body.amount),
+          reference: body.reference ?? null,
+          note: body.note ?? null,
+          status: 'active',
+          version: 1,
+          createdBy: { id: me.user.id, name: me.user.name },
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          voidedAt: null,
+          voidReason: null,
+          voidedBy: null,
+        };
+        collections.unshift(c);
+        ledgerAdd(
+          customer,
+          'collection',
+          fixed(-Number(c.amount)),
+          { type: 'collection', id: c.id, code: c.code },
+          null,
+          me.user,
+        );
+        if (key) salesIdempotency.set(`${email}:${key}`, c);
+        return send(res, 201, collectionView(c));
+      }
+      if (rest === 'collections' && req.method === 'GET') {
+        if (!need('collection.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const list = collections.filter(
+          (c) =>
+            (!f.customerId || c.customerId === f.customerId) &&
+            (!f.orderId || c.orderId === f.orderId) &&
+            (!f.method || c.method === f.method) &&
+            (!f.status || c.status === f.status) &&
+            (!f.from || c.collectionDate >= f.from) &&
+            (!f.to || c.collectionDate <= f.to),
+        );
+        const pg = pageOf(list, page);
+        return send(res, 200, { ...pg, items: pg.items.map(collectionView) });
+      }
+      let cm = rest.match(/^collections\/([^/]+)(\/void)?$/);
+      if (cm) {
+        if (!need('collection.view')) return;
+        const c = collections.find((x) => x.id === cm[1]);
+        if (!c) return err(res, 404, 'Collection not found', 'COLLECTION_NOT_FOUND');
+        if (req.method === 'GET' && !cm[2]) return send(res, 200, collectionView(c));
+        if (req.method === 'POST' && cm[2]) {
+          if (!need('collection.void')) return;
+          if (c.status === 'void') return err(res, 409, 'Already void', 'COLLECTION_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          voidCollection(c, body.reason.trim(), me.user);
+          return send(res, 200, collectionView(c));
+        }
+        if (req.method === 'PATCH') {
+          if (!need('collection.edit')) return;
+          if (c.status === 'void') return err(res, 409, 'Already void', 'COLLECTION_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          const customer = customers.find((x) => x.id === c.customerId);
+          const before = c.amount;
+          for (const k of ['collectionDate', 'method', 'reference', 'note'])
+            if (k in body) c[k] = body[k];
+          if (body.amount !== undefined) c.amount = money(body.amount);
+          c.version += 1;
+          c.updatedAt = new Date().toISOString();
+          if (c.amount !== before)
+            ledgerAdd(
+              customer,
+              'collection_edit',
+              fixed(-addMoney(c.amount, -before)),
+              { type: 'collection', id: c.id, code: c.code },
+              body.reason,
+              me.user,
+            );
+          else refreshCustomer(customer);
+          return send(res, 200, collectionView(c));
+        }
+      }
+      let lm = rest.match(/^customers\/([^/]+)\/ledger$/);
+      if (lm && req.method === 'GET') {
+        if (!need('customer.due.view')) return;
+        const customer = customers.find((c) => c.id === lm[1]);
+        if (!customer)
+          return err(res, 404, 'Customer not found', 'CUSTOMER_NOT_FOUND', 'customerId');
+        refreshCustomer(customer);
+        const f = Object.fromEntries(url.searchParams);
+        const list = ledger.filter(
+          (e) =>
+            e.customerId === customer.id &&
+            (!f.from || e.entryDate >= f.from) &&
+            (!f.to || e.entryDate <= f.to),
+        );
+        const pg = pageOf(list, page);
+        return send(res, 200, {
+          customer: {
+            id: customer.id,
+            code: customer.code,
+            nameEn: customer.nameEn,
+            openingBalance: customer.openingBalance,
+            deliveredAmount: customer.deliveredAmount,
+            collectedAmount: customer.collectedAmount,
+            currentBalance: customer.currentBalance,
+            creditLimit: customer.creditLimit,
+          },
+          ...pg,
+          items: pg.items.map((e) => {
+            const copy = { ...e };
+            delete copy.customerId;
+            return copy;
+          }),
+        });
+      }
       // ---- Stock ----
       if (rest === 'stock' && req.method === 'GET') {
         if (!need('stock.view')) return;
@@ -849,6 +1661,9 @@ http
           product_category: categories,
           purchase: purchases,
           product_stock: products,
+          sales_order: orders,
+          delivery: deliveries,
+          collection: collections,
         };
         /** Field rules, including the dynamic purchase line fields (items.<id>.quantity). */
         const ruleOf = (type, field) => {
@@ -872,11 +1687,38 @@ http
             return field === 'adjustBy'
               ? { see: null, apply: 'stock.adjust.large', label: 'Stock change' }
               : undefined;
+          if (type === 'sales_order') {
+            if (['orderDate', 'deliveryWindow', 'deliverBy', 'note'].includes(field))
+              return { see: null, apply: 'sale.edit', label: field };
+            const line = /^items\.([^.]+)\.(quantity|unitPrice)$/.exec(field);
+            if (line)
+              return {
+                see: null,
+                apply: 'sale.edit',
+                label: line[2] === 'quantity' ? 'Quantity' : 'Price',
+              };
+            return undefined;
+          }
+          if (type === 'delivery') {
+            if (['deliveryDate', 'transportReference', 'note'].includes(field))
+              return { see: null, apply: 'delivery.edit', label: field };
+            const line = /^items\.([^.]+)\.quantity$/.exec(field);
+            return line ? { see: null, apply: 'delivery.edit', label: 'Quantity' } : undefined;
+          }
+          if (type === 'collection') {
+            if (field === 'amount')
+              return { see: 'collection.view', apply: 'collection.edit', label: 'Amount' };
+            if (['collectionDate', 'method', 'reference', 'note'].includes(field))
+              return { see: null, apply: 'collection.edit', label: field };
+            return undefined;
+          }
           return CHANGE_FIELDS[type]?.[field];
         };
         const valueOf = (type, rec, field) => {
-          const m = type === 'purchase' && /^items\.([^.]+)\.(quantity|unitPrice)$/.exec(field);
-          if (m) return rec.items.find((i) => i.id === m[1])?.[m[2]];
+          const line =
+            ['purchase', 'sales_order', 'delivery'].includes(type) &&
+            /^items\.([^.]+)\.(quantity|unitPrice)$/.exec(field);
+          if (line) return rec.items.find((i) => i.id === line[1])?.[line[2]];
           if (type === 'product_stock') return null;
           return rec[field];
         };
@@ -889,7 +1731,7 @@ http
         const labelOf = (type, rec) =>
           type === 'product_category'
             ? rec.nameEn
-            : type === 'purchase'
+            : ['purchase', 'sales_order', 'delivery', 'collection'].includes(type)
               ? rec.code
               : `${rec.code} ${rec.nameEn}`;
         const stockLine = (product, delta) => {
@@ -920,6 +1762,51 @@ http
             return lines;
           }
           if (type === 'product_stock') return [stockLine(rec, Number(change.adjustBy))];
+          if (type === 'sales_order') {
+            if (kind === 'void')
+              return [
+                {
+                  key: 'order.remainingQuantity',
+                  label: 'Left to deliver',
+                  before: qtyString(
+                    rec.items.reduce(
+                      (a, i) => a + Number(i.quantity) - Number(i.deliveredQuantity),
+                      0,
+                    ),
+                  ),
+                  after: '0',
+                },
+              ];
+            const before = sumMoneyStr(rec.items.map((i) => lineTotal(i.quantity, i.unitPrice)));
+            const after = sumMoneyStr(
+              rec.items.map((i) =>
+                lineTotal(
+                  change[`items.${i.id}.quantity`] ?? i.quantity,
+                  change[`items.${i.id}.unitPrice`] ?? i.unitPrice,
+                ),
+              ),
+            );
+            return [{ key: 'order.totalAmount', label: 'Order total', before, after }];
+          }
+          if (type === 'delivery' || type === 'collection') {
+            const amount =
+              type === 'collection'
+                ? rec.amount
+                : sumMoneyStr(rec.items.map((i) => lineTotal(i.quantity, i.unitPrice)));
+            return [
+              {
+                key: 'customer.currentBalance',
+                label: 'Customer balance',
+                before: customers.find((c) => c.id === rec.customerId).currentBalance,
+                after: fixed(
+                  addMoney(
+                    customers.find((c) => c.id === rec.customerId).currentBalance,
+                    kind === 'void' ? (type === 'collection' ? amount : -amount) : 0,
+                  ),
+                ),
+              },
+            ];
+          }
           return Object.entries(only(type, change)).flatMap(([field, after]) => {
             const before = rec[field];
             const line = {
@@ -961,7 +1848,7 @@ http
             kind: cr.kind,
             summary:
               cr.kind === 'void'
-                ? 'Void purchase'
+                ? `Void ${cr.entityType.replace('_', ' ')}`
                 : summaryOf(cr.entityType, cr.snapshot, cr.proposedChange),
             status: cr.status,
             requestedBy: cr.requestedBy,
@@ -1003,7 +1890,7 @@ http
           const change = {};
           const kind = body.kind === 'void' ? 'void' : 'edit';
           if (kind === 'void') {
-            if (type !== 'purchase')
+            if (!['purchase', 'sales_order', 'delivery', 'collection'].includes(type))
               return [null, err(res, 400, 'Cannot be voided', 'VOID_NOT_SUPPORTED', 'kind')];
             return [{ type, rec, change, kind }, null];
           }
@@ -1024,7 +1911,19 @@ http
               k === 'isActive' ||
               k === 'adjustBy' ||
               k.endsWith('.quantity') ||
-              ['purchaseDate', 'note', 'supplierReference'].includes(k);
+              [
+                'purchaseDate',
+                'note',
+                'supplierReference',
+                'orderDate',
+                'deliveryWindow',
+                'deliverBy',
+                'deliveryDate',
+                'collectionDate',
+                'method',
+                'transportReference',
+                'reference',
+              ].includes(k);
             change[k] = asIs ? v : money(v);
           }
           if (!Object.keys(change).length)
@@ -1179,9 +2078,24 @@ http
             details,
           });
         if (cr.kind === 'void') {
-          if (!need('purchase.void')) return;
-          const short = voidPurchase(rec, cr.reason, cr.requestedBy);
-          if (short) return stockShort(short);
+          const voidPermission = {
+            purchase: 'purchase.void',
+            sales_order: 'sale.void',
+            delivery: 'delivery.void',
+            collection: 'collection.void',
+          }[cr.entityType];
+          if (!need(voidPermission)) return;
+          if (cr.entityType === 'purchase') {
+            const short = voidPurchase(rec, cr.reason, cr.requestedBy);
+            if (short) return stockShort(short);
+          } else if (cr.entityType === 'sales_order') {
+            const blocked = voidOrder(rec, cr.reason, cr.requestedBy);
+            if (blocked) return err(res, 409, 'Active deliveries exist', blocked);
+          } else if (cr.entityType === 'delivery') {
+            voidDelivery(rec, cr.reason, cr.requestedBy);
+          } else {
+            voidCollection(rec, cr.reason, cr.requestedBy);
+          }
         } else {
           for (const f of Object.keys(cr.proposedChange))
             if (!perms.includes(ruleOf(cr.entityType, f).apply))
@@ -1217,6 +2131,19 @@ http
             }
             rec.updatedAt = new Date().toISOString();
             for (const i of rec.items) recomputeLast(i.productId);
+          } else if (['sales_order', 'delivery', 'collection'].includes(cr.entityType)) {
+            for (const [f, v] of Object.entries(cr.proposedChange)) {
+              const line = /^items\.([^.]+)\.(quantity|unitPrice)$/.exec(f);
+              if (!line) {
+                rec[f] = v;
+                continue;
+              }
+              const item = rec.items.find((i) => i.id === line[1]);
+              if (line[2] === 'unitPrice') item.unitPrice = v;
+              else item.quantity = String(v);
+            }
+            rec.updatedAt = new Date().toISOString();
+            refreshCustomer(customers.find((c) => c.id === rec.customerId));
           } else {
             Object.assign(rec, cr.proposedChange, { updatedAt: new Date().toISOString() });
           }
@@ -1305,7 +2232,13 @@ http
         p.updatedAt = new Date().toISOString();
         return send(res, 200, hide(perms, p, COST_FIELDS, 'product.cost.view'));
       }
-      const dueFields = ['openingBalance', 'currentBalance', 'creditLimit'];
+      const dueFields = [
+        'openingBalance',
+        'currentBalance',
+        'creditLimit',
+        'deliveredAmount',
+        'collectedAmount',
+      ];
       if (rest === 'customers' && req.method === 'GET') {
         if (!need('customer.view')) return;
         const q = search.replace(/^0/, '');

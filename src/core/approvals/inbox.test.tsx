@@ -352,7 +352,7 @@ describe('purchase and stock requests in the inbox', () => {
           after: '388400.00',
           delta: '-5700.00',
         },
-        { key: 'purchaseCounter.2026-11', label: 'Bags bought in 2026-11', delta: '-10' },
+        { key: 'purchaseCounter.2026-11', label: 'Quantity bought in 2026-11', delta: '-10' },
       ],
     });
     mockApi({ [`GET ${BASE}/cr1`]: () => json(200, pr) });
@@ -370,7 +370,7 @@ describe('purchase and stock requests in the inbox', () => {
     expect(stock).toHaveTextContent('497 → 487');
     expect(stock).not.toHaveTextContent('৳');
     expect(screen.getByText('Purchase total').closest('li')).toHaveTextContent('৳3,94,100.00');
-    expect(screen.getByText('Bags bought in 2026-11').closest('li')).toHaveTextContent('(-10)');
+    expect(screen.getByText('Quantity bought in 2026-11').closest('li')).toHaveTextContent('(-10)');
     expect(screen.getByRole('link', { name: 'Open the record' })).toHaveAttribute(
       'href',
       '/b/example-cement/purchases/pu1',

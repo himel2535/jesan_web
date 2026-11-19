@@ -63,7 +63,9 @@ test('customers: due hidden from salesman; duplicate phone message on create', a
   browser,
 }) => {
   await signIn(page, 'manager', '/b/example-cement/customers');
-  await expect(page.getByRole('row', { name: /Sample Store One/ })).toContainText('৳12,50,000.00');
+  // The balance is always opening + delivered − collected (docs/API.md §11), so it is the
+  // opening balance until something is delivered or collected.
+  await expect(page.getByRole('row', { name: /Sample Store One/ })).toContainText('৳12,500.00');
   await expect(page.getByRole('row', { name: /Advance Shop/ })).toContainText('Advance');
 
   const salesman = await browser.newPage();
@@ -112,7 +114,7 @@ test('Bengali and dark theme render the same data without errors', async ({ page
   await page.getByRole('button', { name: 'লগইন' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.getByRole('heading', { name: 'গ্রাহক' })).toBeVisible();
-  await expect(page.getByRole('row', { name: /নমুনা স্টোর এক/ })).toContainText('৳১২,৫০,০০০.০০');
+  await expect(page.getByRole('row', { name: /নমুনা স্টোর এক/ })).toContainText('৳১২,৫০০.০০');
   await expect(page.getByRole('row', { name: /Advance Shop/ })).toContainText('অগ্রিম');
   await page.goto('/b/example-cement/suppliers');
   await expect(page.getByText('প্রধান সরবরাহকারী')).toBeVisible();
