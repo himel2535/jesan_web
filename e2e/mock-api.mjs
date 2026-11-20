@@ -315,6 +315,35 @@ const seededLast = new Map(); // productId → seeded last purchase (kept when n
 const adjustedToday = new Map(); // `${email}:${productId}` → absolute bags adjusted today
 const purchaseIdempotency = new Map();
 const ADJUST_LIMIT = 10;
+
+// ---- Commission: scheme, entries and receipts (docs/API.md §10, Akij, owner-only) ----
+let commissionScheme = null;
+const commissionEntries = [];
+const commissionIdempotency = new Map();
+const calcCommission = (qty, scheme) => {
+  const base = Math.round(Number(qty) * Number(scheme.rateBase) * 100) / 100;
+  const extra = Math.max(0, Number(qty) - Number(scheme.targetQty));
+  const bonus = Math.round(extra * Number(scheme.bonusRate) * 100) / 100;
+  return (base + bonus).toFixed(2);
+};
+const commissionAmounts = (e) => {
+  const receivedAmount = sumMoneyStr(e.receipts.map((r) => r.amount));
+  return {
+    receivedAmount,
+    pendingAmount: (Number(e.calculatedAmount) - Number(receivedAmount)).toFixed(2),
+  };
+};
+const commissionEntrySummary = (e) => ({
+  id: e.id,
+  fromDate: e.fromDate,
+  toDate: e.toDate,
+  quantity: e.quantity,
+  calculatedAmount: e.calculatedAmount,
+  ...commissionAmounts(e),
+  note: e.note,
+  createdAt: e.createdAt,
+});
+const commissionEntryView = (e) => ({ ...commissionEntrySummary(e), receipts: e.receipts });
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
 const qtyString = (n) => String(n);
 const lineTotal = (q, price) => (Math.round(Number(q) * Number(price) * 100) / 100).toFixed(2);
@@ -1201,6 +1230,162 @@ http
           for (const i of pu.items) recomputeLast(i.productId);
           return send(res, 200, purchaseView(pu, perms));
         }
+      }
+      // ---- Commission: scheme, entries and receipts (docs/API.md §10, Akij, owner-only) ----
+      if (rest === 'commission-scheme' && req.method === 'GET')
+        return need('commission.view') && send(res, 200, { scheme: commissionScheme });
+      if (rest === 'commission-scheme' && req.method === 'PUT') {
+        if (!need('commission.manage')) return;
+        if (!(Number(body.rateBase) > 0))
+          return err(res, 400, 'Base rate too small', 'RATE_BASE_TOO_SMALL', 'rateBase');
+        if (!(Number(body.targetQty) > 0))
+          return err(res, 400, 'Target too small', 'TARGET_QTY_TOO_SMALL', 'targetQty');
+        commissionScheme = {
+          rateBase: money(body.rateBase),
+          targetQty: String(body.targetQty),
+          bonusRate: money(body.bonusRate),
+          updatedAt: new Date().toISOString(),
+        };
+        return send(res, 200, commissionScheme);
+      }
+      if (rest === 'commission-entries' && req.method === 'GET') {
+        if (!need('commission.view')) return;
+        const list = [...commissionEntries].sort((a, b) => (a.fromDate < b.fromDate ? 1 : -1));
+        const pg = pageOf(list, page);
+        return send(res, 200, { ...pg, items: pg.items.map(commissionEntrySummary) });
+      }
+      if (rest === 'commission-entries/suggestion' && req.method === 'GET') {
+        if (!need('commission.manage')) return;
+        const from = url.searchParams.get('from');
+        const to = url.searchParams.get('to');
+        const quantity = purchases
+          .filter((pu) => pu.status !== 'void' && pu.purchaseDate >= from && pu.purchaseDate <= to)
+          .flatMap((pu) => pu.items.map((i) => Number(i.quantity)))
+          .reduce((a, v) => a + v, 0);
+        return send(res, 200, { from, to, quantity: String(quantity) });
+      }
+      if (rest === 'commission-entries' && req.method === 'POST') {
+        if (!need('commission.manage')) return;
+        const key = req.headers['idempotency-key'];
+        const seen = key && commissionIdempotency.get(`${email}:${key}`);
+        if (seen) return send(res, 200, commissionEntryView(seen));
+        if (!commissionScheme)
+          return err(res, 400, 'No scheme set', 'COMMISSION_SCHEME_NOT_SET', 'quantity');
+        if (body.fromDate > body.toDate)
+          return err(
+            res,
+            400,
+            'fromDate after toDate',
+            'COMMISSION_DATE_RANGE_INVALID',
+            'fromDate',
+          );
+        if (body.toDate > today())
+          return err(res, 400, 'toDate in the future', 'COMMISSION_DATE_IN_FUTURE', 'toDate');
+        const e = {
+          id: `ce${commissionEntries.length + 1}`,
+          fromDate: body.fromDate,
+          toDate: body.toDate,
+          quantity: String(body.quantity),
+          calculatedAmount: calcCommission(body.quantity, commissionScheme),
+          note: body.note ?? null,
+          createdAt: new Date().toISOString(),
+          receipts: [],
+        };
+        commissionEntries.push(e);
+        if (key) commissionIdempotency.set(`${email}:${key}`, e);
+        return send(res, 201, commissionEntryView(e));
+      }
+      let ceIdMatch = rest.match(/^commission-entries\/([^/]+)$/);
+      if (ceIdMatch) {
+        if (!need('commission.view')) return;
+        const e = commissionEntries.find((x) => x.id === ceIdMatch[1]);
+        if (!e) return err(res, 404, 'Entry not found', 'COMMISSION_ENTRY_NOT_FOUND');
+        if (req.method === 'GET') return send(res, 200, commissionEntryView(e));
+        if (req.method === 'PATCH') {
+          if (!need('commission.manage')) return;
+          const fromDate = body.fromDate ?? e.fromDate;
+          const toDate = body.toDate ?? e.toDate;
+          if (fromDate > toDate)
+            return err(
+              res,
+              400,
+              'fromDate after toDate',
+              'COMMISSION_DATE_RANGE_INVALID',
+              'fromDate',
+            );
+          if (toDate > today())
+            return err(res, 400, 'toDate in the future', 'COMMISSION_DATE_IN_FUTURE', 'toDate');
+          if (!commissionScheme)
+            return err(res, 400, 'No scheme set', 'COMMISSION_SCHEME_NOT_SET', 'quantity');
+          e.fromDate = fromDate;
+          e.toDate = toDate;
+          if (body.quantity !== undefined) e.quantity = String(body.quantity);
+          if (body.note !== undefined) e.note = body.note;
+          e.calculatedAmount = calcCommission(e.quantity, commissionScheme);
+          return send(res, 200, commissionEntryView(e));
+        }
+      }
+      let crm = rest.match(/^commission-entries\/([^/]+)\/receipts(\/([^/]+))?$/);
+      if (crm) {
+        if (!need('commission.view')) return;
+        const e = commissionEntries.find((x) => x.id === crm[1]);
+        if (!e) return err(res, 404, 'Entry not found', 'COMMISSION_ENTRY_NOT_FOUND');
+        if (req.method === 'POST' && !crm[3]) {
+          if (!need('commission.manage')) return;
+          if (body.receivedDate > today())
+            return err(
+              res,
+              400,
+              'receivedDate in the future',
+              'COMMISSION_DATE_IN_FUTURE',
+              'receivedDate',
+            );
+          const r = {
+            id: `cr${e.receipts.length + 1}-${e.id}`,
+            amount: money(body.amount),
+            receivedDate: body.receivedDate,
+            reference: body.reference ?? null,
+            note: body.note ?? null,
+          };
+          e.receipts.push(r);
+          return send(res, 201, r);
+        }
+        if (req.method === 'PATCH' && crm[3]) {
+          if (!need('commission.manage')) return;
+          const r = e.receipts.find((x) => x.id === crm[3]);
+          if (!r) return err(res, 404, 'Receipt not found', 'COMMISSION_RECEIPT_NOT_FOUND');
+          if (body.receivedDate !== undefined && body.receivedDate > today())
+            return err(
+              res,
+              400,
+              'receivedDate in the future',
+              'COMMISSION_DATE_IN_FUTURE',
+              'receivedDate',
+            );
+          if (body.amount !== undefined) r.amount = money(body.amount);
+          if (body.receivedDate !== undefined) r.receivedDate = body.receivedDate;
+          if (body.reference !== undefined) r.reference = body.reference;
+          if (body.note !== undefined) r.note = body.note;
+          return send(res, 200, r);
+        }
+      }
+      if (rest === 'commission-summary' && req.method === 'GET') {
+        if (!need('commission.view')) return;
+        const year = String(url.searchParams.get('year') ?? new Date().getFullYear());
+        const yearEntries = commissionEntries.filter((e) => e.fromDate.startsWith(year));
+        const yearReceipts = commissionEntries.flatMap((e) =>
+          e.receipts.filter((r) => r.receivedDate.startsWith(year)),
+        );
+        const totalCalculated = sumMoneyStr(yearEntries.map((e) => e.calculatedAmount));
+        const totalReceived = sumMoneyStr(yearReceipts.map((r) => r.amount));
+        return send(res, 200, {
+          year: Number(year),
+          totalCalculated,
+          totalReceived,
+          totalPending: (Number(totalCalculated) - Number(totalReceived)).toFixed(2),
+          entryCount: yearEntries.length,
+          receiptCount: yearReceipts.length,
+        });
       }
       // ---- Orders, deliveries and collections (docs/API.md §11) ----
       if (rest === 'collection-methods' && req.method === 'GET')

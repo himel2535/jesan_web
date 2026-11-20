@@ -19,7 +19,7 @@ async function as(browser: Browser, who: keyof typeof ACCOUNTS, next: string): P
 }
 
 // The sidebar's "Reports" entry is gated by `reports.finance.view` (a separate, owner/finance-only
-// nav stub for a future profit/commission page — see docs/API.md and DECISIONS.md), so these pages
+// nav stub for a future profit report — see docs/API.md and DECISIONS.md), so these pages
 // are reached directly by URL here, same as a manager or accountant holding only `report.view`
 // would reach them in production.
 
