@@ -19,6 +19,7 @@ import { Money } from '../master-data/shared/display';
 import { ListSkeleton, LoadError, Notice } from '../master-data/shared/states';
 import { useCommissionEntries, useCommissionScheme, useCommissionSummary } from './api';
 import { EntryForm } from './entry-form';
+import { ReceiptForm } from './receipt-form';
 import { SchemeForm } from './scheme-form';
 import { useDefaultUnit } from './shared';
 import type { CommissionEntry } from './types';
@@ -226,6 +227,8 @@ function EntriesList({
   const params = useSearchParams();
   const page = parsePageParam(params.get('page'));
   const query = useCommissionEntries(slug, businessId, page);
+  const [quickReceipt, setQuickReceipt] = useState<CommissionEntry | null>(null);
+  const [listNotice, setListNotice] = useState<string | null>(null);
   const when = (iso: string) => format.date(`${iso}T00:00:00+06:00`);
 
   return (
@@ -238,6 +241,7 @@ function EntriesList({
           </Button>
         ) : null}
       </div>
+      <Notice>{listNotice}</Notice>
 
       {query.isPending ? (
         <ListSkeleton />
@@ -268,6 +272,9 @@ function EntriesList({
                       <th scope="col" className="px-4 py-3 text-right font-medium">
                         {t('pendingAmount')}
                       </th>
+                      <th scope="col" className="px-4 py-3 font-medium">
+                        <span className="sr-only">{t('actions')}</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -281,6 +288,9 @@ function EntriesList({
                             href={`${base}/${entry.id}`}
                             prefetch={false}
                             className="hover:underline"
+                            aria-label={t('detailsFor', {
+                              date: `${when(entry.fromDate)} – ${when(entry.toDate)}`,
+                            })}
                           >
                             {when(entry.fromDate)} – {when(entry.toDate)}
                           </Link>
@@ -297,6 +307,29 @@ function EntriesList({
                         <td className="px-4 py-3 text-right tabular-nums">
                           <Money value={entry.pendingAmount} />
                         </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`${base}/${entry.id}`}
+                              prefetch={false}
+                              className="hover:bg-surface-hover focus-visible:outline-ring inline-flex h-8 items-center rounded-md border border-border bg-surface-muted px-3 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                            >
+                              {t('details')}
+                            </Link>
+                            {canManage ? (
+                              <Button
+                                variant="secondary"
+                                onClick={() => setQuickReceipt(entry)}
+                                aria-label={t('addReceiptFor', {
+                                  date: `${when(entry.fromDate)} – ${when(entry.toDate)}`,
+                                })}
+                              >
+                                <Plus aria-hidden className="size-3" />
+                                {t('addReceipt')}
+                              </Button>
+                            ) : null}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -306,32 +339,51 @@ function EntriesList({
               <ul className="space-y-2">
                 {query.data.items.map((entry: CommissionEntry) => (
                   <li key={entry.id} className="rounded-card border border-border bg-surface p-4">
-                    <Link
-                      href={`${base}/${entry.id}`}
-                      prefetch={false}
-                      className="block hover:underline"
-                    >
-                      <span className="flex items-start justify-between gap-3">
-                        <span className="font-medium">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">
                           {when(entry.fromDate)} – {when(entry.toDate)}
-                        </span>
-                        <span className="tabular-nums">{format.quantity(entry.quantity)}</span>
+                        </p>
+                        <p className="mt-1 flex flex-wrap gap-x-4 text-sm">
+                          <span>
+                            <span className="text-fg-muted">{t('calculatedAmount')}: </span>
+                            <Money value={entry.calculatedAmount} />
+                          </span>
+                          <span>
+                            <span className="text-fg-muted">{t('receivedAmount')}: </span>
+                            <Money value={entry.receivedAmount} />
+                          </span>
+                          <span>
+                            <span className="text-fg-muted">{t('pendingAmount')}: </span>
+                            <Money value={entry.pendingAmount} />
+                          </span>
+                        </p>
+                      </div>
+                      <span className="text-sm text-fg-muted tabular-nums">
+                        {format.quantity(entry.quantity)}
                       </span>
-                    </Link>
-                    <p className="mt-2 flex flex-wrap gap-x-4 text-sm">
-                      <span>
-                        <span className="text-fg-muted">{t('calculatedAmount')}: </span>
-                        <Money value={entry.calculatedAmount} />
-                      </span>
-                      <span>
-                        <span className="text-fg-muted">{t('receivedAmount')}: </span>
-                        <Money value={entry.receivedAmount} />
-                      </span>
-                      <span>
-                        <span className="text-fg-muted">{t('pendingAmount')}: </span>
-                        <Money value={entry.pendingAmount} />
-                      </span>
-                    </p>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Link
+                        href={`${base}/${entry.id}`}
+                        prefetch={false}
+                        className="hover:bg-surface-hover focus-visible:outline-ring inline-flex h-8 items-center rounded-md border border-border bg-surface-muted px-3 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                      >
+                        {t('details')}
+                      </Link>
+                      {canManage ? (
+                        <Button
+                          variant="secondary"
+                          onClick={() => setQuickReceipt(entry)}
+                          aria-label={t('addReceiptFor', {
+                            date: `${when(entry.fromDate)} – ${when(entry.toDate)}`,
+                          })}
+                        >
+                          <Plus aria-hidden className="size-3" />
+                          {t('addReceipt')}
+                        </Button>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -340,6 +392,17 @@ function EntriesList({
           <Pagination totalItems={query.data.total} pageSize={query.data.pageSize || PAGE_SIZE} />
         </>
       )}
+
+      {quickReceipt ? (
+        <ReceiptForm
+          entryId={quickReceipt.id}
+          receipt={null}
+          slug={slug}
+          businessId={businessId}
+          onClose={() => setQuickReceipt(null)}
+          onSaved={(message) => (setQuickReceipt(null), setListNotice(message))}
+        />
+      ) : null}
     </section>
   );
 }
