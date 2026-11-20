@@ -2,9 +2,9 @@
 
 import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/core/ui/page-header';
-import { useProduct } from '../api';
+import { useCategories, useProduct, useUnits } from '../api';
 import { useNameOf } from '../shared/display';
-import { ListSkeleton, LoadError } from '../shared/states';
+import { FormSkeleton, LoadError } from '../shared/states';
 import { ProductForm } from './product-form';
 
 export function ProductEdit({
@@ -19,7 +19,10 @@ export function ProductEdit({
   const t = useTranslations('dealership.products');
   const nameOf = useNameOf();
   const query = useProduct(slug, businessId, id);
-  if (query.isPending) return <ListSkeleton rows={6} />;
+  // ProductForm below needs these two; ask while the record is still on its way.
+  useCategories(slug, businessId, 'true');
+  useUnits(slug, businessId);
+  if (query.isPending) return <FormSkeleton />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   return (
     <>

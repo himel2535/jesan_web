@@ -102,6 +102,16 @@ export function ProductName({ product, name }: { product: ProductRef; name: stri
 }
 
 /**
+ * The first list `CustomerPicker` asks for, started by the page above it. The picker only mounts
+ * once the page's skeleton gate opens, so without this its request would wait for the gate and go
+ * out in a second wave; with it both leave together and the picker finds the rows in the cache.
+ * Same key, same params as the picker itself — one request, not two.
+ */
+export function useWarmCustomerPicker(slug: string, businessId: string, active: 'true' | 'all') {
+  useCustomers(slug, businessId, { active });
+}
+
+/**
  * Search customers (name, code or phone, 300 ms debounce) and pick one. `active` decides
  * whether inactive customers can be chosen: new orders may not use them, but deliveries and
  * collections on their older orders may (docs/plans/step-5b.md decision 8).

@@ -10,6 +10,14 @@ import { useNameOf } from '../master-data/shared/display';
 import type { Product } from '../master-data/types';
 
 /**
+ * The first list `ProductPicker` asks for, started by the page above it (see
+ * `useWarmCustomerPicker`): one wave instead of two. Only active products, as the picker does.
+ */
+export function useWarmProductPicker(slug: string, businessId: string) {
+  useProducts(slug, businessId, { active: 'true' });
+}
+
+/**
  * Search active products (name or code, 300 ms debounce) and pick one. Results are plain buttons
  * (Tab/Enter work); products already chosen are shown but disabled.
  */

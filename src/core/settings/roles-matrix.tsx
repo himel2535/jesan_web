@@ -52,7 +52,7 @@ function MatrixSkeleton() {
   return (
     <div aria-busy="true" className="space-y-3">
       <Skeleton className="h-10 w-full" />
-      {Array.from({ length: 8 }, (_, i) => (
+      {Array.from({ length: 10 }, (_, i) => (
         <Skeleton key={i} className="h-8 w-full" />
       ))}
     </div>

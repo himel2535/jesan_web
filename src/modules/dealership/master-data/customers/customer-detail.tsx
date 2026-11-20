@@ -14,7 +14,7 @@ import { CorrectionSection, useCustomerRequestTarget } from '../shared/correctio
 import { DeactivateDialog } from '../shared/deactivate-dialog';
 import { DetailList, type DetailRow } from '../shared/detail-list';
 import { Balance, Money, StatusBadge, useNameOf } from '../shared/display';
-import { ListSkeleton, LoadError, Notice } from '../shared/states';
+import { DetailSkeleton, FormSkeleton, LoadError, Notice } from '../shared/states';
 import { CreditLimit, hasDueFields } from './customers-list';
 import { CustomerForm } from './customer-form';
 
@@ -42,7 +42,7 @@ export function CustomerDetail({
   );
   const base = `/b/${encodeURIComponent(slug)}/customers`;
 
-  if (query.isPending) return <ListSkeleton rows={6} />;
+  if (query.isPending) return <DetailSkeleton lines={6} />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   const c = query.data;
 
@@ -165,7 +165,7 @@ export function CustomerEdit({
   const t = useTranslations('dealership.customers');
   const nameOf = useNameOf();
   const query = useCustomer(slug, businessId, id);
-  if (query.isPending) return <ListSkeleton rows={6} />;
+  if (query.isPending) return <FormSkeleton />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   return (
     <>

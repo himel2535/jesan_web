@@ -20,7 +20,7 @@ import { inputClass } from '@/core/ui/text-field';
 import { useIsDesktop } from '@/core/ui/use-media-query';
 import { useUnits } from '../master-data/api';
 import { useNameOf } from '../master-data/shared/display';
-import { ListSkeleton, LoadError, Notice } from '../master-data/shared/states';
+import { DetailSkeleton, LoadError, Notice } from '../master-data/shared/states';
 import { useMovements } from './api';
 import { AdjustStockDialog } from './adjust-dialog';
 import { MOVEMENT_KINDS, type Movement, type MovementFilters, type MovementKind } from './types';
@@ -87,7 +87,7 @@ export function StockHistory({
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
-  if (query.isPending) return <ListSkeleton rows={6} />;
+  if (query.isPending) return <DetailSkeleton lines={6} />;
   if (query.isError) {
     if (query.error instanceof ApiError && query.error.status === 404) {
       return (

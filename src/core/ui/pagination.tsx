@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useFormat } from '@/core/i18n/use-format';
 import { cn } from './cn';
+import { RouteProgress } from './route-progress';
 import { PAGE_SIZE, getPageItems, pageRange, parsePageParam, totalPages } from './pagination-logic';
 
 export interface PaginationProps {
@@ -54,6 +55,7 @@ export function Pagination({ totalItems, pageSize = PAGE_SIZE, param = 'page' }:
       >
         {icon}
         <span className="sr-only sm:not-sr-only">{label}</span>
+        <RouteProgress />
       </Link>
     );
 
@@ -95,6 +97,7 @@ export function Pagination({ totalItems, pageSize = PAGE_SIZE, param = 'page' }:
                 )}
               >
                 {format.number(item)}
+                <RouteProgress />
               </Link>
             </li>
           ),

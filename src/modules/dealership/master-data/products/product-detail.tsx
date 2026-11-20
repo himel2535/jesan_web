@@ -16,7 +16,7 @@ import { CorrectionSection, useProductRequestTarget } from '../shared/correction
 import { DeactivateDialog } from '../shared/deactivate-dialog';
 import { DetailList, type DetailRow } from '../shared/detail-list';
 import { Money, StatusBadge, useNameOf } from '../shared/display';
-import { ListSkeleton, LoadError, Notice } from '../shared/states';
+import { DetailSkeleton, LoadError, Notice } from '../shared/states';
 
 export function ProductDetail({
   slug,
@@ -47,7 +47,7 @@ export function ProductDetail({
   );
   const base = `/b/${encodeURIComponent(slug)}/products`;
 
-  if (query.isPending) return <ListSkeleton rows={6} />;
+  if (query.isPending) return <DetailSkeleton lines={6} />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   const p = query.data;
   const unit = units.data?.items.find((u) => u.key === p.unitKey);

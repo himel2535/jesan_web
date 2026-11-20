@@ -28,6 +28,7 @@ export function loginErrorFor(error: unknown): FormError {
 
 export function LoginForm({ next }: { next: string }) {
   const t = useTranslations('auth');
+  const tc = useTranslations('common');
   const id = useId();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -63,8 +64,11 @@ export function LoginForm({ next }: { next: string }) {
       navigateTo(safeNextPath(next));
       return;
     } catch (cause) {
-      setError(loginErrorFor(cause));
-      setPassword('');
+      const failure = loginErrorFor(cause);
+      setError(failure);
+      // A sleeping backend says nothing about the password, so keep it: "Try again" resubmits it.
+      // Any other failure clears it, as before (CLAUDE.md: never keep a password around).
+      if (failure.kind !== 'unavailable') setPassword('');
       inFlight.current = false;
       setSubmitting(false);
       passwordRef.current?.focus();
@@ -78,7 +82,9 @@ export function LoginForm({ next }: { next: string }) {
         ? error.seconds
           ? t('tooManyWithSeconds', { seconds: error.seconds })
           : t('tooMany')
-        : t(error.kind);
+        : error.kind === 'unavailable'
+          ? tc('serverWaking')
+          : t(error.kind);
 
   const identifierId = `${id}-identifier`;
   const passwordId = `${id}-password`;
@@ -94,9 +100,14 @@ export function LoginForm({ next }: { next: string }) {
     >
       <div id={errorId} role="alert" aria-live="assertive">
         {message ? (
-          <p className="rounded-lg border border-danger px-3 py-2 text-sm font-medium text-danger">
-            {message}
-          </p>
+          <div className="space-y-2 rounded-lg border border-danger px-3 py-2">
+            <p className="text-sm font-medium text-danger">{message}</p>
+            {error?.kind === 'unavailable' ? (
+              <Button type="submit" variant="secondary" disabled={submitting}>
+                {tc('retry')}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

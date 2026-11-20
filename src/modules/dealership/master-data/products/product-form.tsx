@@ -11,7 +11,7 @@ import { Field, inputClass } from '@/core/ui/text-field';
 import { useCategories, useSaveProduct, useUnits, type ProductInput } from '../api';
 import { SensitiveSection, TextInput } from '../shared/fields';
 import { CategoryDialog } from '../categories/category-dialog';
-import { FormError, ListSkeleton, Notice } from '../shared/states';
+import { FormError, FormSkeleton, Notice } from '../shared/states';
 import { useProductRequestTarget } from '../shared/correction';
 import { RequestChangeButton } from '@/core/approvals/request-dialog';
 import { LIMITS, type Category, type Product } from '../types';
@@ -130,7 +130,7 @@ export function ProductForm({
     }
   };
 
-  if (categories.isPending || units.isPending) return <ListSkeleton rows={4} />;
+  if (categories.isPending || units.isPending) return <FormSkeleton />;
   const noCategory = !product && categoryOptions.length === 0;
 
   return (

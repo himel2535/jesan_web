@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTH_REFRESH_PATH, apiFetch, buildUrl, setAuthFailureHandler } from './client';
+import {
+  AUTH_REFRESH_PATH,
+  DEFAULT_TIMEOUT_MS,
+  apiFetch,
+  buildUrl,
+  setAuthFailureHandler,
+} from './client';
 import { BROWSER_API_BASE as API_BASE_URL } from './config';
 import { parseRetryAfter } from './errors';
 import { ApiError, apiErrorFromResponse } from './errors';
@@ -73,7 +79,7 @@ describe('apiFetch', () => {
     });
   });
 
-  it('times out after 3 seconds by default', async () => {
+  it('times out after the default budget, or the one the caller gave', async () => {
     fetchMock.mockImplementationOnce(
       (_url, init) =>
         new Promise((_resolve, reject) => {
@@ -87,7 +93,7 @@ describe('apiFetch', () => {
 
     fetchMock.mockResolvedValueOnce(json(200, {}));
     await apiFetch('/fast');
-    expect(timeoutSpy).toHaveBeenLastCalledWith(3000);
+    expect(timeoutSpy).toHaveBeenLastCalledWith(DEFAULT_TIMEOUT_MS);
   });
 
   it('lets a caller cancellation propagate unchanged', async () => {

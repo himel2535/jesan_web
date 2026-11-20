@@ -22,6 +22,7 @@ export function buildBusinessNav(
       href: entry.path ? `${base}/${entry.path}` : base,
       icon: entry.icon,
       prefetch: entry.prefetch,
+      listPrefetch: entry.listPrefetch,
       exact: entry.path === '',
     }));
 }

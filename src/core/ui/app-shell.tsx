@@ -8,6 +8,7 @@ import { SIDEBAR_COOKIE, type Theme } from '@/core/theme/config';
 import { MobileDrawer } from './mobile-drawer';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
+import { WakingNotice } from './waking-notice';
 
 export interface AppShellProps {
   navItems: NavItem[];
@@ -46,6 +47,8 @@ export function AppShell({ navItems, initialCollapsed, theme, title, children }:
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar theme={theme} onOpenMenu={() => setDrawerOpen(true)} />
+        {/* One place for "the server is waking up", so no page carries its own copy. */}
+        <WakingNotice />
         <main id="main" tabIndex={-1} className="flex-1 p-4 md:p-6">
           {children}
         </main>

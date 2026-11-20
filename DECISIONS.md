@@ -451,3 +451,25 @@
 - mock-API-র `currentBalance` এখন সবসময় `openingBalance + delivered − collected`; তাই পুরনো e2e-র বেমানান ১২,৫০,০০০ ধরে নেওয়া বাদ।
 - `docs/adding-a-business.md` রেপোতে ছিল না; এই PR-এ frontend অনুচ্ছেদ দিয়ে তৈরি।
 - দৈনিক সারাংশ, Accounts, কমিশন, রিপোর্ট ও ছাপার কাগজ এই ধাপে নয়।
+
+## ২০২৬-১১-২০ — লোডিং: একটাই skeleton, ঝিলিক নেই (প্ল্যান: docs/plans/loading-fix.md)
+
+- Branch `claude/loving-gauss-htrtz5` (এই পরিবেশে push শুধু এখানেই অনুমোদিত, তাই CLAUDE.md-র "প্রতিটা কাজে নতুন নামের branch" এবার মানা যায়নি)।
+- **route-এর `loading.tsx` পুরোপুরি বাদ** (দুটোই: `(enterprise)` ও `b/[slug]`), `null` দিয়ে নয়। কারণ: `loading.tsx` একটা Suspense সীমানা, তাই নিচের পাতাটা unmount হয় — `?page=`/ফিল্টার বদলালে তালিকার সারি মুছে যেত আর ব্যবহারকারী একই ক্লিকে দুইবার আকার বদল দেখত (fallback, তারপর পাতার নিজের skeleton)। সীমানা না থাকলে পরের পাতা তৈরি হওয়া পর্যন্ত আগের পাতাই থাকে, প্রতিটা পাতায় ঠিক একটা skeleton, আর `keepPreviousData` পুরনো সারি মুছে না ফেলে শুধু আবছা করে। `src/core/ui/loading-shape.test.tsx` পাহারা দেয় যে `src/app/**/loading.tsx` আর ফিরে না আসে।
+- ক্লিকের উত্তর এখন `<RouteProgress>` — `useLinkStatus()`-চালিত ২px CSS বার, `<Link>`-এর ভেতরে (সাইডবারের লিংক ও `<Pagination>`-এ)। কোনো লাইব্রেরি নয়, blur নয়, `prefers-reduced-motion`-এ animation বন্ধ।
+- `ListSkeleton` (টুলবার + ১০ সারি), `DetailSkeleton`, `FormSkeleton` এখন core-এ এক জায়গায় (`src/core/ui/skeleton.tsx`); `master-data/shared/states.tsx`-এর দ্বিতীয় ৫-সারির সংজ্ঞা বাদ, `sales/skeletons.tsx` শুধু re-export। বিস্তারিত পাতা `DetailSkeleton`, ফর্ম `FormSkeleton`, তালিকা ১০ সারি। Settings-এর ইউজার তালিকা ও Approvals-এর ইনবক্স হাতে লেখা skeleton ছেড়ে `ListSkeleton`-এ; Approvals-এর বিস্তারিত পাতায় server-rendered হেডার নেই, তাই `DetailSkeleton`।
+- গ্রাহকের "ইতিহাস" পাতায় দুটো অংশের দুটো skeleton ছিল → পাতার জন্য একটাই (`loading` ফ্ল্যাগ)।
+- `DEFAULT_TIMEOUT_MS` ৩০০০ → ১০০০০। ঘুম-ভাঙা Render ৩ সেকেন্ডে কখনো উত্তর দেয় না, তাই retry-ও বৃথা হতো; সুস্থ সার্ভারে কিছু বদলায় না (উত্তর মিলিসেকেন্ডে)।
+- retry-নীতি: non-`ApiError` (অর্থাৎ বাতিল করা অনুরোধ) কখনো নয়; 4xx কখনো নয়; network/timeout/502/503/504 সর্বোচ্চ ৩ বার, বিরতি ১s → ২s → ৪s (সর্বোচ্চ ৮s); অন্য 5xx আগের মতো ১ বার।
+- "সার্ভার জাগছে" বার্তা একটাই জায়গায়: `src/core/ui/waking-notice.tsx` query cache-এ subscribe করে (`fetchFailureCount > 0` অবস্থায় fetch চলছে কি না) আর `AppShell`-এ `<main>`-এর উপরে বসে, তাই কোনো পাতায় আলাদা কোড নেই। দুই ভাষায় একটাই নতুন key: `common.serverWaking`।
+- Login-এ শুধু `unavailable` ত্রুটিতে পাসওয়ার্ড মুছে যায় না আর alert-এ "আবার চেষ্টা করুন" বাটন (একই মান আবার পাঠায়); বাকি সব ত্রুটিতে আগের মতোই পাসওয়ার্ড মুছে যায়।
+- সাইডবারে hover/focus-এ রুট + ওই পাতার প্রথম তালিকা-query prefetch। "সাইডবার নিজে ডেটা আনে না" নিয়মের সীমিত ব্যতিক্রম: শুধু hover/focus-এ, শুধু হালকা তালিকা-পাতায় (products, customers, suppliers, purchases, sales, deliveries, collections, stock), একটা request। manifest-এ শুধু ডেটা (`listPrefetch: { entity, path, params }`), কারণ server layout client-এ ফাংশন পাঠাতে পারে না; core তাই ব্যবসা-নিরপেক্ষ থাকে। `nav-prefetch.test.ts` প্রতিটা entry-র key পাতার hook-এর key-র সঙ্গে মিলিয়ে দেখে — নইলে prefetch অন্য key-তে পড়ত আর দুইবার fetch হতো।
+- `useCategories`-এ `staleTime: 5 * 60_000` (units ও collection-methods-এর মতো): products-list, stock-list, categories-panel ও product-form একই ডেটা চায়।
+- ফর্ম-পাতার picker-এর তালিকা এখন পাতার প্রথম ঢেউয়েই যায় (`useWarmCustomerPicker`, `useWarmProductPicker`, আর `product-edit`-এ `useCategories`+`useUnits`)। আগে skeleton-গেট খোলার পরে picker mount হয়ে দ্বিতীয় round trip লাগত; request সংখ্যা একই, শুধু একটা RTT কম।
+- টাকা/স্টক/ব্যালেন্সের invalidate সেট ও staleTime অপরিবর্তিত; default staleTime আগের মতোই ৩০ সেকেন্ড, `refetchOnWindowFocus` আগের মতোই বন্ধ।
+- mock-API-তে টেস্ট-only বিলম্ব: `POST /__test/delay { ms, paths }`। cookie দিয়ে হয়নি, কারণ পাতার server অংশ (`serverApiGet`) শুধু access cookie পাঠায়, তাই `GET /auth/me` ধীর করা যেত না — অথচ route fallback ঠিক ওটারই অপেক্ষা করে।
+- **backend লাগবে (এখন করা হয়নি):**
+  - products-list এখনো একই ফিল্টারে আলাদা `GET stock` ডাকে শুধু স্টকের কলামের জন্য (৪ → ৩ হতো, যদি `GET products` উত্তরে স্টক থাকত)।
+  - `/sales/new`-এ units + collection-methods + customers + products — চারটা; একটা সংমিশ্রিত endpoint হলে ১-২ হতো।
+  - units + categories + collection-methods একবারে দেওয়ার মতো `GET /b/:slug/bootstrap` ধরনের endpoint হলে প্রায় সব পাতা এক request কমত।
+  - সাইডবারের অপেক্ষমাণ-সংখ্যার ব্যাজ প্রতিটা পাতায় একটা request যোগ করে (ঘোষিত ব্যতিক্রম); `/auth/me`-র উত্তরে সংখ্যাটা থাকলে ওটা বাদ যেত।

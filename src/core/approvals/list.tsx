@@ -13,7 +13,7 @@ import { cn } from '@/core/ui/cn';
 import { EmptyState } from '@/core/ui/empty-state';
 import { Pagination } from '@/core/ui/pagination';
 import { PAGE_SIZE, parsePageParam } from '@/core/ui/pagination-logic';
-import { Skeleton } from '@/core/ui/skeleton';
+import { ListSkeleton } from '@/core/ui/skeleton';
 import { inputClass } from '@/core/ui/text-field';
 import { useIsDesktop } from '@/core/ui/use-media-query';
 import { useChangeRequests } from './api';
@@ -177,11 +177,7 @@ export function ApprovalsList({ slug, scope }: { slug: string; scope: 'mine' | '
       ) : null}
 
       {query.isPending ? (
-        <div className="space-y-2" aria-busy>
-          {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
+        <ListSkeleton />
       ) : query.isError ? (
         <LoadFailed error={query.error} onRetry={() => void query.refetch()} />
       ) : items.length === 0 ? (

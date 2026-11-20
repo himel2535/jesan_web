@@ -106,6 +106,23 @@ describe('<OrdersList>', () => {
     await expectNoA11yViolations(container);
   });
 
+  /**
+   * Loading must change shape once, not twice: the route's `loading.tsx` shows no skeleton at all
+   * (see src/core/ui/loading-shape.test.tsx), so while the list loads the page's own skeleton is
+   * the only busy region on screen.
+   */
+  it('shows exactly one skeleton while loading, in the shape of the list', () => {
+    mockApi({
+      ...routes(WHOLE_UNIT),
+      [`GET ${B}/orders`]: () => new Promise<Response>(() => {}),
+    });
+    const { container } = renderInBusiness(<OrdersList slug="example-cement" businessId={BID} />, {
+      me: managerP,
+    });
+    expect(container.querySelectorAll('[aria-busy="true"]')).toHaveLength(1);
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
   it('no total column when the API sends no amount; no New order without sale.create', async () => {
     mockApi({
       ...routes(WHOLE_UNIT),

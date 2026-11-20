@@ -6,17 +6,12 @@ import type { ReactNode } from 'react';
 import { apiErrorKind } from '@/core/api/error-kind';
 import { Button } from '@/core/ui/button';
 import { EmptyState } from '@/core/ui/empty-state';
-import { Skeleton } from '@/core/ui/skeleton';
 
-export function ListSkeleton({ rows = 5 }: { rows?: number }) {
-  return (
-    <div aria-busy="true" className="space-y-2">
-      {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-12 w-full" />
-      ))}
-    </div>
-  );
-}
+/**
+ * The page-shaped skeletons live in core so every page loads with the same shape; re-exported
+ * here because the dealership pages import their states from this file.
+ */
+export { DetailSkeleton, FormSkeleton, ListSkeleton } from '@/core/ui/skeleton';
 
 /** Load failure: a message by status (403 = no permission) and a retry button. */
 export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {

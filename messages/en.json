@@ -4,7 +4,8 @@
     "loading": "Loading…",
     "close": "Close",
     "retry": "Try again",
-    "goHome": "Go to home"
+    "goHome": "Go to home",
+    "serverWaking": "The server is waking up — please wait a few seconds."
   },
   "nav": {
     "label": "Main navigation",
