@@ -52,6 +52,7 @@ export function useCategories(slug: string, businessId: string, active: ActiveFi
         query: { active },
         signal,
       }).then((r) => r.items),
+    staleTime: 5 * 60_000, // business settings: rarely change, wanted by four pages
   });
 }
 

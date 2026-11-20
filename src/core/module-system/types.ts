@@ -14,6 +14,22 @@ export interface ModuleNavEntry {
   /** Hide the entry unless the user has this permission in the business (UI hint only). */
   permission?: PermissionRule;
   prefetch?: NavPrefetch;
+  /**
+   * The first list the page shows, so hovering the link can warm that one query as well as the
+   * route (`NavPrefetch`). Plain data, because the server layout hands it to a client component:
+   * `params` must be exactly the key the page's own hook builds for its unfiltered first page,
+   * or the prefetch lands under a key nothing reads (`nav-prefetch.test.ts` checks every entry).
+   */
+  listPrefetch?: ListPrefetch;
+}
+
+export interface ListPrefetch {
+  /** Entity segment of the query key, e.g. 'orders'. */
+  entity: string;
+  /** Endpoint inside the business, e.g. 'orders' for GET /b/:slug/orders. */
+  path: string;
+  /** Query string and key params of the page's first, unfiltered request. */
+  params?: Readonly<Record<string, string | number>>;
 }
 
 export interface ModuleManifest {

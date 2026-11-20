@@ -1,6 +1,13 @@
 import type { ModuleManifest } from '@/core/module-system/types';
 
 /**
+ * What every list page asks for when it is opened with no filter: one page of ten rows. The
+ * module's own hooks drop unset filters before building the key, so this is the whole key
+ * (`nav-prefetch.test.ts` asserts it against each hook).
+ */
+const FIRST_PAGE = { page: 1 } as const;
+
+/**
  * Generic dealership module (one module for every dealership business; names, units and rules
  * come from the business's data, never from code). Sidebar order follows proposal §7.
  *
@@ -12,24 +19,70 @@ export const dealershipManifest = {
   namespace: 'dealership',
   nav: [
     { key: 'dashboard', path: '', icon: 'dashboard', prefetch: 'hover' },
-    { key: 'products', path: 'products', icon: 'package', permission: 'product.view' },
-    { key: 'customers', path: 'customers', icon: 'users', permission: 'customer.view' },
-    { key: 'suppliers', path: 'suppliers', icon: 'truck', permission: 'supplier.view' },
-    { key: 'purchases', path: 'purchases', icon: 'cart', permission: 'purchase.view' },
+    {
+      key: 'products',
+      path: 'products',
+      icon: 'package',
+      permission: 'product.view',
+      prefetch: 'hover',
+      listPrefetch: { entity: 'products', path: 'products', params: FIRST_PAGE },
+    },
+    {
+      key: 'customers',
+      path: 'customers',
+      icon: 'users',
+      permission: 'customer.view',
+      prefetch: 'hover',
+      listPrefetch: { entity: 'customers', path: 'customers', params: FIRST_PAGE },
+    },
+    {
+      key: 'suppliers',
+      path: 'suppliers',
+      icon: 'truck',
+      permission: 'supplier.view',
+      prefetch: 'hover',
+      listPrefetch: { entity: 'suppliers', path: 'suppliers', params: FIRST_PAGE },
+    },
+    {
+      key: 'purchases',
+      path: 'purchases',
+      icon: 'cart',
+      permission: 'purchase.view',
+      prefetch: 'hover',
+      listPrefetch: { entity: 'purchases', path: 'purchases', params: FIRST_PAGE },
+    },
     {
       key: 'sales',
       path: 'sales',
       icon: 'receipt',
       permission: { anyOf: ['sale.view.all', 'sale.view.own'] },
+      prefetch: 'hover',
+      listPrefetch: { entity: 'orders', path: 'orders', params: FIRST_PAGE },
     },
     {
       key: 'deliveries',
       path: 'deliveries',
       icon: 'truck',
       permission: 'delivery.view',
+      prefetch: 'hover',
+      listPrefetch: { entity: 'deliveries', path: 'deliveries', params: FIRST_PAGE },
     },
-    { key: 'collections', path: 'collections', icon: 'wallet', permission: 'collection.view' },
-    { key: 'stock', path: 'stock', icon: 'boxes', permission: 'stock.view' },
+    {
+      key: 'collections',
+      path: 'collections',
+      icon: 'wallet',
+      permission: 'collection.view',
+      prefetch: 'hover',
+      listPrefetch: { entity: 'collections', path: 'collections', params: FIRST_PAGE },
+    },
+    {
+      key: 'stock',
+      path: 'stock',
+      icon: 'boxes',
+      permission: 'stock.view',
+      prefetch: 'hover',
+      listPrefetch: { entity: 'stock', path: 'stock', params: FIRST_PAGE },
+    },
     { key: 'accounts', path: 'accounts', icon: 'wallet', permission: 'ledger.view' },
     { key: 'commission', path: 'commission', icon: 'percent', permission: 'commission.view' },
     { key: 'reports', path: 'reports', icon: 'chart', permission: 'reports.finance.view' },

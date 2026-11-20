@@ -66,16 +66,33 @@ describe('<LoginForm>', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Try again in 42 seconds');
   });
 
-  it('server down (network error or 5xx): a separate message', async () => {
+  // A sleeping free-tier backend, not a wrong password: say so, keep what was typed, and offer
+  // one button that sends it again.
+  it('server down (network error or 5xx): the waking message and a retry button', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
     renderWithIntl(<LoginForm next="/" />);
     await fillAndSubmit();
-    expect(screen.getByRole('alert')).toHaveTextContent('The server is not reachable');
+    expect(screen.getByRole('alert')).toHaveTextContent('The server is waking up');
+    expect(screen.getByLabelText('Password')).toHaveValue('test-pass-123');
 
     fetchMock.mockResolvedValueOnce(json(500, { statusCode: 500 }));
-    await userEvent.type(screen.getByLabelText('Password'), 'again-123');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('The server is not reachable');
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('alert')).toHaveTextContent('The server is waking up');
+
+    // It really resent the password that was still in the field, unchanged.
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+      identifier: 'manager@example.com',
+      password: 'test-pass-123',
+    });
+  });
+
+  it('a wrong password is still cleared, and no retry button is offered', async () => {
+    fetchMock.mockResolvedValueOnce(json(401, { statusCode: 401 }));
+    renderWithIntl(<LoginForm next="/" />);
+    await fillAndSubmit();
+    expect(screen.getByLabelText('Password')).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
   });
 
   it('submits only once on a double click', async () => {

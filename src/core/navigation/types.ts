@@ -1,3 +1,4 @@
+import type { ListPrefetch } from '@/core/module-system/types';
 import type { NavIconName } from '@/core/ui/icons';
 
 /**
@@ -19,4 +20,6 @@ export interface NavItem {
   exact?: boolean;
   /** A live count next to the label (rendered by a client component that fetches it). */
   badge?: 'pendingApprovals';
+  /** With `prefetch: 'hover'`, the page's first list query is warmed on hover/focus too. */
+  listPrefetch?: ListPrefetch;
 }

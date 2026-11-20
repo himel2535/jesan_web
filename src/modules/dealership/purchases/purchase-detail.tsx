@@ -9,7 +9,7 @@ import { useFormat } from '@/core/i18n/use-format';
 import { PageHeader } from '@/core/ui/page-header';
 import { DetailList, type DetailRow } from '../master-data/shared/detail-list';
 import { Money, useNameOf } from '../master-data/shared/display';
-import { ListSkeleton, LoadError, Notice } from '../master-data/shared/states';
+import { DetailSkeleton, LoadError, Notice } from '../master-data/shared/states';
 import { usePurchase } from './api';
 import { PurchaseActions } from './purchase-actions';
 import { PurchaseStatusBadge } from './purchases-list';
@@ -46,7 +46,7 @@ export function PurchaseDetail({
   );
   const base = `/b/${encodeURIComponent(slug)}`;
 
-  if (query.isPending) return <ListSkeleton rows={6} />;
+  if (query.isPending) return <DetailSkeleton lines={6} />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   const p: Purchase = query.data;
   const showPrices = p.items.some((i) => 'unitPrice' in i);

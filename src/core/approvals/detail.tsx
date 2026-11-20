@@ -12,7 +12,7 @@ import { useFormat } from '@/core/i18n/use-format';
 import { Button } from '@/core/ui/button';
 import { ConfirmDialog } from '@/core/ui/confirm-dialog';
 import { PageHeader } from '@/core/ui/page-header';
-import { Skeleton } from '@/core/ui/skeleton';
+import { DetailSkeleton } from '@/core/ui/skeleton';
 import { Field, describedBy, inputClass } from '@/core/ui/text-field';
 import { cn } from '@/core/ui/cn';
 import { useChangeRequest, useDecide, type Decision } from './api';
@@ -58,14 +58,9 @@ export function ApprovalDetail({ slug, id }: { slug: string; id: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const base = `/b/${encodeURIComponent(slug)}/approvals`;
 
-  if (query.isPending) {
-    return (
-      <div className="space-y-3" aria-busy>
-        <Skeleton className="h-10 w-2/3" />
-        <Skeleton className="h-40 w-full" />
-      </div>
-    );
-  }
+  // No server-rendered header on this page, so this skeleton is the whole screen: give it the
+  // shape of the record page that follows.
+  if (query.isPending) return <DetailSkeleton />;
   if (query.isError) {
     if (query.error instanceof ApiError && query.error.status === 404) {
       return (

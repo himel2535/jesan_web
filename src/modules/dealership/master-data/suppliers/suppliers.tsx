@@ -13,7 +13,7 @@ import { StatusBadge, useNameOf } from '../shared/display';
 import { useListParams, useSetListParams } from '../shared/list-params';
 import { ListToolbar } from '../shared/list-toolbar';
 import { DetailsLink } from '../shared/row-actions';
-import { ListEmpty, ListSkeleton, LoadError } from '../shared/states';
+import { DetailSkeleton, ListEmpty, ListSkeleton, LoadError } from '../shared/states';
 
 function PrincipalBadge() {
   const t = useTranslations('dealership.suppliers');
@@ -38,7 +38,7 @@ export function SuppliersList({ slug, businessId }: { slug: string; businessId: 
     <div className="space-y-4">
       <ListToolbar />
       {query.isPending ? (
-        <ListSkeleton rows={2} />
+        <ListSkeleton />
       ) : query.isError ? (
         <LoadError error={query.error} onRetry={() => void query.refetch()} />
       ) : items.length === 0 ? (
@@ -95,7 +95,7 @@ export function SupplierDetail({
   const t = useTranslations('dealership');
   const nameOf = useNameOf();
   const query = useSupplier(slug, businessId, id);
-  if (query.isPending) return <ListSkeleton rows={4} />;
+  if (query.isPending) return <DetailSkeleton lines={4} />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   const s = query.data;
   return (

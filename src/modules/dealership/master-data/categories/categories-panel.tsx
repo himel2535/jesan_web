@@ -85,7 +85,7 @@ export function CategoriesPanel({ slug, businessId }: { slug: string; businessId
       <Notice>{notice}</Notice>
 
       {query.isPending ? (
-        <ListSkeleton rows={3} />
+        <ListSkeleton />
       ) : query.isError ? (
         <LoadError error={query.error} onRetry={() => void query.refetch()} />
       ) : query.data.length === 0 ? (

@@ -53,6 +53,8 @@ export function CustomerActivity({
     canSeeDeliveries,
   );
   const base = `/b/${encodeURIComponent(slug)}`;
+  // One skeleton for the page, not one per section: two at once would change shape twice.
+  const loading = (canSeeOrders && orders.isPending) || (canSeeDeliveries && deliveries.isPending);
 
   const label = (htmlFor: string, text: string) => (
     <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-fg">
@@ -87,12 +89,12 @@ export function CustomerActivity({
         </div>
       </div>
 
-      {canSeeOrders ? (
+      {loading ? <ListSkeleton /> : null}
+
+      {!loading && canSeeOrders ? (
         <section className="space-y-2">
           <h2 className="text-base font-semibold">{t('orders')}</h2>
-          {orders.isPending ? (
-            <ListSkeleton rows={5} />
-          ) : orders.isError ? (
+          {orders.isPending ? null : orders.isError ? (
             <LoadError error={orders.error} onRetry={() => void orders.refetch()} />
           ) : orders.data.items.length === 0 ? (
             <p className="text-sm text-fg-muted">{t('noOrders')}</p>
@@ -136,12 +138,10 @@ export function CustomerActivity({
         </section>
       ) : null}
 
-      {canSeeDeliveries ? (
+      {!loading && canSeeDeliveries ? (
         <section className="space-y-2">
           <h2 className="text-base font-semibold">{t('deliveries')}</h2>
-          {deliveries.isPending ? (
-            <ListSkeleton rows={5} />
-          ) : deliveries.isError ? (
+          {deliveries.isPending ? null : deliveries.isError ? (
             <LoadError error={deliveries.error} onRetry={() => void deliveries.refetch()} />
           ) : deliveries.data.items.length === 0 ? (
             <p className="text-sm text-fg-muted">{t('noDeliveries')}</p>

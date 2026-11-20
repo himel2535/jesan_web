@@ -17,10 +17,16 @@ import { useNameOf } from '../../master-data/shared/display';
 import { TextInput } from '../../master-data/shared/fields';
 import { FormError } from '../../master-data/shared/states';
 import type { Customer, Product } from '../../master-data/types';
-import { ProductPicker } from '../../purchases/product-picker';
+import { ProductPicker, useWarmProductPicker } from '../../purchases/product-picker';
 import { useCollectionMethods, useCreateCollection, useCreateOrder } from '../api';
 import { FormSkeleton } from '../skeletons';
-import { CustomerPicker, ProductName, useMethodLabel, useUnitInfo } from '../shared';
+import {
+  CustomerPicker,
+  ProductName,
+  useMethodLabel,
+  useUnitInfo,
+  useWarmCustomerPicker,
+} from '../shared';
 import {
   DELIVERY_WINDOWS,
   SALES_LIMITS,
@@ -61,6 +67,9 @@ export function OrderForm({ slug, businessId }: { slug: string; businessId: stri
   const methodLabel = useMethodLabel();
   const canCollect = useCan('collection.create');
   const methods = useCollectionMethods(slug, businessId, canCollect);
+  // Both pickers sit behind the skeleton gate below; start their lists now, in this wave.
+  useWarmCustomerPicker(slug, businessId, 'true');
+  useWarmProductPicker(slug, businessId);
   const create = useCreateOrder(slug, businessId);
   const collect = useCreateCollection(slug, businessId);
   const [orderKey] = useState(newIdempotencyKey);

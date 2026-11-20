@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -62,18 +63,22 @@ describe('<LocaleSwitcher>', () => {
 });
 
 describe('<AppShell>', () => {
+  // The shell watches the query cache (the "server is waking up" line, and the nav's own
+  // hover warmers), so it needs the client it always has in the app's root layout.
   const renderShell = (collapsed = false) =>
     renderWithIntl(
-      <SessionProvider me={managerMe}>
-        <AppShell
-          title="Example Cement"
-          navItems={items}
-          initialCollapsed={collapsed}
-          theme="light"
-        >
-          <p>content</p>
-        </AppShell>
-      </SessionProvider>,
+      <QueryClientProvider client={new QueryClient()}>
+        <SessionProvider me={managerMe}>
+          <AppShell
+            title="Example Cement"
+            navItems={items}
+            initialCollapsed={collapsed}
+            theme="light"
+          >
+            <p>content</p>
+          </AppShell>
+        </SessionProvider>
+      </QueryClientProvider>,
     );
 
   it('marks the current page and has a skip link to main content', () => {

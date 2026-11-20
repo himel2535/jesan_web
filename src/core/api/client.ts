@@ -1,7 +1,12 @@
 import { BROWSER_API_BASE } from './config';
 import { ApiError, apiErrorFromResponse } from './errors';
 
-export const DEFAULT_TIMEOUT_MS = 3000;
+/**
+ * A healthy jesan-api answers in milliseconds; this budget exists for the free Render instance,
+ * which takes several seconds to answer the first request after it has gone to sleep. Three
+ * seconds would time out every one of those, making the query retries pointless (DECISIONS.md).
+ */
+export const DEFAULT_TIMEOUT_MS = 10_000;
 
 /** Refresh endpoint of jesan-api (docs/API.md §3): refresh cookie in, two new cookies out. */
 export const AUTH_REFRESH_PATH = '/auth/refresh';

@@ -222,9 +222,26 @@ function issue(res, email) {
     `jesan_rt=rt${seq}; Max-Age=2592000; Path=/api/v1/auth; HttpOnly; SameSite=Lax`,
   ]);
 }
+/**
+ * Test-only latency, so a spec can watch the loading states instead of racing them. A spec turns
+ * it on with `POST /__test/delay { ms, paths }` straight to this server and off again afterwards.
+ * It has to be here rather than in a cookie, because the server-rendered part of a page sends
+ * only the access cookie (`serverApiGet`), so GET /auth/me could not otherwise be slowed down —
+ * and that is exactly the request a route's `loading.tsx` waits for.
+ *
+ * `currentDelay` is set per request below and read here, which is safe because every handler
+ * calls `send` synchronously within its own request.
+ */
+const MAX_DELAY_MS = 3000;
+let delay = { ms: 0, paths: null };
+let currentDelay = 0;
 const send = (res, status, body, headers = {}) => {
-  res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
-  res.end(body === undefined ? '' : JSON.stringify(body));
+  const write = () => {
+    res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
+    res.end(body === undefined ? '' : JSON.stringify(body));
+  };
+  if (currentDelay > 0) setTimeout(write, currentDelay);
+  else write();
 };
 // Errors in the docs/API.md §11 shape: stable `code`, and `field` + `errors[]` for one field.
 const CODE_BY_STATUS = {
@@ -726,7 +743,19 @@ http
       const cookies = cookiesOf(req);
       if (req.method !== 'GET' && req.headers.origin && !ORIGINS.includes(req.headers.origin))
         return err(res, 403, 'Origin not allowed', 'ORIGIN_NOT_ALLOWED');
+      currentDelay =
+        delay.ms > 0 && (!delay.paths || delay.paths.some((p) => path.startsWith(p)))
+          ? delay.ms
+          : 0;
       if (path === '/health') return send(res, 200, { status: 'ok' });
+      if (path === '/__test/delay' && req.method === 'POST') {
+        delay = {
+          ms: Math.min(Math.max(Number(body.ms) || 0, 0), MAX_DELAY_MS),
+          paths: Array.isArray(body.paths) && body.paths.length > 0 ? body.paths : null,
+        };
+        currentDelay = 0; // answer the control call itself at once
+        return send(res, 200, delay);
+      }
       if (path === '/auth/login') {
         const u =
           USERS[

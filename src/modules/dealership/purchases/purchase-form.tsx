@@ -16,10 +16,10 @@ import { Field, describedBy, inputClass } from '@/core/ui/text-field';
 import { useSuppliers, useUnits } from '../master-data/api';
 import { useNameOf } from '../master-data/shared/display';
 import { TextInput } from '../master-data/shared/fields';
-import { FormError, ListSkeleton } from '../master-data/shared/states';
+import { FormError, FormSkeleton } from '../master-data/shared/states';
 import type { Product } from '../master-data/types';
 import { useCreatePurchase } from './api';
-import { ProductPicker } from './product-picker';
+import { ProductPicker, useWarmProductPicker } from './product-picker';
 import { PURCHASE_LIMITS, type PurchaseInput } from './types';
 
 interface Line {
@@ -46,6 +46,8 @@ export function PurchaseForm({ slug, businessId }: { slug: string; businessId: s
   const errorMessage = useErrorMessage();
   const units = useUnits(slug, businessId);
   const suppliers = useSuppliers(slug, businessId, { active: 'true', page: 1 });
+  // The picker sits behind the skeleton gate below; start its list now, in this wave.
+  useWarmProductPicker(slug, businessId);
   const create = useCreatePurchase(slug, businessId);
   const [idempotencyKey] = useState(newIdempotencyKey);
   const inFlight = useRef(false);
@@ -144,7 +146,7 @@ export function PurchaseForm({ slug, businessId }: { slug: string; businessId: s
     }
   };
 
-  if (units.isPending || suppliers.isPending) return <ListSkeleton rows={4} />;
+  if (units.isPending || suppliers.isPending) return <FormSkeleton />;
   const fid = (key: string) => `${id}-${key}`;
   const pending = create.isPending;
 

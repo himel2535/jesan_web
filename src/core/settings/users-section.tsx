@@ -15,7 +15,7 @@ import { Dropdown } from '@/core/ui/dropdown';
 import { EmptyState } from '@/core/ui/empty-state';
 import { Pagination } from '@/core/ui/pagination';
 import { PAGE_SIZE, parsePageParam } from '@/core/ui/pagination-logic';
-import { Skeleton } from '@/core/ui/skeleton';
+import { ListSkeleton } from '@/core/ui/skeleton';
 import { useRemoveAccess, useSetUserStatus, useUsers } from './api';
 import { useErrorMessage } from '@/core/api/field-errors';
 import { settingsErrorKind } from './errors';
@@ -95,11 +95,7 @@ export function UsersSection({ slug, businessId }: { slug: string; businessId: s
       </div>
 
       {query.isPending ? (
-        <div aria-busy="true" className="space-y-2">
-          {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
+        <ListSkeleton />
       ) : query.isError ? (
         <div role="alert" className="space-y-3 rounded-card border border-border p-6 text-center">
           <p className="text-fg">{t(`users.error.${settingsErrorKind(query.error)}`)}</p>

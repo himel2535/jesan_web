@@ -13,7 +13,7 @@ import { CorrectionSection, useCategoryRequestTarget } from '../shared/correctio
 import { DeactivateDialog } from '../shared/deactivate-dialog';
 import { DetailList, type DetailRow } from '../shared/detail-list';
 import { StatusBadge, useNameOf } from '../shared/display';
-import { ListSkeleton, LoadError, Notice } from '../shared/states';
+import { DetailSkeleton, LoadError, Notice } from '../shared/states';
 import { CategoryDialog } from './category-dialog';
 
 /**
@@ -42,7 +42,7 @@ export function CategoryDetail({
   const requestTargetOf = useCategoryRequestTarget();
   const base = `/b/${encodeURIComponent(slug)}/products`;
 
-  if (query.isPending) return <ListSkeleton rows={4} />;
+  if (query.isPending) return <DetailSkeleton lines={4} />;
   if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   const category = query.data.find((c) => c.id === id);
   if (!category) {

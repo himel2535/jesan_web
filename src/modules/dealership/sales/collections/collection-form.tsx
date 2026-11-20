@@ -16,7 +16,7 @@ import { FormError } from '../../master-data/shared/states';
 import type { Customer } from '../../master-data/types';
 import { useCollectionMethods, useCreateCollection, useOrders } from '../api';
 import { FormSkeleton } from '../skeletons';
-import { CustomerPicker, useMethodLabel } from '../shared';
+import { CustomerPicker, useMethodLabel, useWarmCustomerPicker } from '../shared';
 import { SALES_LIMITS, type CollectionInput } from '../types';
 
 type Errors = Record<string, string | undefined>;
@@ -42,6 +42,8 @@ export function CollectionForm({ slug, businessId }: { slug: string; businessId:
   const preset = useCustomer(slug, businessId, presetCustomerId, Boolean(presetCustomerId));
   const methods = useCollectionMethods(slug, businessId);
   const create = useCreateCollection(slug, businessId);
+  // The picker sits behind the skeleton gate below; start its list now, in this wave.
+  useWarmCustomerPicker(slug, businessId, 'all');
   const [idempotencyKey] = useState(newIdempotencyKey);
   const inFlight = useRef(false);
   const today = useMemo(() => businessToday(), []);
