@@ -11,7 +11,8 @@ import { Pagination } from '@/core/ui/pagination';
 import { PAGE_SIZE, parsePageParam } from '@/core/ui/pagination-logic';
 import { inputClass } from '@/core/ui/text-field';
 import { useIsDesktop } from '@/core/ui/use-media-query';
-import { Money, useNameOf } from '../../master-data/shared/display';
+import { useCustomer } from '../../master-data/api';
+import { Balance, Money, useNameOf } from '../../master-data/shared/display';
 import { DetailsLink } from '../../master-data/shared/row-actions';
 import { ListEmpty, LoadError } from '../../master-data/shared/states';
 import { useCollectionMethods, useCollections } from '../api';
@@ -28,6 +29,24 @@ import type { CollectionFilters } from '../types';
 
 const buttonLink =
   'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-fg hover:opacity-90';
+
+/**
+ * A collection only embeds a bare customer ref (docs/API.md §11), never the balance — so the
+ * due column fetches each row's customer. Bounded to 10 rows/page; React Query dedupes repeats.
+ */
+function CustomerDue({
+  slug,
+  businessId,
+  customerId,
+}: {
+  slug: string;
+  businessId: string;
+  customerId: string;
+}) {
+  const query = useCustomer(slug, businessId, customerId);
+  if (query.data?.currentBalance === undefined) return null;
+  return <Balance value={query.data.currentBalance} className="font-semibold" />;
+}
 
 function useCollectionFilters(): CollectionFilters {
   const p = useSearchParams();
@@ -50,6 +69,7 @@ export function CollectionsList({ slug, businessId }: { slug: string; businessId
   const tf = useTranslations('dealership.sales.filters');
   const ts = useTranslations('dealership.sales');
   const td = useTranslations('dealership.common');
+  const tcust = useTranslations('dealership.customers');
   const id = useId();
   const nameOf = useNameOf();
   const day = useBusinessDay();
@@ -58,6 +78,7 @@ export function CollectionsList({ slug, businessId }: { slug: string; businessId
   const methodLabel = useMethodLabel();
   const setFilters = useSetFilters();
   const canCreate = useCan('collection.create');
+  const canSeeDue = useCan('customer.due.view');
   const filters = useCollectionFilters();
   const query = useCollections(slug, businessId, filters);
   const methods = useCollectionMethods(slug, businessId, canCreate);
@@ -185,6 +206,11 @@ export function CollectionsList({ slug, businessId }: { slug: string; businessId
                       <th scope="col" className="px-4 py-3 text-right font-medium">
                         {tc('amount')}
                       </th>
+                      {canSeeDue ? (
+                        <th scope="col" className="px-4 py-3 text-right font-medium">
+                          {tcust('currentBalance')}
+                        </th>
+                      ) : null}
                       <th scope="col" className="px-4 py-3 font-medium">
                         {tc('order')}
                       </th>
@@ -219,8 +245,17 @@ export function CollectionsList({ slug, businessId }: { slug: string; businessId
                           <td className="px-4 py-3">{nameOf(c.customer)}</td>
                           <td className="px-4 py-3">{methodLabel(c.method)}</td>
                           <td className="px-4 py-3 text-right">
-                            <Money value={c.amount} />
+                            <Money value={c.amount} className="font-semibold" />
                           </td>
+                          {canSeeDue ? (
+                            <td className="px-4 py-3 text-right">
+                              <CustomerDue
+                                slug={slug}
+                                businessId={businessId}
+                                customerId={c.customer.id}
+                              />
+                            </td>
+                          ) : null}
                           <td className="px-4 py-3 font-mono">{c.order?.code ?? '—'}</td>
                           <td className="px-4 py-3">
                             <StatusText status={c.status} />
@@ -253,8 +288,18 @@ export function CollectionsList({ slug, businessId }: { slug: string; businessId
                     </Link>
                     <p className="mt-2 text-sm">
                       <span className="text-fg-muted">{tc('amount')}: </span>
-                      <Money value={c.amount} />
+                      <Money value={c.amount} className="font-semibold" />
                     </p>
+                    {canSeeDue ? (
+                      <p className="mt-1 text-sm">
+                        <span className="text-fg-muted">{tcust('currentBalance')}: </span>
+                        <CustomerDue
+                          slug={slug}
+                          businessId={businessId}
+                          customerId={c.customer.id}
+                        />
+                      </p>
+                    ) : null}
                     <div className="mt-3 flex justify-end">
                       <DetailsLink href={`${base}/${c.id}`} name={c.code} />
                     </div>

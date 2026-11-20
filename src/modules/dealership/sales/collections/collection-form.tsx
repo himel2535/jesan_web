@@ -5,12 +5,13 @@ import { useTranslations } from 'next-intl';
 import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { newIdempotencyKey } from '@/core/approvals/api';
 import { useErrorMessage } from '@/core/api/field-errors';
+import { useCan } from '@/core/auth/can';
 import { businessToday } from '@/core/i18n/format';
 import { MONEY_PATTERN, cleanMoneyInput } from '@/core/lib/money';
 import { Button } from '@/core/ui/button';
 import { Field, describedBy, inputClass } from '@/core/ui/text-field';
 import { useCustomer } from '../../master-data/api';
-import { useNameOf } from '../../master-data/shared/display';
+import { Balance, useNameOf } from '../../master-data/shared/display';
 import { TextInput } from '../../master-data/shared/fields';
 import { FormError } from '../../master-data/shared/states';
 import type { Customer } from '../../master-data/types';
@@ -26,18 +27,34 @@ type Errors = Record<string, string | undefined>;
  * money is never allocated to one (docs/API.md §11); collecting more than is due is allowed
  * and simply turns the balance into an advance. Inactive customers may still pay, so the
  * picker shows them too (step-5b decision 8).
+ *
+ * `customerId` locks the customer (no picker, no "change customer") — used when this form is
+ * opened from the customer's own page. `onSaved`, if given, replaces the default navigation to
+ * the new collection's detail page (e.g. a dialog just closes and shows a notice instead).
  */
-export function CollectionForm({ slug, businessId }: { slug: string; businessId: string }) {
+export function CollectionForm({
+  slug,
+  businessId,
+  customerId,
+  onSaved,
+}: {
+  slug: string;
+  businessId: string;
+  customerId?: string;
+  onSaved?: (message: string) => void;
+}) {
   const t = useTranslations('dealership.sales.collections');
   const tc = useTranslations('dealership.sales.common');
   const tf = useTranslations('dealership.sales.orders.form');
+  const tcust = useTranslations('dealership.customers');
   const params = useSearchParams();
   const id = useId();
   const router = useRouter();
   const nameOf = useNameOf();
   const methodLabel = useMethodLabel();
   const errorMessage = useErrorMessage();
-  const presetCustomerId = params.get('customerId') ?? '';
+  const canSeeDue = useCan('customer.due.view');
+  const presetCustomerId = customerId ?? params.get('customerId') ?? '';
   const presetOrderId = params.get('orderId') ?? '';
   const preset = useCustomer(slug, businessId, presetCustomerId, Boolean(presetCustomerId));
   const methods = useCollectionMethods(slug, businessId);
@@ -94,7 +111,8 @@ export function CollectionForm({ slug, businessId }: { slug: string; businessId:
     inFlight.current = true;
     try {
       const saved = await create.mutateAsync({ input, idempotencyKey });
-      router.push(`/b/${encodeURIComponent(slug)}/collections/${saved.id}?saved=created`);
+      if (onSaved) onSaved(t('form.created'));
+      else router.push(`/b/${encodeURIComponent(slug)}/collections/${saved.id}?saved=created`);
     } catch (cause) {
       const split = errorMessage.split(cause, [
         'customerId',
@@ -129,17 +147,19 @@ export function CollectionForm({ slug, businessId }: { slug: string; businessId:
               <span className="font-mono text-xs text-fg-muted">{customer.code}</span>{' '}
               {nameOf(customer)}
             </p>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setPicked(null);
-                setOrderId('');
-                router.replace(`/b/${encodeURIComponent(slug)}/collections/new`);
-              }}
-              disabled={pending}
-            >
-              {tf('changeCustomer')}
-            </Button>
+            {customerId ? null : (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setPicked(null);
+                  setOrderId('');
+                  router.replace(`/b/${encodeURIComponent(slug)}/collections/new`);
+                }}
+                disabled={pending}
+              >
+                {tf('changeCustomer')}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="max-w-xl">
@@ -159,6 +179,11 @@ export function CollectionForm({ slug, businessId }: { slug: string; businessId:
         {errors.customerId ? (
           <p className="text-sm font-medium text-danger" role="alert">
             {errors.customerId}
+          </p>
+        ) : null}
+        {customer && canSeeDue && customer.currentBalance !== undefined ? (
+          <p className="text-sm text-fg-muted">
+            {tcust('currentBalance')}: <Balance value={customer.currentBalance} />
           </p>
         ) : null}
       </section>

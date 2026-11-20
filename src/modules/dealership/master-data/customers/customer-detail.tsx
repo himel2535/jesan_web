@@ -8,7 +8,9 @@ import { useState } from 'react';
 import { useCan } from '@/core/auth/can';
 import { useFormat } from '@/core/i18n/use-format';
 import { Button } from '@/core/ui/button';
+import { Modal } from '@/core/ui/modal';
 import { PageHeader } from '@/core/ui/page-header';
+import { CollectionForm } from '../../sales/collections/collection-form';
 import { useCustomer, useSaveCustomer } from '../api';
 import { CorrectionSection, useCustomerRequestTarget } from '../shared/correction';
 import { DeactivateDialog } from '../shared/deactivate-dialog';
@@ -33,10 +35,13 @@ export function CustomerDetail({
   const saved = useSearchParams().get('saved');
   const canManage = useCan('customer.manage');
   const canDeactivate = useCan('customer.deactivate');
+  const canCollect = useCan('collection.create');
+  const canSeeLedger = useCan('customer.due.view');
   const query = useCustomer(slug, businessId, id);
   const save = useSaveCustomer(slug, businessId);
   const requestTarget = useCustomerRequestTarget(query.data);
   const [confirming, setConfirming] = useState(false);
+  const [showCollection, setShowCollection] = useState(false);
   const [notice, setNotice] = useState<string | null>(
     saved === 'created' ? t('common.created') : saved === 'updated' ? t('common.saved') : null,
   );
@@ -66,7 +71,10 @@ export function CustomerDetail({
       : []),
     ...(hasDueFields(c)
       ? [
-          { label: t('customers.currentBalance'), value: <Balance value={c.currentBalance} /> },
+          {
+            label: t('customers.currentBalance'),
+            value: <Balance value={c.currentBalance} className="font-semibold" />,
+          },
           ...(c.openingBalance !== undefined
             ? [
                 {
@@ -84,7 +92,7 @@ export function CustomerDetail({
                 },
                 {
                   label: t('sales.ledger.collectedAmount'),
-                  value: <Money value={c.collectedAmount} />,
+                  value: <Money value={c.collectedAmount} className="font-semibold" />,
                 },
               ]
             : []),
@@ -113,6 +121,11 @@ export function CustomerDetail({
                 {c.isActive ? t('common.deactivate') : t('common.activate')}
               </Button>
             ) : null}
+            {canCollect ? (
+              <Button onClick={() => (setNotice(null), setShowCollection(true))}>
+                {t('sales.collections.new')}
+              </Button>
+            ) : null}
             {canManage ? (
               <Link
                 href={`${base}/${c.id}/edit`}
@@ -130,13 +143,24 @@ export function CustomerDetail({
         <Notice>{notice}</Notice>
         <DetailList rows={rows} />
         <CorrectionSection slug={slug} target={requestTarget} onSent={setNotice} />
-        <Link
-          href={base}
-          prefetch={false}
-          className="inline-block text-sm font-medium text-fg underline"
-        >
-          {t('common.back')}
-        </Link>
+        <div className="flex flex-wrap gap-4">
+          <Link
+            href={base}
+            prefetch={false}
+            className="inline-block text-sm font-medium text-fg underline"
+          >
+            {t('common.back')}
+          </Link>
+          {canSeeLedger ? (
+            <Link
+              href={`${base}/${c.id}/ledger`}
+              prefetch={false}
+              className="inline-block text-sm font-medium text-fg underline"
+            >
+              {t('sales.ledger.tabLedger')}
+            </Link>
+          ) : null}
+        </div>
       </div>
       <DeactivateDialog
         open={confirming}
@@ -149,6 +173,23 @@ export function CustomerDetail({
           setNotice(t('common.statusChanged'));
         }}
       />
+      {showCollection ? (
+        <Modal
+          open
+          title={t('sales.collections.newTitle')}
+          onClose={() => setShowCollection(false)}
+        >
+          <CollectionForm
+            slug={slug}
+            businessId={businessId}
+            customerId={c.id}
+            onSaved={(message) => {
+              setShowCollection(false);
+              setNotice(message);
+            }}
+          />
+        </Modal>
+      ) : null}
     </>
   );
 }

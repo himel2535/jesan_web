@@ -59,6 +59,7 @@ const ownerP = meWith(OWNER_PERMISSIONS);
 const routes = {
   [`GET ${B}/product-units`]: unitsRoute(WHOLE_UNIT),
   [`GET ${B}/customers`]: () => json(200, page([customerRecord()])),
+  [`GET ${B}/customers/cu1`]: () => json(200, customerRecord()),
   // The methods are the business's own list; no method name lives in the code.
   [`GET ${B}/collection-methods`]: () => json(200, { items: ['cash', 'bkash', 'cheque'] }),
   [`GET ${B}/orders`]: () => json(200, page([orderSummary()])),
@@ -128,6 +129,28 @@ describe('<CollectionForm>', () => {
     expect(amount).toHaveValue('0');
   });
 
+  it('customerId prop locks the customer: no picker, shows current due, onSaved instead of navigating', async () => {
+    const onSaved = vi.fn();
+    const { calls } = mockApi({
+      ...routes,
+      [`POST ${B}/collections`]: () => json(201, collection({ id: 'col9' })),
+    });
+    renderInBusiness(
+      <CollectionForm slug="example-cement" businessId={BID} customerId="cu1" onSaved={onSaved} />,
+      { me: managerP },
+    );
+    expect(await screen.findByText(/C-00001/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change customer' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /C-00001/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Current due/)).toBeInTheDocument();
+    expect(screen.getByText('৳12,500.00')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Amount'), '5000');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalledWith('The collection was saved.'));
+    expect(calls.find((c) => c.method === 'POST')!.body).toMatchObject({ customerId: 'cu1' });
+    expect(nav.push).not.toHaveBeenCalled();
+  });
+
   it('a field error from the API lands under its field, in Bengali', async () => {
     mockApi({
       ...routes,
@@ -158,6 +181,8 @@ describe('<CollectionsList>', () => {
     expect(row).toHaveTextContent('bKash');
     expect(row).toHaveTextContent('৳20,000.00');
     expect(row).toHaveTextContent('ORD-0001');
+    // Current due: a per-row lookup of the customer (a collection never embeds the balance).
+    expect(await within(row).findByText('৳12,500.00')).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText('Method'), 'cash');
     expect(nav.replace).toHaveBeenLastCalledWith('/b/example-cement/collections?method=cash', {
       scroll: false,
@@ -172,6 +197,17 @@ describe('<CollectionsList>', () => {
     });
     await screen.findByRole('rowheader', { name: 'COL-0001' });
     expect(screen.queryByRole('link', { name: 'Take a collection' })).not.toBeInTheDocument();
+  });
+
+  it('no Current Due column without customer.due.view', async () => {
+    mockApi({ ...routes, [`GET ${B}/collections`]: () => json(200, page([collection()])) });
+    const { container } = renderInBusiness(
+      <CollectionsList slug="example-cement" businessId={BID} />,
+      { me: meWith(['collection.view', 'collection.create', 'customer.view']) },
+    );
+    await screen.findByRole('rowheader', { name: 'COL-0001' });
+    expect(screen.queryByRole('columnheader', { name: 'Current due' })).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent('৳12,500.00');
   });
 });
 

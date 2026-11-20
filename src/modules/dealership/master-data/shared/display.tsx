@@ -13,12 +13,12 @@ export function Money({ value, className }: { value: string; className?: string 
 }
 
 /** A customer balance: negative is an advance, shown as the positive amount with a label. */
-export function Balance({ value }: { value: string }) {
+export function Balance({ value, className }: { value: string; className?: string }) {
   const t = useTranslations('dealership.customers');
   const format = useFormat();
-  if (!isNegativeMoney(value)) return <Money value={value} />;
+  if (!isNegativeMoney(value)) return <Money value={value} className={className} />;
   return (
-    <span className="inline-flex flex-wrap items-center gap-1.5">
+    <span className={cn('inline-flex flex-wrap items-center gap-1.5', className)}>
       <span className="tabular-nums">{format.money(absoluteMoney(value))}</span>
       <span className="rounded-full border border-success px-2 py-0.5 text-xs font-medium text-success">
         {t('advance')}
