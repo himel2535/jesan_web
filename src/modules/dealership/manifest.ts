@@ -83,6 +83,23 @@ export const dealershipManifest = {
       prefetch: 'hover',
       listPrefetch: { entity: 'stock', path: 'stock', params: FIRST_PAGE },
     },
+    {
+      key: 'expenses',
+      path: 'expenses',
+      icon: 'receipt',
+      permission: 'expense.view',
+      prefetch: 'hover',
+      listPrefetch: { entity: 'expenses', path: 'expenses', params: FIRST_PAGE },
+    },
+    {
+      key: 'cashbook',
+      path: 'cashbook',
+      icon: 'wallet',
+      permission: 'cashbook.view',
+      prefetch: 'hover',
+    },
+    // Future step (proposal §7.8): one combined accounts/ledger page. Different permission and
+    // scope from expenses/cashbook above, so left untouched.
     { key: 'accounts', path: 'accounts', icon: 'wallet', permission: 'ledger.view' },
     { key: 'commission', path: 'commission', icon: 'percent', permission: 'commission.view' },
     { key: 'reports', path: 'reports', icon: 'chart', permission: 'reports.finance.view' },
@@ -108,5 +125,11 @@ export const dealershipManifest = {
       invalidate: ['deliveries', 'orders', 'stock', 'customers', 'ledger'],
     },
     collection: { path: 'collections/:id', invalidate: ['collections', 'customers', 'ledger'] },
+    expense: { path: 'expenses/:id', invalidate: ['expenses', 'cashBook'] },
+    // A type's status shows on every expense row that uses it.
+    expense_category: {
+      path: 'expenses/categories/:id',
+      invalidate: ['expenseCategories', 'expenses'],
+    },
   },
 } as const satisfies ModuleManifest;

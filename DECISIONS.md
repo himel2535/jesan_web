@@ -473,3 +473,15 @@
   - `/sales/new`-এ units + collection-methods + customers + products — চারটা; একটা সংমিশ্রিত endpoint হলে ১-২ হতো।
   - units + categories + collection-methods একবারে দেওয়ার মতো `GET /b/:slug/bootstrap` ধরনের endpoint হলে প্রায় সব পাতা এক request কমত।
   - সাইডবারের অপেক্ষমাণ-সংখ্যার ব্যাজ প্রতিটা পাতায় একটা request যোগ করে (ঘোষিত ব্যতিক্রম); `/auth/me`-র উত্তরে সংখ্যাটা থাকলে ওটা বাদ যেত।
+
+## ২০২৬-১১-২০ — Step 6-c1: খরচ ও ক্যাশ বই (প্ল্যান: `docs/plans/step-6-c1.md`)
+
+- `docs/API.md` backend main (`db763ee`) থেকে হুবহু sync করা হয়েছে (নতুন অধ্যায় ১৩, ত্রুটি ও রোলের অধ্যায় ১৪→১৩, ১৫→১৪ থেকে পুনর্বিন্যাস)। এই ধাপে শুধু খরচ ও ক্যাশ বই বানানো হয়েছে; রিপোর্ট ও দৈনিক সারাংশ (একই অধ্যায়ের বাকি অংশ) পরের ধাপে।
+- **Manifest nav**: নতুন `expenses` (`expense.view`) ও `cashbook` (`cashbook.view`) আইটেম `stock`-এর পরে, বিদ্যমান `accounts` placeholder-এর আগে বসানো হয়েছে। `accounts` (permission `ledger.view`) touch করা হয়নি — প্রপোজাল §৭.৮-এর ভবিষ্যতের সম্মিলিত হিসাব পাতার জন্য সংরক্ষিত, এই ধাপের `expense.*`/`cashbook.view`-এর থেকে আলাদা অনুমতি ও সুযোগ।
+- `cashbook` nav আইটেমে `listPrefetch` নেই: ক্যাশ বইয়ের ডিফল্ট তারিখ-সীমা ("এই মাস") সার্ভারের হিসাব, hover-এ সঠিক key মেলানো যায় না বলে prefetch বাদ (গ্রাহকের খাতা পাতার মতোই)।
+- `test/fixtures/me.ts`: manager পান `expense.view/create/category.manage`, `cashbook.view`; owner সব পাঁচটা নতুন অনুমতি পান (`expense.edit`/`expense.void` manager পান না — backend-এ ডিফল্ট owner-level)। `test/settings-utils.tsx`-এর accountant fixture-এ `expense.view`, `cashbook.view` যোগ হয়েছে।
+- **সংশোধনের অনুরোধে `categoryId` বাদ**: backend `change-requests`-এ `entityType: "expense"`-এর `categoryId` ফিল্ড অনুমতি দেয়, কিন্তু কোর request-dialog-এ কোনো "ক্যাটাগরি বাছাই" input-টাইপ নেই (শুধু money/quantity/date/text), আর raw id টাইপ করানো খারাপ UX। তাই request-এ `expenseDate`, `method`, `amount`, `note`, `proofNote` — পাঁচটা ফিল্ড; `categoryId` বদলাতে `expense.edit` থাকা কাউকে বলতে হবে (সরাসরি PATCH)। (`src/modules/dealership/expenses/correction.tsx`)
+- Query-key entity নাম: `expenses`, `expenseCategories`, `expenseMethods`, `cashBook` (camelCase, বিদ্যমান `collections`/`stock` প্যাটার্নের সাথে সামঞ্জস্যপূর্ণ, কোনো হাইফেন নয়)। `changeEntities`: `expense → invalidate ['expenses','cashBook']`, `expense_category → invalidate ['expenseCategories','expenses']`।
+- খরচের ধরন ব্যবস্থাপনা পুরোপুরি `master-data/categories`-এর প্যাটার্ন থেকে পোর্ট করা (তালিকা পাতাভাগ ছাড়া, dialog দিয়ে তৈরি/বদল, `RowActions`-এ deactivate+reason, কোনো hard delete নেই) — নতুন কোনো UI primitive লাগেনি।
+- e2e mock-এ ক্যাশ বই সার্ভার-পাশে গণনা করা (কোনো টেবিল নয়; active আদায়/খরচ/কেনা থেকে সরাসরি, backend-এর বর্ণনার মতোই); কেনা সবসময় নগদ ধরা হয়েছে (মক-এ `paymentMethod` আগে থেকেই সবসময় `'cash'`)।
+- পারফরম্যান্স (রিপোর্ট): খরচের তালিকা পাতা খোলায় ১টা list GET + (অনুমতি থাকলে) ১টা categories GET + ১টা methods GET = সর্বোচ্চ ৩টা; নতুন খরচের ফর্মে categories+methods = ২টা; বিস্তারিত পাতায় ১টা; ক্যাশ বইয়ে ১টা; খরচের ধরন ব্যবস্থাপনায় ১টা।

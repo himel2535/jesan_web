@@ -1,5 +1,5 @@
 /**
- * Stable error codes of jesan-api (docs/API.md §13), each with its own translated message in
+ * Stable error codes of jesan-api (docs/API.md §14), each with its own translated message in
  * `messages/*.json` under `apiErrors.codes`. A test checks both languages have every one.
  *
  * Field-structure codes are `<FIELD>_<PROBLEM>` (e.g. `NAME_EN_REQUIRED`); they are endless, so
@@ -112,7 +112,20 @@ export const ERROR_CODES = [
   'DELIVERY_ALREADY_VOID',
   'COLLECTION_ALREADY_VOID',
   'DELIVERY_EXISTS',
-  // Field-structure codes with a message of their own (examples in §13)
+  // Expenses, cash book and reports (§13)
+  'EXPENSE_METHOD_UNKNOWN',
+  'EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE',
+  'EXPENSE_DATE_INVALID',
+  'EXPENSE_DATE_IN_FUTURE',
+  'EXPENSE_DATE_TOO_OLD',
+  'FROM_INVALID',
+  'TO_INVALID',
+  'RANGE_TOO_LARGE',
+  'EXPENSE_NOT_FOUND',
+  'EXPENSE_CATEGORY_NOT_FOUND',
+  'EXPENSE_ALREADY_VOID',
+  'NAME_BN_DUPLICATE',
+  // Field-structure codes with a message of their own (examples in §14)
   'NAME_EN_REQUIRED',
   'NAME_BN_REQUIRED',
   'NAME_EN_TOO_LONG',

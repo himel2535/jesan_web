@@ -18,8 +18,9 @@ API বদলালে এই ফাইলও একই PR-এ হালনা�
 10. [কেনা ও স্টক](#১০-কেনা-ও-স্টক)
 11. [অর্ডার, ডেলিভারি ও আদায়](#১১-অর্ডার-ডেলিভারি-ও-আদায়)
 12. [সংশোধনের অনুরোধ ও অনুমোদন](#১২-সংশোধনের-অনুরোধ-ও-অনুমোদন)
-13. [ত্রুটির রূপ ও কোড](#১৩-ত্রুটির-রূপ-ও-কোড)
-14. [রোল ও অনুমতি](#১৪-রোল-ও-অনুমতি)
+13. [খরচ, ক্যাশ বই ও মূল রিপোর্ট](#১৩-খরচ-ক্যাশ-বই-ও-মূল-রিপোর্ট)
+14. [ত্রুটির রূপ ও কোড](#১৪-ত্রুটির-রূপ-ও-কোড)
+15. [রোল ও অনুমতি](#১৫-রোল-ও-অনুমতি)
 
 ---
 
@@ -199,6 +200,23 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | POST | `/b/:businessSlug/change-requests/:id/approve` | হ্যাঁ | `change.approve` + সংশ্লিষ্ট সরাসরি-অনুমতি; নিজের নয় | 200 |
 | POST | `/b/:businessSlug/change-requests/:id/reject` | হ্যাঁ | `change.approve`; নিজের নয় | 200 |
 | POST | `/b/:businessSlug/change-requests/:id/cancel` | হ্যাঁ | `change.view.own`; শুধু নিজের | 200 |
+| GET | `/b/:businessSlug/expense-categories?active=` | হ্যাঁ | `expense.view` | 200 |
+| POST | `/b/:businessSlug/expense-categories` | হ্যাঁ | `expense.category.manage` | 201 |
+| PATCH | `/b/:businessSlug/expense-categories/:id` | হ্যাঁ | `expense.category.manage` (নিষ্ক্রিয়ে `reason`) | 200 |
+| GET | `/b/:businessSlug/expense-methods` | হ্যাঁ | `expense.create` | 200 |
+| POST | `/b/:businessSlug/expenses` | হ্যাঁ | `expense.create` | 201 (একই `Idempotency-Key`: 200) |
+| GET | `/b/:businessSlug/expenses?from=&to=&categoryId=&method=&status=&page=` | হ্যাঁ | `expense.view` | 200 |
+| GET | `/b/:businessSlug/expenses/:id` | হ্যাঁ | `expense.view` | 200 |
+| PATCH | `/b/:businessSlug/expenses/:id` | হ্যাঁ | `expense.edit` + `reason` | 200 |
+| POST | `/b/:businessSlug/expenses/:id/void` | হ্যাঁ | `expense.void` | 200 |
+| GET | `/b/:businessSlug/cash-book?from=&to=&page=` | হ্যাঁ | `cashbook.view` | 200 |
+| GET | `/b/:businessSlug/reports/sales?groupBy=&from=&to=&page=` | হ্যাঁ | `report.view` | 200 |
+| GET | `/b/:businessSlug/reports/collections?groupBy=&from=&to=&page=` | হ্যাঁ | `report.view` | 200 |
+| GET | `/b/:businessSlug/reports/dues?page=` | হ্যাঁ | `report.view` | 200 |
+| GET | `/b/:businessSlug/reports/stock?page=` | হ্যাঁ | `report.view` | 200 |
+| GET | `/b/:businessSlug/reports/stock-movements?from=&to=&page=` | হ্যাঁ | `report.view` | 200 |
+| GET | `/b/:businessSlug/reports/expenses?groupBy=&from=&to=` | হ্যাঁ | `report.view` | 200 |
+| GET | `/b/:businessSlug/reports/daily-summary?date=` | হ্যাঁ | `report.view` (নগদ অংশ `cashbook.view`) | 200 |
 
 `/b/:businessSlug/...` পথে আগে যাচাই হয় ইউজার ওই ব্যবসায় ঢুকতে পারেন কি না, তারপর অনুমতি। অজানা ব্যবসা আর ঢোকার অনুমতি নেই, দুটোই একই 403।
 
@@ -1732,7 +1750,131 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ---
 
-## ১৩. ত্রুটির রূপ ও কোড
+## ১৩. খরচ, ক্যাশ বই ও মূল রিপোর্ট
+
+দৈনিক খরচ, নগদ ও ব্যাংক/মোবাইল-ব্যাংকিং-এর ক্যাশ বই, আর ব্যবসা চালানোর শুধু-পড়া রিপোর্ট। সব পথ `/api/v1/b/:businessSlug/...`-এর নিচে। মালিকের কমিশন ও লাভ এখনো নেই (ভবিষ্যতের ধাপ); কেনা-দাম-নির্ভর কোনো কলাম এই অংশে কোথাও নেই।
+
+### খরচের ধরন
+
+ব্যবসা-ভিত্তিক তালিকা (বেতন, ভাড়া, বিদ্যুৎ, যানবাহন ও জ্বালানি, আপ্যায়ন, অন্যান্য — ব্যবসার Settings-এ বদলানো যায়)। মোছা নেই, শুধু নিষ্ক্রিয় (কারণ বাধ্যতামূলক); ইতিমধ্যে বসানো খরচ তার ধরন দেখাতেই থাকে।
+
+**`GET expense-categories?active=`** (`expense.view`): তালিকা পাতাভাগ ছাড়া (ধরন অল্প, মাস্টার ডেটার ক্যাটাগরির মতো)।
+
+**`POST expense-categories`** (`expense.category.manage`):
+
+```json
+{ "nameEn": "Office supplies", "nameBn": "অফিস সরঞ্জাম", "sortOrder": 7 }
+```
+
+**`PATCH expense-categories/:id`** (`expense.category.manage`): নাম বা `sortOrder` বদলাতে `reason` লাগে না; `isActive` বদলাতে `reason` (৩–৫০০ অক্ষর) বাধ্যতামূলক।
+
+### খরচ
+
+**`POST expenses`** (`expense.create`; ম্যানেজার, হিসাবরক্ষক): ঐচ্ছিক `Idempotency-Key` header।
+
+```json
+{
+  "expenseDate": "2026-11-19",
+  "categoryId": "01a1f347-c33b-7546-b92d-f977780d6726",
+  "method": "cash",
+  "amount": "5000.00",
+  "note": "November office rent",
+  "proofNote": "Receipt 112"
+}
+```
+
+- `expenseDate` না দিলে আজ (ব্যবসার সময়-অঞ্চলে); ভবিষ্যৎ নয়; `expense.edit` না থাকলে শুধু শেষ ৭ দিন (ব্যবসার Settings: `backdateLimitDays`)।
+- `method` ব্যবসার `expenseMethods`-এর একটা হতে হবে (না থাকলে `collectionMethods`-এর মান ব্যবহার হয়)।
+- `categoryId` একই ব্যবসার ও active হতে হবে।
+- `note` (বিবরণ) ও `proofNote` (প্রমাণ-নোট, যেমন রসিদ নম্বর) দুটোই ঐচ্ছিক, আলাদা ঘর।
+- উত্তরে কোড (`EXP-0001`), `status: "active"`, `version: 1`।
+
+**`GET expenses?from=&to=&categoryId=&method=&status=&page=`** এবং **`GET expenses/:id`** (`expense.view`): পাতাভাগ ১০ সারি।
+
+**`GET expense-methods`** (`expense.create`): `{ "items": ["cash", "bkash", "nagad", "bank", "cheque"] }` — ব্যবসার Settings থেকে।
+
+### সংশোধন ও বাতিল
+
+কর্মী নিজে `PATCH`/`.../void` করতে পারেন না (403); `expense.edit` / `expense.void` (ডিফল্টে মালিক-স্তর) দিয়ে সরাসরি, নইলে অংশ ১২-র `POST change-requests` দিয়ে (`entityType: "expense"`, ঘর: `expenseDate`, `categoryId`, `method`, `amount`, `note`, `proofNote`)। বাতিলে কোনো উল্টো এন্ট্রি বসে না — ক্যাশ বই derived বলে `status: "void"` হওয়াই যথেষ্ট; প্রতিটা বদলে `version` বাড়ে। খরচের ধরন নিষ্ক্রিয়/সক্রিয় করার অনুরোধ একই পথে (`entityType: "expense_category"`, ঘর: `isActive`)।
+
+### ক্যাশ বই
+
+**`GET cash-book?from=&to=&page=`** (`cashbook.view`; ম্যানেজার, হিসাবরক্ষক): কোনো টেবিল নয় — আসল আদায়, খরচ ও নগদ কেনা থেকে সরাসরি গোনা। না দিলে `from`/`to` চলতি মাস; সর্বোচ্চ ৪০০ দিন একসাথে (বেশি হলে 400 `RANGE_TOO_LARGE`)।
+
+```json
+{
+  "from": "2026-11-01",
+  "to": "2026-11-19",
+  "openingBalance": "12000.00",
+  "closingBalance": "18500.00",
+  "totals": {
+    "collections": "9500.00", "expenses": "2000.00", "purchases": "1000.00",
+    "in": "9500.00", "out": "3000.00", "net": "6500.00",
+    "cashIn": "6000.00", "cashOut": "2500.00", "cashNet": "3500.00"
+  },
+  "byMethod": [
+    { "method": "bank", "isCash": false, "in": "3500.00", "out": "500.00", "net": "3000.00" },
+    { "method": "cash", "isCash": true, "in": "6000.00", "out": "2500.00", "net": "3500.00" }
+  ],
+  "days": [
+    { "date": "2026-11-19", "opening": "17800.00", "collections": "700.00", "expenses": "0.00", "purchases": "0.00", "in": "700.00", "out": "0.00", "closing": "18500.00" }
+  ],
+  "page": 1, "pageSize": 10, "total": 12
+}
+```
+
+- `days` শুধু কিছু ঘটেছে এমন দিনগুলো, পুরনো থেকে নতুন; পাতাভাগ দিনের উপর (১০টা)।
+- `byMethod`-এ ব্যবসার প্রতিটা পদ্ধতি থাকে, কাজ না হলেও; `isCash` ব্যবসার Settings-এর `cashMethodKeys`-এ (ডিফল্ট `cash`) আছে কিনা।
+- বাতিল হওয়া আদায়/খরচ/কেনা কখনো গোনা হয় না।
+
+### রিপোর্ট
+
+সব শুধু-পড়া, `report.view`। তারিখ-সীমা না দিলে চলতি মাস, সর্বোচ্চ ৪০০ দিন একসাথে (400 `RANGE_TOO_LARGE`)। কোনো রিপোর্টে কেনা-দাম, লাভ বা কমিশন নেই।
+
+| Route | `groupBy` | উত্তরের মূল ঘর |
+|---|---|---|
+| `GET reports/sales?groupBy=&from=&to=&page=` | `date` (ডিফল্ট) \| `customer` \| `product` \| `category` | `items[].{key,label,quantity,amount}`, `totalQuantity`, `totalAmount` |
+| `GET reports/collections?groupBy=&from=&to=&page=` | `date` (ডিফল্ট) \| `method` | `items[].{key,count,amount}`, `totalAmount` |
+| `GET reports/dues?page=` | — | `items[].{code,currentBalance,dueAmount,advanceAmount,aging}`, `totalDue`, `totalAdvance` |
+| `GET reports/stock?page=` | — | `items[].{code,currentStock,unitKey}` |
+| `GET reports/stock-movements?from=&to=&page=` | — | `items[].{code,net,byKind[].{kind,quantity}}` |
+| `GET reports/expenses?groupBy=&from=&to=` | `category` (ডিফল্ট) \| `month` | `items[].{key,label,count,amount}`, `totalAmount` |
+| `GET reports/daily-summary?date=` | — | `orders`, `deliveries`, `collections`, `expenses` (সবই `{count,amount}`), `cash` |
+
+**বিক্রয় রিপোর্ট** (`sales`): active ডেলিভারির পরিমাণ ও মূল্য, তারিখ/গ্রাহক/পণ্য/ক্যাটাগরি ধরে। `product`/`category`-তে পাতাভাগ মেমরিতে (গ্রুপের সংখ্যা সবসময় পণ্য/ক্যাটাগরির সংখ্যার মধ্যে)।
+
+**বাকির তালিকা** (`dues`): active গ্রাহক, যার ব্যালেন্স শূন্য নয়, নামের ক্রমে। `dueAmount` ও `advanceAmount` আলাদা (একটা সময় একটাই শূন্য-বহির্ভূত)। `aging` (`d0To7`, `d8To30`, `d30Plus`): আদায় কোনো ডেলিভারিতে বরাদ্দ হয় না, তাই FIFO হিসাব — শুরুর বাকি সবচেয়ে পুরনো ধরে, গ্রাহকের খাতা পুরনো থেকে নতুন মিলিয়ে; তিন bucket-এর যোগ সবসময় `dueAmount`।
+
+```json
+{
+  "items": [
+    { "id": "...", "code": "C-00007", "nameEn": "City Hardware", "currentBalance": "9000.00",
+      "dueAmount": "9000.00", "advanceAmount": "0.00",
+      "aging": { "d0To7": "4000.00", "d8To30": "3000.00", "d30Plus": "2000.00" } }
+  ],
+  "totalDue": "145000.00", "totalAdvance": "8000.00", "page": 1, "pageSize": 10, "total": 214
+}
+```
+
+**দৈনিক সারাংশ** (`daily-summary`): আজকের (না দিলে) অর্ডার, ডেলিভারি, আদায়, খরচ — সংখ্যা ও টাকা। `cash` অংশ (`openingBalance`, `closingBalance`, `net`) শুধু `cashbook.view` থাকলে আসে, সার্ভারে বাদ দেওয়া হয়, frontend-এ লুকানো নয়।
+
+### ত্রুটি
+
+| Status | `code` (`field`) | কখন |
+|---|---|---|
+| 400 | `EXPENSE_METHOD_UNKNOWN` (`method`) | পদ্ধতি ব্যবসার তালিকায় নেই |
+| 400 | `EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE` (`categoryId`) | ধরন নেই, অন্য ব্যবসার, বা নিষ্ক্রিয় |
+| 400 | `AMOUNT_TOO_SMALL` / `AMOUNT_INVALID` (`amount`) | টাকা শূন্য বা তার কম, বা রূপ ভুল |
+| 400 | `EXPENSE_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`, `expenseDate`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
+| 400 | `FROM_INVALID` / `TO_INVALID` (`from` / `to`) | তারিখ আসল নয়, বা `to` < `from` |
+| 400 | `RANGE_TOO_LARGE` (`to`) | তারিখ-সীমা ৪০০ দিনের বেশি |
+| 404 | `EXPENSE_NOT_FOUND`, `EXPENSE_CATEGORY_NOT_FOUND` | নেই বা অন্য ব্যবসার |
+| 409 | `EXPENSE_ALREADY_VOID` | বাতিল খরচে আবার বদল বা বাতিল |
+| 409 | `NAME_EN_DUPLICATE` / `NAME_BN_DUPLICATE` (`nameEn` / `nameBn`) | এই নামের ধরন আগেই আছে |
+
+---
+
+## ১৪. ত্রুটির রূপ ও কোড
 
 ### রূপ
 
@@ -1903,6 +2045,15 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `STALE_REQUEST` | 409 | - | অনুরোধের পরে রেকর্ড বদলেছে; অনুরোধ এখন stale, নতুন করে করতে হবে |
 | `ENTITY_TYPE_UNSUPPORTED` | 409 | - | এই ধরনের রেকর্ড আর বদলানো যায় না (module সরানো হয়েছে) |
 | `CHANGE_FIELD_UNSUPPORTED` | 409 | - | অনুরোধের কোনো ঘর আর নেই (যেমন সরানো বিক্রয়মূল্য) |
+| **খরচ, ক্যাশ বই ও রিপোর্ট** (অংশ ১৩) | | | |
+| `EXPENSE_METHOD_UNKNOWN` | 400 | `method` | পদ্ধতি ব্যবসার তালিকায় নেই |
+| `EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE` | 400 | `categoryId` | ধরন নেই, অন্য ব্যবসার, বা নিষ্ক্রিয় |
+| `EXPENSE_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `expenseDate` | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
+| `FROM_INVALID` / `TO_INVALID` | 400 | `from` / `to` | তারিখ আসল নয়, বা `to` < `from` |
+| `RANGE_TOO_LARGE` | 400 | `to` | রিপোর্ট বা ক্যাশ বইয়ের তারিখ-সীমা ৪০০ দিনের বেশি |
+| `EXPENSE_NOT_FOUND` | 404 | - | খরচ নেই বা অন্য ব্যবসার |
+| `EXPENSE_CATEGORY_NOT_FOUND` | 404 | - | ধরন নেই বা অন্য ব্যবসার |
+| `EXPENSE_ALREADY_VOID` | 409 | - | বাতিল খরচে আবার বদল বা বাতিলের চেষ্টা |
 
 429-এর আসল উত্তর (`Retry-After` header আগের মতোই):
 
@@ -1915,7 +2066,7 @@ Retry-After: 60
 
 ---
 
-## ১৪. রোল ও অনুমতি
+## ১৫. রোল ও অনুমতি
 
 ### রোল
 
@@ -1980,16 +2131,22 @@ Retry-After: 60
 | `ledger.view` | dealership | | | ✓ | | খাতা দেখা |
 | `ledger.entry.create` | dealership | | | ✓ | | খাতায় এন্ট্রি |
 | `payment.create` | dealership | | | ✓ | | পেমেন্ট এন্ট্রি |
-| `expense.create` | dealership | | | ✓ | | খরচ এন্ট্রি |
-| `summary.finance.view` | dealership | | | | | মোট আয়ের সারাংশ |
-| `reports.finance.view` | dealership | | | | | আর্থিক রিপোর্ট |
+| `expense.view` | dealership | | ✓ | ✓ | | খরচ দেখা |
+| `expense.create` | dealership | | ✓ | ✓ | | খরচ এন্ট্রি |
+| `expense.edit` | dealership | | | | | খরচ সংশোধন সরাসরি বা অনুমোদন |
+| `expense.void` | dealership | | | | | খরচ বাতিল সরাসরি বা অনুমোদন |
+| `expense.category.manage` | dealership | | ✓ | | | খরচের ধরন তৈরি, বদল, নিষ্ক্রিয়/সক্রিয় |
+| `cashbook.view` | dealership | | ✓ | ✓ | | দৈনিক ক্যাশ বই দেখা |
+| `report.view` | dealership | | ✓ | ✓ | | বিক্রয়/আদায়/বাকি/স্টক/খরচ/দৈনিক সারাংশ রিপোর্ট দেখা |
+| `summary.finance.view` | dealership | | | | | মোট আয়ের সারাংশ (ভবিষ্যতের ধাপ) |
+| `reports.finance.view` | dealership | | | | | লাভ ও কমিশনের আর্থিক রিপোর্ট (ভবিষ্যতের ধাপ) |
 | `commission.view` | dealership | **হ্যাঁ** | | | | কমিশন দেখা |
 | `commission.manage` | dealership | **হ্যাঁ** | | | | কমিশন scheme |
 | `profit.view` | dealership | **হ্যাঁ** | | | | লাভ দেখা |
 
-`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা, কেনা ও স্টক (অংশ ১০), আর অর্ডার, ডেলিভারি ও আদায় (অংশ ১১) তৈরি হয়েছে; খাতা ও কমিশনের অনুমতি আগে থেকে ঘোষণা করা আছে, যাতে Settings-এর ছক এখনই তৈরি করা যায়।
+`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা, কেনা ও স্টক (অংশ ১০), অর্ডার, ডেলিভারি ও আদায় (অংশ ১১), আর খরচ, ক্যাশ বই ও রিপোর্ট (অংশ ১৩) তৈরি হয়েছে; `summary.finance.view` ও `reports.finance.view` ভবিষ্যতের লাভ ও কমিশনের ধাপের জন্য আগে থেকে ঘোষণা করা আছে, এখনো কোনো endpoint নেই।
 
-তৈরির পরে বাকি বা সীমা বদল আর নিষ্ক্রিয় করার তিনটা অনুমতি (`customer.balance.edit`, `product.deactivate`, `customer.deactivate`), কেনার সংশোধন ও বাতিল (`purchase.edit`, `purchase.void`), বড় স্টক সমন্বয় (`stock.adjust.large`), অর্ডার, ডেলিভারি ও আদায়ের সংশোধন ও বাতিল (`sale.edit`, `sale.void`, `delivery.edit`, `delivery.void`, `collection.edit`, `collection.void`), ক্রেডিট সীমা পারের অনুমতি (`delivery.credit.override`), আর `change.view.all` ও `change.approve`, কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)। স্টাফ এসব বদল অনুরোধের মাধ্যমে করেন (অংশ ১২)।
+তৈরির পরে বাকি বা সীমা বদল আর নিষ্ক্রিয় করার তিনটা অনুমতি (`customer.balance.edit`, `product.deactivate`, `customer.deactivate`), কেনার সংশোধন ও বাতিল (`purchase.edit`, `purchase.void`), বড় স্টক সমন্বয় (`stock.adjust.large`), অর্ডার, ডেলিভারি ও আদায়ের সংশোধন ও বাতিল (`sale.edit`, `sale.void`, `delivery.edit`, `delivery.void`, `collection.edit`, `collection.void`), খরচের সংশোধন ও বাতিল (`expense.edit`, `expense.void`), ক্রেডিট সীমা পারের অনুমতি (`delivery.credit.override`), আর `change.view.all` ও `change.approve`, কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)। স্টাফ এসব বদল অনুরোধের মাধ্যমে করেন (অংশ ১২)।
 
 ### frontend-এ কীভাবে ব্যবহার করবেন
 

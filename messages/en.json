@@ -158,7 +158,19 @@
       "ORDER_ALREADY_VOID": "This order is void; it cannot be delivered, corrected or voided again.",
       "DELIVERY_ALREADY_VOID": "This delivery is already void; it cannot be corrected or voided again.",
       "COLLECTION_ALREADY_VOID": "This collection is already void; it cannot be corrected or voided again.",
-      "DELIVERY_EXISTS": "This order still has active deliveries; void those first."
+      "DELIVERY_EXISTS": "This order still has active deliveries; void those first.",
+      "EXPENSE_METHOD_UNKNOWN": "Choose one of the offered payment methods.",
+      "EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE": "This expense type does not exist or is inactive.",
+      "EXPENSE_DATE_INVALID": "This expense date does not exist.",
+      "EXPENSE_DATE_IN_FUTURE": "The expense date cannot be in the future.",
+      "EXPENSE_DATE_TOO_OLD": "This expense date is older than you may enter.",
+      "FROM_INVALID": "This start date does not exist.",
+      "TO_INVALID": "This end date does not exist, or comes before the start date.",
+      "RANGE_TOO_LARGE": "This date range is too large; choose a shorter one.",
+      "EXPENSE_NOT_FOUND": "This expense was not found.",
+      "EXPENSE_CATEGORY_NOT_FOUND": "This expense type was not found.",
+      "EXPENSE_ALREADY_VOID": "This expense is already void; it cannot be corrected or voided again.",
+      "NAME_BN_DUPLICATE": "This Bangla name is already used in this business."
     },
     "problems": {
       "REQUIRED": "This field is required.",
@@ -289,6 +301,8 @@
       "purchases": "Purchases",
       "sales": "Sales",
       "stock": "Stock",
+      "expenses": "Expenses",
+      "cashbook": "Cash book",
       "accounts": "Accounts",
       "commission": "Commission",
       "reports": "Reports",
@@ -840,6 +854,117 @@
           "noDeliveries": "No delivery for this customer."
         }
       }
+    },
+    "expenses": {
+      "title": "Expenses",
+      "description": "Daily expenses of {business}.",
+      "newTitle": "Record an expense",
+      "new": "Record an expense",
+      "category": "Expense type",
+      "categoryAll": "All types",
+      "categoryRequired": "Choose a type.",
+      "method": "Method",
+      "methodAll": "All methods",
+      "methodRequired": "Choose a method.",
+      "expenseDate": "Expense date",
+      "proofNote": "Proof note",
+      "proofNoteHint": "Receipt or voucher number, if any.",
+      "noteHint": "What the money was for.",
+      "amountInvalid": "Enter an amount above zero, like 570 or 570.50.",
+      "manageCategories": "Manage expense types",
+      "emptyTitle": "No expenses yet",
+      "emptyDescription": "Expenses recorded for this business appear here.",
+      "filters": {
+        "from": "From",
+        "to": "To"
+      },
+      "status": {
+        "label": "Status",
+        "all": "All statuses",
+        "active": "Active",
+        "void": "Void"
+      },
+      "form": {
+        "created": "The expense was saved."
+      },
+      "detail": {
+        "title": "Expense {code}",
+        "back": "Back to expenses"
+      },
+      "actions": {
+        "correct": "Correct",
+        "void": "Void"
+      },
+      "void": {
+        "title": "Void expense {code}?",
+        "body": "The cash book is counted live, so voiding it is enough — no reversing entry is added.",
+        "confirm": "Void the expense",
+        "done": "The expense was voided."
+      },
+      "correct": {
+        "title": "Correct expense {code}",
+        "intro": "Only what you change is sent. The cash book follows the difference.",
+        "save": "Save the correction",
+        "done": "The expense was corrected."
+      },
+      "common": {
+        "date": "Date",
+        "amount": "Amount",
+        "note": "Note",
+        "createdBy": "Entered by",
+        "voidedTitle": "This record is void",
+        "voidedBy": "Voided by {name} on {date}.",
+        "voidReason": "Reason",
+        "nothing": "Nothing was changed.",
+        "reasonNeeded": "Write why (3–500 characters)."
+      },
+      "categories": {
+        "title": "Expense types",
+        "description": "The expense types of {business} (salary, rent, utilities, …).",
+        "detailTitle": "Expense type",
+        "intro": "No hard delete — an already-used type keeps showing on its old expenses.",
+        "new": "New type",
+        "newTitle": "New expense type",
+        "editTitle": "Edit {name}",
+        "sortOrder": "Order",
+        "sortOrderHint": "Lower numbers show first in pickers.",
+        "sortOrderInvalid": "Enter a whole number.",
+        "emptyTitle": "No expense types yet",
+        "emptyDescription": "Expense types appear here once created."
+      },
+      "methodNames": {
+        "cash": "Cash",
+        "bkash": "bKash",
+        "nagad": "Nagad",
+        "rocket": "Rocket",
+        "bank": "Bank transfer",
+        "cheque": "Cheque",
+        "card": "Card"
+      }
+    },
+    "cashBook": {
+      "title": "Cash book",
+      "description": "The daily cash book of {business}.",
+      "openingBalance": "Opening balance",
+      "closingBalance": "Closing balance",
+      "totalIn": "Total in",
+      "totalOut": "Total out",
+      "in": "In",
+      "out": "Out",
+      "net": "Net",
+      "cash": "physical cash",
+      "date": "Date",
+      "opening": "Opening",
+      "collections": "Collections",
+      "expenses": "Expenses",
+      "purchases": "Purchases",
+      "closing": "Closing",
+      "emptyTitle": "Nothing in this range",
+      "emptyDescription": "Collections, expenses and cash purchases appear here by day.",
+      "filters": {
+        "from": "From",
+        "to": "To"
+      }
     }
   },
   "settings": {
@@ -1018,6 +1143,7 @@
       "ledger": "Ledger",
       "payment": "Payments",
       "expense": "Expenses",
+      "cashbook": "Cash book",
       "summary": "Summary",
       "reports": "Reports",
       "commission": "Commission",
@@ -1063,7 +1189,12 @@
       "ledger_view": "View ledger",
       "ledger_entry_create": "Add ledger entries",
       "payment_create": "Record payments",
+      "expense_view": "View expenses",
       "expense_create": "Record expenses",
+      "expense_edit": "Correct an expense, directly or by approval",
+      "expense_void": "Void an expense, directly or by approval",
+      "expense_category_manage": "Create, edit and deactivate expense types",
+      "cashbook_view": "View the daily cash book",
       "summary_finance_view": "View income summary",
       "reports_finance_view": "View financial reports",
       "commission_view": "View commission",
@@ -1106,7 +1237,9 @@
       "product_stock": "Stock",
       "sales_order": "Order",
       "delivery": "Delivery",
-      "collection": "Collection"
+      "collection": "Collection",
+      "expense": "Expense",
+      "expense_category": "Expense type"
     },
     "kind": {
       "edit": "Change",
@@ -1172,7 +1305,9 @@
       "transportReference": "Transport reference",
       "reference": "Reference",
       "method": "Method",
-      "amount": "Amount"
+      "amount": "Amount",
+      "expenseDate": "Expense date",
+      "proofNote": "Proof note"
     },
     "values": {
       "active": "Active",

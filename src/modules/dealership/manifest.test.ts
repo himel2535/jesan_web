@@ -35,6 +35,8 @@ describe('dealership sidebar by permission', () => {
       'deliveries',
       'collections',
       'stock',
+      'expenses',
+      'cashbook',
       'settings',
     ]);
   });
@@ -50,6 +52,8 @@ describe('dealership sidebar by permission', () => {
       'deliveries',
       'collections',
       'stock',
+      'expenses',
+      'cashbook',
       'accounts',
       'commission',
       'reports',

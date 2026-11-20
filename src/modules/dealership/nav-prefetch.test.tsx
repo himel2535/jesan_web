@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { createModuleKeys } from '@/core/api/query-keys';
 import type { ListPrefetch } from '@/core/module-system/types';
+import { useExpenses } from './expenses/api';
 import { dealershipManifest } from './manifest';
 import { useCustomers, useProducts, useSuppliers } from './master-data/api';
 import { usePurchases } from './purchases/api';
@@ -43,6 +44,9 @@ const pageHooks: Record<string, () => unknown> = {
   stock: function useFirstPage() {
     return useStock(SLUG, BID, { page: 1, active: 'true' });
   },
+  expenses: function useFirstPage() {
+    return useExpenses(SLUG, BID, { page: 1 });
+  },
 };
 
 /** The key the hook actually registered in the cache. */
@@ -79,6 +83,7 @@ describe('manifest listPrefetch keys', () => {
       'deliveries',
       'collections',
       'stock',
+      'expenses',
     ]);
     // Warming a query is only worth a request when the click usually follows.
     for (const entry of listEntries) expect(entry.prefetch).toBe('hover');
