@@ -158,7 +158,19 @@
       "ORDER_ALREADY_VOID": "এই অর্ডার বাতিল; এতে ডেলিভারি, সংশোধন বা আবার বাতিল হয় না।",
       "DELIVERY_ALREADY_VOID": "এই ডেলিভারি আগেই বাতিল; আবার সংশোধন বা বাতিল হয় না।",
       "COLLECTION_ALREADY_VOID": "এই আদায় আগেই বাতিল; আবার সংশোধন বা বাতিল হয় না।",
-      "DELIVERY_EXISTS": "এই অর্ডারে এখনো সক্রিয় ডেলিভারি আছে; আগে সেগুলো বাতিল করুন।"
+      "DELIVERY_EXISTS": "এই অর্ডারে এখনো সক্রিয় ডেলিভারি আছে; আগে সেগুলো বাতিল করুন।",
+      "EXPENSE_METHOD_UNKNOWN": "দেওয়া পদ্ধতিগুলোর একটা বেছে নিন।",
+      "EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE": "এই খরচের ধরন নেই বা নিষ্ক্রিয়।",
+      "EXPENSE_DATE_INVALID": "খরচের এই তারিখ নেই।",
+      "EXPENSE_DATE_IN_FUTURE": "খরচের তারিখ ভবিষ্যতের হতে পারে না।",
+      "EXPENSE_DATE_TOO_OLD": "খরচের এই তারিখ আপনার বসানোর সীমার চেয়ে পুরনো।",
+      "FROM_INVALID": "শুরুর এই তারিখ নেই।",
+      "TO_INVALID": "শেষের এই তারিখ নেই, বা শুরুর তারিখের আগের।",
+      "RANGE_TOO_LARGE": "এই তারিখ-সীমা অনেক বড়; ছোট সীমা বেছে নিন।",
+      "EXPENSE_NOT_FOUND": "এই খরচ পাওয়া যায়নি।",
+      "EXPENSE_CATEGORY_NOT_FOUND": "এই খরচের ধরন পাওয়া যায়নি।",
+      "EXPENSE_ALREADY_VOID": "এই খরচ আগেই বাতিল হয়েছে; আবার বাতিল বা সংশোধন করা যায় না।",
+      "NAME_BN_DUPLICATE": "এই বাংলা নাম এই ব্যবসায় আগে থেকেই আছে।"
     },
     "problems": {
       "REQUIRED": "এই ঘরটা পূরণ করুন।",
@@ -289,6 +301,8 @@
       "purchases": "কেনা",
       "sales": "বিক্রি",
       "stock": "স্টক",
+      "expenses": "খরচ",
+      "cashbook": "ক্যাশ বই",
       "accounts": "হিসাব",
       "commission": "কমিশন",
       "reports": "রিপোর্ট",
@@ -840,6 +854,117 @@
           "noDeliveries": "এই গ্রাহকের কোনো ডেলিভারি নেই।"
         }
       }
+    },
+    "expenses": {
+      "title": "খরচ",
+      "description": "{business}-এর দৈনিক খরচ।",
+      "newTitle": "খরচ এন্ট্রি",
+      "new": "খরচ এন্ট্রি",
+      "category": "খরচের ধরন",
+      "categoryAll": "সব ধরন",
+      "categoryRequired": "একটা ধরন বেছে নিন।",
+      "method": "পদ্ধতি",
+      "methodAll": "সব পদ্ধতি",
+      "methodRequired": "একটা পদ্ধতি বেছে নিন।",
+      "expenseDate": "খরচের তারিখ",
+      "proofNote": "প্রমাণ-নোট",
+      "proofNoteHint": "রসিদ বা ভাউচার নম্বর, থাকলে।",
+      "noteHint": "টাকাটা কীসের জন্য খরচ হলো।",
+      "amountInvalid": "শূন্যের বেশি টাকা লিখুন, যেমন ৫৭০ বা ৫৭০.৫০।",
+      "manageCategories": "খরচের ধরন ব্যবস্থাপনা",
+      "emptyTitle": "এখনো কোনো খরচ নেই",
+      "emptyDescription": "এই ব্যবসার খরচ এখানে দেখা যাবে।",
+      "filters": {
+        "from": "থেকে",
+        "to": "পর্যন্ত"
+      },
+      "status": {
+        "label": "অবস্থা",
+        "all": "সব অবস্থা",
+        "active": "সক্রিয়",
+        "void": "বাতিল"
+      },
+      "form": {
+        "created": "খরচটা সংরক্ষণ হয়েছে।"
+      },
+      "detail": {
+        "title": "খরচ {code}",
+        "back": "খরচের তালিকায় ফিরুন"
+      },
+      "actions": {
+        "correct": "সংশোধন",
+        "void": "বাতিল"
+      },
+      "void": {
+        "title": "খরচ {code} বাতিল করবেন?",
+        "body": "ক্যাশ বই সরাসরি গোনা হয়, তাই বাতিল করাই যথেষ্ট — আলাদা কোনো উল্টো এন্ট্রি লাগে না।",
+        "confirm": "খরচ বাতিল করুন",
+        "done": "খরচটা বাতিল হয়েছে।"
+      },
+      "correct": {
+        "title": "খরচ {code} সংশোধন",
+        "intro": "শুধু যা বদলান তাই পাঠানো হয়। ক্যাশ বই পার্থক্য অনুযায়ী বদলায়।",
+        "save": "সংশোধন সংরক্ষণ করুন",
+        "done": "খরচটা সংশোধন হয়েছে।"
+      },
+      "common": {
+        "date": "তারিখ",
+        "amount": "টাকা",
+        "note": "নোট",
+        "createdBy": "যিনি দিয়েছেন",
+        "voidedTitle": "এই রেকর্ড বাতিল",
+        "voidedBy": "{name} {date} তারিখে বাতিল করেছেন।",
+        "voidReason": "কারণ",
+        "nothing": "কিছু বদলানো হয়নি।",
+        "reasonNeeded": "কারণ লিখুন (৩–৫০০ অক্ষর)।"
+      },
+      "categories": {
+        "title": "খরচের ধরন",
+        "description": "{business}-এর খরচের ধরন (বেতন, ভাড়া, বিদ্যুৎ, …)।",
+        "detailTitle": "খরচের ধরন",
+        "intro": "মোছা নেই — ইতিমধ্যে ব্যবহৃত ধরন তার পুরনো খরচে দেখাতেই থাকে।",
+        "new": "নতুন ধরন",
+        "newTitle": "নতুন খরচের ধরন",
+        "editTitle": "{name} সম্পাদনা",
+        "sortOrder": "ক্রম",
+        "sortOrderHint": "ছোট সংখ্যা তালিকায় আগে দেখায়।",
+        "sortOrderInvalid": "একটা পূর্ণসংখ্যা লিখুন।",
+        "emptyTitle": "এখনো কোনো ধরন নেই",
+        "emptyDescription": "তৈরি করলে খরচের ধরন এখানে দেখা যাবে।"
+      },
+      "methodNames": {
+        "cash": "নগদ টাকা",
+        "bkash": "বিকাশ",
+        "nagad": "নগদ",
+        "rocket": "রকেট",
+        "bank": "ব্যাংক ট্রান্সফার",
+        "cheque": "চেক",
+        "card": "কার্ড"
+      }
+    },
+    "cashBook": {
+      "title": "ক্যাশ বই",
+      "description": "{business}-এর দৈনিক ক্যাশ বই।",
+      "openingBalance": "শুরুর জমা",
+      "closingBalance": "শেষের জমা",
+      "totalIn": "মোট জমা",
+      "totalOut": "মোট খরচ",
+      "in": "জমা",
+      "out": "খরচ",
+      "net": "নিট",
+      "cash": "আসল নগদ",
+      "date": "তারিখ",
+      "opening": "শুরুর",
+      "collections": "আদায়",
+      "expenses": "খরচ",
+      "purchases": "কেনা",
+      "closing": "শেষের",
+      "emptyTitle": "এই সীমায় কিছু নেই",
+      "emptyDescription": "আদায়, খরচ ও নগদ কেনা এখানে দিনভিত্তিক দেখা যাবে।",
+      "filters": {
+        "from": "থেকে",
+        "to": "পর্যন্ত"
+      }
     }
   },
   "settings": {
@@ -1018,6 +1143,7 @@
       "ledger": "খাতা",
       "payment": "পেমেন্ট",
       "expense": "খরচ",
+      "cashbook": "ক্যাশ বই",
       "summary": "সারাংশ",
       "reports": "রিপোর্ট",
       "commission": "কমিশন",
@@ -1063,7 +1189,12 @@
       "ledger_view": "খাতা দেখা",
       "ledger_entry_create": "খাতায় এন্ট্রি",
       "payment_create": "পেমেন্ট এন্ট্রি",
+      "expense_view": "খরচ দেখা",
       "expense_create": "খরচ এন্ট্রি",
+      "expense_edit": "খরচ সংশোধন সরাসরি বা অনুমোদনে",
+      "expense_void": "খরচ বাতিল সরাসরি বা অনুমোদনে",
+      "expense_category_manage": "খরচের ধরন তৈরি, বদল ও নিষ্ক্রিয়",
+      "cashbook_view": "দৈনিক ক্যাশ বই দেখা",
       "summary_finance_view": "মোট আয়ের সারাংশ দেখা",
       "reports_finance_view": "আর্থিক রিপোর্ট দেখা",
       "commission_view": "কমিশন দেখা",
@@ -1106,7 +1237,9 @@
       "product_stock": "স্টক",
       "sales_order": "অর্ডার",
       "delivery": "ডেলিভারি",
-      "collection": "আদায়"
+      "collection": "আদায়",
+      "expense": "খরচ",
+      "expense_category": "খরচের ধরন"
     },
     "kind": {
       "edit": "বদল",
@@ -1172,7 +1305,9 @@
       "transportReference": "পরিবহনের রেফারেন্স",
       "reference": "রেফারেন্স",
       "method": "পদ্ধতি",
-      "amount": "টাকা"
+      "amount": "টাকা",
+      "expenseDate": "খরচের তারিখ",
+      "proofNote": "প্রমাণ-নোট"
     },
     "values": {
       "active": "সক্রিয়",

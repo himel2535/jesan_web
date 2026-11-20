@@ -6,6 +6,7 @@ const PORT = Number(process.env.MOCK_API_PORT ?? 4000);
 const ORIGINS = ['http://localhost:3000'];
 
 const MANAGER = [
+  'cashbook.view',
   'collection.create',
   'collection.view',
   'delivery.create',
@@ -13,6 +14,9 @@ const MANAGER = [
   'customer.due.view',
   'customer.manage',
   'customer.view',
+  'expense.category.manage',
+  'expense.create',
+  'expense.view',
   'product.cost.view',
   'product.manage',
   'product.view',
@@ -59,6 +63,8 @@ const OWNER = [
   'delivery.credit.override',
   'collection.edit',
   'collection.void',
+  'expense.edit',
+  'expense.void',
   'stock.adjust.large',
   'change.view.all',
   'change.approve',
@@ -460,6 +466,151 @@ const ledger = []; // append-only; newest first
 const salesIdempotency = new Map();
 const COLLECTION_METHODS = ['cash', 'bkash', 'nagad', 'bank', 'cheque'];
 const CREDIT_LIMIT_MODE = 'warn';
+
+// ---- Expenses and the cash book (docs/API.md §13) ----
+const expenses = [];
+const expenseIdempotency = new Map();
+let expenseCategories = [
+  { id: 'ec1', nameEn: 'Salaries', nameBn: 'বেতন', sortOrder: 1, isActive: true, version: 1 },
+  { id: 'ec2', nameEn: 'Rent', nameBn: 'ভাড়া', sortOrder: 2, isActive: true, version: 1 },
+  { id: 'ec3', nameEn: 'Utilities', nameBn: 'বিদ্যুৎ', sortOrder: 3, isActive: true, version: 1 },
+];
+// `expenseMethods` falls back to `collectionMethods` when not set separately (docs/API.md §13).
+const EXPENSE_METHODS = COLLECTION_METHODS;
+const CASH_METHOD_KEYS = ['cash'];
+
+const expenseCategoryView = (c) => ({
+  ...c,
+  createdAt: c.createdAt ?? now,
+  updatedAt: c.updatedAt ?? now,
+});
+
+function expenseView(e) {
+  const cat = expenseCategories.find((c) => c.id === e.categoryId);
+  return {
+    id: e.id,
+    code: e.code,
+    expenseDate: e.expenseDate,
+    category: { id: cat.id, nameEn: cat.nameEn, nameBn: cat.nameBn },
+    method: e.method,
+    amount: e.amount,
+    note: e.note,
+    proofNote: e.proofNote,
+    status: e.status,
+    version: e.version,
+    createdBy: e.createdBy,
+    createdAt: e.createdAt,
+    voidedAt: e.voidedAt,
+    voidReason: e.voidReason,
+    voidedBy: e.voidedBy,
+    updatedAt: e.updatedAt,
+  };
+}
+
+/** Every number counted live from the active collections, expenses and purchases (no table). */
+function cashBookCompute(from, to) {
+  const activeC = collections.filter((c) => c.status === 'active');
+  const activeE = expenses.filter((e) => e.status === 'active');
+  const activeP = purchases.filter((p) => p.status === 'active');
+  const purchaseTotal = (p) =>
+    Number(sumMoneyStr(p.items.map((i) => lineTotal(i.quantity, i.unitPrice))));
+
+  const dayOf = (dateStr, kind) => {
+    let collectionsIn = 0;
+    let expensesOut = 0;
+    let purchasesOut = 0;
+    for (const c of activeC) if (c.collectionDate === dateStr) collectionsIn += Number(c.amount);
+    for (const e of activeE) if (e.expenseDate === dateStr) expensesOut += Number(e.amount);
+    for (const p of activeP) if (p.purchaseDate === dateStr) purchasesOut += purchaseTotal(p);
+    const inAmt = collectionsIn;
+    const outAmt = expensesOut + purchasesOut;
+    return kind === 'in'
+      ? inAmt
+      : kind === 'out'
+        ? outAmt
+        : { collectionsIn, expensesOut, purchasesOut };
+  };
+
+  const net = (dateTest) => {
+    let sum = 0;
+    for (const c of activeC) if (dateTest(c.collectionDate)) sum += Number(c.amount);
+    for (const e of activeE) if (dateTest(e.expenseDate)) sum -= Number(e.amount);
+    for (const p of activeP) if (dateTest(p.purchaseDate)) sum -= purchaseTotal(p);
+    return sum;
+  };
+
+  const openingBalance = net((d) => d < from);
+  const allDates = new Set([
+    ...activeC.map((c) => c.collectionDate),
+    ...activeE.map((e) => e.expenseDate),
+    ...activeP.map((p) => p.purchaseDate),
+  ]);
+  const inRangeDates = [...allDates].filter((d) => d >= from && d <= to).sort();
+
+  let running = openingBalance;
+  const days = inRangeDates.map((date) => {
+    const { collectionsIn, expensesOut, purchasesOut } = dayOf(date, 'split');
+    const opening = running;
+    const inAmt = collectionsIn;
+    const outAmt = expensesOut + purchasesOut;
+    running = opening + inAmt - outAmt;
+    return {
+      date,
+      opening: fixed(opening),
+      collections: fixed(collectionsIn),
+      expenses: fixed(expensesOut),
+      purchases: fixed(purchasesOut),
+      in: fixed(inAmt),
+      out: fixed(outAmt),
+      closing: fixed(running),
+    };
+  });
+
+  const totalCollections = inRangeDates.reduce((s, d) => s + dayOf(d, 'split').collectionsIn, 0);
+  const totalExpenses = inRangeDates.reduce((s, d) => s + dayOf(d, 'split').expensesOut, 0);
+  const totalPurchases = inRangeDates.reduce((s, d) => s + dayOf(d, 'split').purchasesOut, 0);
+  const byMethod = EXPENSE_METHODS.map((method) => {
+    let inAmt = 0;
+    let outAmt = 0;
+    for (const c of activeC)
+      if (c.method === method && c.collectionDate >= from && c.collectionDate <= to)
+        inAmt += Number(c.amount);
+    for (const e of activeE)
+      if (e.method === method && e.expenseDate >= from && e.expenseDate <= to)
+        outAmt += Number(e.amount);
+    if (method === 'cash')
+      for (const p of activeP)
+        if (p.purchaseDate >= from && p.purchaseDate <= to) outAmt += purchaseTotal(p);
+    return {
+      method,
+      isCash: CASH_METHOD_KEYS.includes(method),
+      in: fixed(inAmt),
+      out: fixed(outAmt),
+      net: fixed(inAmt - outAmt),
+    };
+  });
+
+  const closingBalance = running;
+  return {
+    from,
+    to,
+    openingBalance: fixed(openingBalance),
+    closingBalance: fixed(closingBalance),
+    totals: {
+      collections: fixed(totalCollections),
+      expenses: fixed(totalExpenses),
+      purchases: fixed(totalPurchases),
+      in: fixed(totalCollections),
+      out: fixed(totalExpenses + totalPurchases),
+      net: fixed(totalCollections - totalExpenses - totalPurchases),
+      cashIn: byMethod.find((m) => m.method === 'cash')?.in ?? '0.00',
+      cashOut: byMethod.find((m) => m.method === 'cash')?.out ?? '0.00',
+      cashNet: byMethod.find((m) => m.method === 'cash')?.net ?? '0.00',
+    },
+    byMethod,
+    days,
+  };
+}
 const customerRef = (c) => ({ id: c.id, code: c.code, nameEn: c.nameEn, nameBn: c.nameBn });
 const addMoney = (a, b) => (Math.round(Number(a) * 100) + Math.round(Number(b) * 100)) / 100;
 const fixed = (n) => n.toFixed(2);
@@ -1572,6 +1723,155 @@ http
           else refreshCustomer(customer);
           return send(res, 200, collectionView(c));
         }
+      }
+      // ---- Expenses and the cash book (docs/API.md §13) ----
+      if (rest === 'expense-categories' && req.method === 'GET') {
+        if (!need('expense.view')) return;
+        const activeQ = url.searchParams.get('active') ?? 'true';
+        const ok = (c) => activeQ === 'all' || c.isActive === (activeQ === 'true');
+        return send(res, 200, { items: expenseCategories.filter(ok).map(expenseCategoryView) });
+      }
+      if (rest === 'expense-categories' && req.method === 'POST') {
+        if (!need('expense.category.manage')) return;
+        const nameEn = String(body.nameEn ?? '').trim();
+        const nameBn = String(body.nameBn ?? '').trim();
+        if (expenseCategories.some((c) => c.nameEn.toLowerCase() === nameEn.toLowerCase()))
+          return err(res, 409, 'Name already used', 'NAME_EN_DUPLICATE', 'nameEn');
+        if (expenseCategories.some((c) => c.nameBn === nameBn))
+          return err(res, 409, 'Name already used', 'NAME_BN_DUPLICATE', 'nameBn');
+        const cat = {
+          id: `ec${expenseCategories.length + 1}`,
+          nameEn,
+          nameBn,
+          sortOrder: body.sortOrder ?? expenseCategories.length + 1,
+          isActive: true,
+          version: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        expenseCategories = [...expenseCategories, cat];
+        return send(res, 201, expenseCategoryView(cat));
+      }
+      let ecm = rest.match(/^expense-categories\/([^/]+)$/);
+      if (ecm && req.method === 'PATCH') {
+        if (!need('expense.category.manage')) return;
+        const cat = expenseCategories.find((c) => c.id === ecm[1]);
+        if (!cat) return err(res, 404, 'Not found', 'EXPENSE_CATEGORY_NOT_FOUND');
+        if ('isActive' in body && (!body.reason || body.reason.trim().length < 3))
+          return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+        for (const k of ['nameEn', 'nameBn', 'sortOrder', 'isActive'])
+          if (k in body) cat[k] = body[k];
+        cat.version += 1;
+        cat.updatedAt = new Date().toISOString();
+        return send(res, 200, expenseCategoryView(cat));
+      }
+      if (rest === 'expense-methods' && req.method === 'GET')
+        return need('expense.create') && send(res, 200, { items: EXPENSE_METHODS });
+      if (rest === 'expenses' && req.method === 'POST') {
+        if (!need('expense.create')) return;
+        const key = req.headers['idempotency-key'];
+        const seen = key && expenseIdempotency.get(`${email}:${key}`);
+        if (seen) return send(res, 200, expenseView(seen));
+        const cat = expenseCategories.find((c) => c.id === body.categoryId && c.isActive);
+        if (!cat)
+          return err(
+            res,
+            400,
+            'Expense type not found or inactive',
+            'EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE',
+            'categoryId',
+          );
+        if (!EXPENSE_METHODS.includes(body.method))
+          return err(res, 400, 'Unknown method', 'EXPENSE_METHOD_UNKNOWN', 'method');
+        if (!/^\d{1,12}(\.\d{1,2})?$/.test(String(body.amount ?? '')) || Number(body.amount) <= 0)
+          return err(res, 400, 'Amount is too small', 'AMOUNT_TOO_SMALL', 'amount');
+        const date = body.expenseDate ?? today();
+        if (date > today())
+          return err(res, 400, 'In the future', 'EXPENSE_DATE_IN_FUTURE', 'expenseDate');
+        const n = expenses.length + 1;
+        const nowIso = new Date().toISOString();
+        const e = {
+          id: `exp${n}`,
+          code: `EXP-${String(n).padStart(4, '0')}`,
+          categoryId: cat.id,
+          expenseDate: date,
+          method: body.method,
+          amount: money(body.amount),
+          note: body.note ?? null,
+          proofNote: body.proofNote ?? null,
+          status: 'active',
+          version: 1,
+          createdBy: { id: me.user.id, name: me.user.name },
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          voidedAt: null,
+          voidReason: null,
+          voidedBy: null,
+        };
+        expenses.unshift(e);
+        if (key) expenseIdempotency.set(`${email}:${key}`, e);
+        return send(res, 201, expenseView(e));
+      }
+      if (rest === 'expenses' && req.method === 'GET') {
+        if (!need('expense.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const list = expenses.filter(
+          (e) =>
+            (!f.categoryId || e.categoryId === f.categoryId) &&
+            (!f.method || e.method === f.method) &&
+            (!f.status || e.status === f.status) &&
+            (!f.from || e.expenseDate >= f.from) &&
+            (!f.to || e.expenseDate <= f.to),
+        );
+        const pg = pageOf(list, page);
+        return send(res, 200, { ...pg, items: pg.items.map(expenseView) });
+      }
+      let em = rest.match(/^expenses\/([^/]+)(\/void)?$/);
+      if (em) {
+        if (!need('expense.view')) return;
+        const e = expenses.find((x) => x.id === em[1]);
+        if (!e) return err(res, 404, 'Expense not found', 'EXPENSE_NOT_FOUND');
+        if (req.method === 'GET' && !em[2]) return send(res, 200, expenseView(e));
+        if (req.method === 'POST' && em[2]) {
+          if (!need('expense.void')) return;
+          if (e.status === 'void') return err(res, 409, 'Already void', 'EXPENSE_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          e.status = 'void';
+          e.voidedAt = new Date().toISOString();
+          e.voidReason = body.reason.trim();
+          e.voidedBy = { id: me.user.id, name: me.user.name };
+          e.updatedAt = e.voidedAt;
+          return send(res, 200, expenseView(e));
+        }
+        if (req.method === 'PATCH') {
+          if (!need('expense.edit')) return;
+          if (e.status === 'void') return err(res, 409, 'Already void', 'EXPENSE_ALREADY_VOID');
+          if (!body.reason || body.reason.trim().length < 3)
+            return err(res, 400, 'A reason is required', 'REASON_REQUIRED', 'reason');
+          for (const k of ['expenseDate', 'categoryId', 'method', 'note', 'proofNote'])
+            if (k in body) e[k] = body[k];
+          if (body.amount !== undefined) e.amount = money(body.amount);
+          e.version += 1;
+          e.updatedAt = new Date().toISOString();
+          return send(res, 200, expenseView(e));
+        }
+      }
+      if (rest === 'cash-book' && req.method === 'GET') {
+        if (!need('cashbook.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const monthStart = today().slice(0, 7) + '-01';
+        const from = f.from ?? monthStart;
+        const to = f.to ?? today();
+        const full = cashBookCompute(from, to);
+        const dayPage = pageOf(full.days, page);
+        return send(res, 200, {
+          ...full,
+          days: dayPage.items,
+          page,
+          pageSize: 10,
+          total: full.days.length,
+        });
       }
       let lm = rest.match(/^customers\/([^/]+)\/ledger$/);
       if (lm && req.method === 'GET') {

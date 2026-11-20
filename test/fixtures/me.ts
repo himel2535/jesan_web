@@ -23,7 +23,12 @@ export const OWNER_PERMISSIONS = [
   'delivery.edit',
   'delivery.view',
   'delivery.void',
+  'cashbook.view',
+  'expense.category.manage',
   'expense.create',
+  'expense.edit',
+  'expense.view',
+  'expense.void',
   'ledger.entry.create',
   'ledger.view',
   'payment.create',
@@ -55,6 +60,7 @@ export const OWNER_PERMISSIONS = [
 ];
 
 export const MANAGER_PERMISSIONS = [
+  'cashbook.view',
   'collection.create',
   'collection.view',
   'customer.due.view',
@@ -62,6 +68,9 @@ export const MANAGER_PERMISSIONS = [
   'customer.view',
   'delivery.create',
   'delivery.view',
+  'expense.category.manage',
+  'expense.create',
+  'expense.view',
   'product.cost.view',
   'product.manage',
   'product.view',
