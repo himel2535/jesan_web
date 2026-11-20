@@ -965,6 +965,119 @@
         "from": "থেকে",
         "to": "পর্যন্ত"
       }
+    },
+    "reports": {
+      "title": "রিপোর্ট",
+      "description": "{business}-এর শুধু-পড়ার রিপোর্ট।",
+      "nav": {
+        "sales": "বিক্রয়",
+        "collections": "আদায়",
+        "dues": "বাকি",
+        "stock": "স্টক",
+        "stockMovements": "স্টক চলাচল",
+        "expenses": "খরচ"
+      },
+      "common": {
+        "from": "শুরু",
+        "to": "শেষ",
+        "groupBy": "যেভাবে ভাগ",
+        "total": "মোট",
+        "emptyTitle": "এই সময়ে কিছু নেই",
+        "emptyDescription": "অন্য তারিখ-সীমা দেখুন।"
+      },
+      "sales": {
+        "title": "বিক্রয় রিপোর্ট",
+        "groupBy": {
+          "date": "তারিখ",
+          "customer": "গ্রাহক",
+          "product": "পণ্য",
+          "category": "ক্যাটাগরি"
+        },
+        "columns": {
+          "group": "ভাগ",
+          "quantity": "পরিমাণ",
+          "amount": "টাকা"
+        },
+        "totalQuantity": "মোট পরিমাণ",
+        "totalAmount": "মোট টাকা"
+      },
+      "collections": {
+        "title": "আদায় রিপোর্ট",
+        "groupBy": {
+          "date": "তারিখ",
+          "method": "পদ্ধতি"
+        },
+        "columns": {
+          "group": "ভাগ",
+          "count": "সংখ্যা",
+          "amount": "টাকা"
+        },
+        "totalAmount": "মোট টাকা"
+      },
+      "dues": {
+        "title": "বাকির রিপোর্ট",
+        "columns": {
+          "currentBalance": "ব্যালেন্স",
+          "dueAmount": "বাকি",
+          "advanceAmount": "অগ্রিম"
+        },
+        "aging": {
+          "title": "বয়স",
+          "d0To7": "০-৭ দিন",
+          "d8To30": "৮-৩০ দিন",
+          "d30Plus": "৩০+ দিন"
+        },
+        "totalDue": "মোট বাকি",
+        "totalAdvance": "মোট অগ্রিম"
+      },
+      "stock": {
+        "title": "স্টক রিপোর্ট",
+        "columns": {
+          "unit": "একক",
+          "currentStock": "বর্তমান স্টক"
+        }
+      },
+      "stockMovements": {
+        "title": "স্টক চলাচল",
+        "columns": {
+          "unit": "একক",
+          "net": "নিট"
+        },
+        "kind": {
+          "purchase": "কেনা",
+          "purchase_edit": "কেনা সংশোধন",
+          "purchase_void": "কেনা বাতিল",
+          "adjustment": "সমন্বয়",
+          "delivery": "ডেলিভারি",
+          "delivery_edit": "ডেলিভারি সংশোধন",
+          "delivery_void": "ডেলিভারি বাতিল"
+        }
+      },
+      "expenses": {
+        "title": "খরচের রিপোর্ট",
+        "groupBy": {
+          "category": "ধরন",
+          "month": "মাস"
+        },
+        "columns": {
+          "group": "ভাগ",
+          "count": "সংখ্যা",
+          "amount": "টাকা"
+        },
+        "totalAmount": "মোট টাকা"
+      },
+      "dailySummary": {
+        "title": "আজ",
+        "orders": "অর্ডার",
+        "deliveries": "ডেলিভারি",
+        "collections": "আদায়",
+        "expenses": "খরচ",
+        "cash": {
+          "openingBalance": "শুরুর ব্যালেন্স",
+          "closingBalance": "শেষের ব্যালেন্স",
+          "net": "নিট"
+        }
+      }
     }
   },
   "settings": {
@@ -1144,6 +1257,7 @@
       "payment": "পেমেন্ট",
       "expense": "খরচ",
       "cashbook": "ক্যাশ বই",
+      "report": "রিপোর্ট",
       "summary": "সারাংশ",
       "reports": "রিপোর্ট",
       "commission": "কমিশন",
@@ -1195,6 +1309,7 @@
       "expense_void": "খরচ বাতিল সরাসরি বা অনুমোদনে",
       "expense_category_manage": "খরচের ধরন তৈরি, বদল ও নিষ্ক্রিয়",
       "cashbook_view": "দৈনিক ক্যাশ বই দেখা",
+      "report_view": "বিক্রয়, আদায়, বাকি, স্টক, খরচ ও দৈনিক সারাংশ রিপোর্ট দেখা",
       "summary_finance_view": "মোট আয়ের সারাংশ দেখা",
       "reports_finance_view": "আর্থিক রিপোর্ট দেখা",
       "commission_view": "কমিশন দেখা",

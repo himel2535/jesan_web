@@ -965,6 +965,119 @@
         "from": "From",
         "to": "To"
       }
+    },
+    "reports": {
+      "title": "Reports",
+      "description": "Read-only reports for {business}.",
+      "nav": {
+        "sales": "Sales",
+        "collections": "Collections",
+        "dues": "Dues",
+        "stock": "Stock",
+        "stockMovements": "Stock movements",
+        "expenses": "Expenses"
+      },
+      "common": {
+        "from": "From",
+        "to": "To",
+        "groupBy": "Group by",
+        "total": "Total",
+        "emptyTitle": "Nothing in this range",
+        "emptyDescription": "Try a different date range."
+      },
+      "sales": {
+        "title": "Sales report",
+        "groupBy": {
+          "date": "Date",
+          "customer": "Customer",
+          "product": "Product",
+          "category": "Category"
+        },
+        "columns": {
+          "group": "Group",
+          "quantity": "Quantity",
+          "amount": "Amount"
+        },
+        "totalQuantity": "Total quantity",
+        "totalAmount": "Total amount"
+      },
+      "collections": {
+        "title": "Collections report",
+        "groupBy": {
+          "date": "Date",
+          "method": "Method"
+        },
+        "columns": {
+          "group": "Group",
+          "count": "Count",
+          "amount": "Amount"
+        },
+        "totalAmount": "Total amount"
+      },
+      "dues": {
+        "title": "Dues report",
+        "columns": {
+          "currentBalance": "Balance",
+          "dueAmount": "Due",
+          "advanceAmount": "Advance"
+        },
+        "aging": {
+          "title": "Aging",
+          "d0To7": "0-7 days",
+          "d8To30": "8-30 days",
+          "d30Plus": "30+ days"
+        },
+        "totalDue": "Total due",
+        "totalAdvance": "Total advance"
+      },
+      "stock": {
+        "title": "Stock report",
+        "columns": {
+          "unit": "Unit",
+          "currentStock": "Current stock"
+        }
+      },
+      "stockMovements": {
+        "title": "Stock movements",
+        "columns": {
+          "unit": "Unit",
+          "net": "Net"
+        },
+        "kind": {
+          "purchase": "Purchase",
+          "purchase_edit": "Purchase correction",
+          "purchase_void": "Purchase void",
+          "adjustment": "Adjustment",
+          "delivery": "Delivery",
+          "delivery_edit": "Delivery correction",
+          "delivery_void": "Delivery void"
+        }
+      },
+      "expenses": {
+        "title": "Expenses report",
+        "groupBy": {
+          "category": "Category",
+          "month": "Month"
+        },
+        "columns": {
+          "group": "Group",
+          "count": "Count",
+          "amount": "Amount"
+        },
+        "totalAmount": "Total amount"
+      },
+      "dailySummary": {
+        "title": "Today",
+        "orders": "Orders",
+        "deliveries": "Deliveries",
+        "collections": "Collections",
+        "expenses": "Expenses",
+        "cash": {
+          "openingBalance": "Opening balance",
+          "closingBalance": "Closing balance",
+          "net": "Net"
+        }
+      }
     }
   },
   "settings": {
@@ -1144,6 +1257,7 @@
       "payment": "Payments",
       "expense": "Expenses",
       "cashbook": "Cash book",
+      "report": "Reports",
       "summary": "Summary",
       "reports": "Reports",
       "commission": "Commission",
@@ -1195,6 +1309,7 @@
       "expense_void": "Void an expense, directly or by approval",
       "expense_category_manage": "Create, edit and deactivate expense types",
       "cashbook_view": "View the daily cash book",
+      "report_view": "View sales, collections, dues, stock, expense and daily summary reports",
       "summary_finance_view": "View income summary",
       "reports_finance_view": "View financial reports",
       "commission_view": "View commission",

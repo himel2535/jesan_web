@@ -121,6 +121,7 @@ const ALL: [string, string, boolean][] = [
   ['expense.void', 'dealership', false],
   ['expense.category.manage', 'dealership', false],
   ['cashbook.view', 'dealership', false],
+  ['report.view', 'dealership', false],
   ['summary.finance.view', 'dealership', false],
   ['reports.finance.view', 'dealership', false],
   ['commission.view', 'dealership', true],
