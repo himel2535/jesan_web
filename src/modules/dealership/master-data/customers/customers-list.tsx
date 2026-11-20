@@ -47,6 +47,8 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
   const base = `/b/${encodeURIComponent(slug)}/customers`;
   const items = query.data?.items ?? [];
   const showDue = canSeeDue && items.some(hasDueFields);
+  const showDelivered = canSeeDue && items.some((c) => c.deliveredAmount !== undefined);
+  const showCollected = canSeeDue && items.some((c) => c.collectedAmount !== undefined);
   // Everyone with customer.view gets this one; still only a column when the API sent it (§11).
   const showPending = items.some((c) => c.pendingDeliveryQuantity !== undefined);
   const filtered = Boolean(params.search || params.active !== 'true');
@@ -128,6 +130,16 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
                           </th>
                         </>
                       ) : null}
+                      {showDelivered ? (
+                        <th scope="col" className="px-4 py-3 text-right font-medium">
+                          {t('sales.ledger.deliveredAmount')}
+                        </th>
+                      ) : null}
+                      {showCollected ? (
+                        <th scope="col" className="px-4 py-3 text-right font-medium">
+                          {t('sales.ledger.collectedAmount')}
+                        </th>
+                      ) : null}
                       <th scope="col" className="px-4 py-3 font-medium">
                         {t('common.status')}
                       </th>
@@ -169,12 +181,28 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
                         {showDue ? (
                           <>
                             <td className="px-4 py-3 text-right">
-                              {hasDueFields(c) ? <Balance value={c.currentBalance} /> : null}
+                              {hasDueFields(c) ? (
+                                <Balance value={c.currentBalance} className="font-semibold" />
+                              ) : null}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <CreditLimit value={c.creditLimit} />
                             </td>
                           </>
+                        ) : null}
+                        {showDelivered ? (
+                          <td className="px-4 py-3 text-right">
+                            {c.deliveredAmount !== undefined ? (
+                              <Money value={c.deliveredAmount} />
+                            ) : null}
+                          </td>
+                        ) : null}
+                        {showCollected ? (
+                          <td className="px-4 py-3 text-right">
+                            {c.collectedAmount !== undefined ? (
+                              <Money value={c.collectedAmount} className="font-semibold" />
+                            ) : null}
+                          </td>
                         ) : null}
                         <td className="px-4 py-3">
                           <StatusBadge active={c.isActive} />
@@ -207,7 +235,23 @@ export function CustomersList({ slug, businessId }: { slug: string; businessId: 
                       {showDue && hasDueFields(c) ? (
                         <span className="mt-2 block text-sm">
                           <span className="text-fg-muted">{t('customers.currentBalance')}: </span>
-                          <Balance value={c.currentBalance} />
+                          <Balance value={c.currentBalance} className="font-semibold" />
+                        </span>
+                      ) : null}
+                      {showDelivered && c.deliveredAmount !== undefined ? (
+                        <span className="mt-1 block text-sm">
+                          <span className="text-fg-muted">
+                            {t('sales.ledger.deliveredAmount')}:{' '}
+                          </span>
+                          <Money value={c.deliveredAmount} />
+                        </span>
+                      ) : null}
+                      {showCollected && c.collectedAmount !== undefined ? (
+                        <span className="mt-1 block text-sm">
+                          <span className="text-fg-muted">
+                            {t('sales.ledger.collectedAmount')}:{' '}
+                          </span>
+                          <Money value={c.collectedAmount} className="font-semibold" />
                         </span>
                       ) : null}
                     </Link>

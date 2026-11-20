@@ -77,7 +77,7 @@ describe('<CustomersList>', () => {
         json(
           200,
           page([
-            customer(),
+            customer({ deliveredAmount: '2200.00', collectedAmount: '1000.00' }),
             customer({
               id: 'cu2',
               nameEn: 'Advance Shop',
@@ -90,9 +90,17 @@ describe('<CustomersList>', () => {
     });
     renderInBusiness(<CustomersList slug="example-cement" businessId={BID} />, { me: managerMe });
     expect(await screen.findByRole('columnheader', { name: 'Current due' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Delivered' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Collected' })).toBeInTheDocument();
     const first = screen.getByRole('rowheader', { name: /Sample Store Two/ }).closest('tr')!;
     expect(first).toHaveTextContent('৳12,50,000.00');
     expect(first).toHaveTextContent('No limit');
+    expect(first).toHaveTextContent('৳2,200.00');
+    expect(first).toHaveTextContent('৳1,000.00');
+    // Current due and Collected are bold; Delivered is not.
+    expect(screen.getByText('৳12,50,000.00')).toHaveClass('font-semibold');
+    expect(screen.getByText('৳1,000.00')).toHaveClass('font-semibold');
+    expect(screen.getByText('৳2,200.00')).not.toHaveClass('font-semibold');
     const advance = screen.getByRole('rowheader', { name: /Advance Shop/ }).closest('tr')!;
     expect(advance).toHaveTextContent('৳200.50');
     expect(advance).toHaveTextContent('Advance');
@@ -299,6 +307,47 @@ describe('<CustomerDetail>', () => {
     expect(invalidate.mock.calls.map(([f]) => f?.queryKey)).toEqual([
       ['dealership', BID, 'customers'],
     ]);
+  });
+
+  it('bold current due and collected; Ledger link; "Take a collection" opens a modal and shows a notice', async () => {
+    const { calls } = mockApi({
+      [`GET ${B}/customers/cu1`]: () =>
+        json(200, customer({ deliveredAmount: '2200.00', collectedAmount: '1000.00' })),
+      [`GET ${B}/customers`]: () => json(200, page([])),
+      [`GET ${B}/collection-methods`]: () => json(200, { items: ['cash'] }),
+      [`GET ${B}/orders`]: () => json(200, page([])),
+      [`POST ${B}/collections`]: () => json(201, { id: 'col9' }),
+    });
+    renderInBusiness(<CustomerDetail slug="example-cement" businessId={BID} id="cu1" />, {
+      me: ownerMe,
+    });
+    await screen.findByRole('heading', { name: 'Sample Store Two' });
+    expect(screen.getByText('৳12,50,000.00')).toHaveClass('font-semibold');
+    expect(screen.getByText('৳1,000.00')).toHaveClass('font-semibold');
+    expect(screen.getByText('৳2,200.00')).not.toHaveClass('font-semibold');
+    expect(screen.getByRole('link', { name: 'Ledger' })).toHaveAttribute(
+      'href',
+      `${B}/customers/cu1/ledger`,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Take a collection' }));
+    const dialog = screen.getByRole('dialog', { name: 'Take a collection' });
+    await userEvent.type(within(dialog).getByLabelText('Amount'), '5000');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('The collection was saved.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'POST')!.body).toMatchObject({ customerId: 'cu1' });
+    expect(nav.push).not.toHaveBeenCalled();
+  });
+
+  it('no "Take a collection" without collection.create; no Ledger link without customer.due.view', async () => {
+    mockApi({ [`GET ${B}/customers/cu1`]: () => json(200, customer({}, false)) });
+    renderInBusiness(<CustomerDetail slug="example-cement" businessId={BID} id="cu1" />, {
+      me: salesmanMe,
+    });
+    await screen.findByRole('heading', { name: 'Sample Store Two' });
+    expect(screen.queryByRole('button', { name: 'Take a collection' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Ledger' })).not.toBeInTheDocument();
   });
 });
 
