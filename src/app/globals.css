@@ -83,3 +83,27 @@ html[lang='bn'] {
     background: rgb(0 0 0 / 0.4);
   }
 }
+
+/* Receipt voucher print: hide everything except the voucher content */
+@media print {
+  body > * {
+    display: none !important;
+  }
+
+  /* Modal portal renders at body level; show only the voucher inside it */
+  body .print-voucher {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    padding: 2cm;
+    background: white;
+    color: black;
+    font-size: 11pt;
+    border: none;
+  }
+
+  body .print-voucher * {
+    color: black !important;
+    border-color: #ccc !important;
+  }
+}

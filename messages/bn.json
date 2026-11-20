@@ -661,7 +661,12 @@
         "quantityInvalid": "শূন্যের বেশি একটা পরিমাণ লিখুন।",
         "emptyTitle": "এখনো কোনো এন্ট্রি নেই",
         "emptyDescription": "নতুন এন্ট্রি তৈরি করুন।",
-        "detailTitle": "{fromDate} – {toDate}"
+        "detailTitle": "{fromDate} – {toDate}",
+        "details": "বিস্তারিত",
+        "detailsFor": "{date} এর বিস্তারিত",
+        "addReceipt": "রসিদ যোগ করুন",
+        "addReceiptFor": "{date} এর জন্য রসিদ যোগ করুন",
+        "actions": "কার্যক্রম"
       },
       "receipt": {
         "title": "রসিদ সমূহ",
@@ -675,7 +680,23 @@
         "amountInvalid": "শূন্যের বেশি একটা পরিমাণ লিখুন।",
         "dateFutureInvalid": "প্রাপ্তির তারিখ ভবিষ্যতের হতে পারে না।",
         "emptyTitle": "এখনো কোনো রসিদ নেই",
-        "emptyDescription": "টাকা এলে রসিদ যোগ করুন।"
+        "emptyDescription": "টাকা এলে রসিদ যোগ করুন।",
+        "print": "ভাউচার প্রিন্ট করুন",
+        "voucher": {
+          "title": "কমিশন রসিদ ভাউচার",
+          "supplier": "সাপ্লায়ার",
+          "period": "কমিশন সময়কাল",
+          "voucherNo": "ভাউচার নং",
+          "amount": "প্রাপ্ত পরিমাণ",
+          "date": "প্রাপ্তির তারিখ",
+          "reference": "রেফারেন্স",
+          "note": "নোট",
+          "receivedBy": "প্রাপক",
+          "authorizedBy": "অনুমোদনকারী",
+          "signature": "(স্বাক্ষর)",
+          "printBtn": "প্রিন্ট",
+          "closeBtn": "বন্ধ করুন"
+        }
       }
     },
     "sales": {

@@ -661,7 +661,12 @@
         "quantityInvalid": "Enter a quantity above zero.",
         "emptyTitle": "No entries yet",
         "emptyDescription": "Create a new entry.",
-        "detailTitle": "{fromDate} – {toDate}"
+        "detailTitle": "{fromDate} – {toDate}",
+        "details": "Details",
+        "detailsFor": "Details of {date}",
+        "addReceipt": "Add receipt",
+        "addReceiptFor": "Add receipt for {date}",
+        "actions": "Actions"
       },
       "receipt": {
         "title": "Receipts",
@@ -675,7 +680,23 @@
         "amountInvalid": "Enter an amount above zero.",
         "dateFutureInvalid": "The received date cannot be in the future.",
         "emptyTitle": "No receipts yet",
-        "emptyDescription": "Add a receipt when money arrives."
+        "emptyDescription": "Add a receipt when money arrives.",
+        "print": "Print voucher",
+        "voucher": {
+          "title": "Commission Receipt Voucher",
+          "supplier": "Supplier",
+          "period": "Commission period",
+          "voucherNo": "Voucher No.",
+          "amount": "Amount received",
+          "date": "Date received",
+          "reference": "Reference",
+          "note": "Note",
+          "receivedBy": "Received by",
+          "authorizedBy": "Authorized by",
+          "signature": "(Signature)",
+          "printBtn": "Print",
+          "closeBtn": "Close"
+        }
       }
     },
     "sales": {

@@ -13,6 +13,7 @@ import { LoadError, Notice } from '../master-data/shared/states';
 import { useCommissionEntry, useCommissionScheme } from './api';
 import { EntryForm } from './entry-form';
 import { ReceiptForm } from './receipt-form';
+import { ReceiptVoucher } from './receipt-voucher';
 import { useDefaultUnit } from './shared';
 import { DetailSkeleton } from './skeletons';
 import type { CommissionReceipt } from './types';
@@ -37,6 +38,7 @@ export function EntryDetail({
   const query = useCommissionEntry(slug, businessId, id);
   const [editing, setEditing] = useState(false);
   const [receiptDialog, setReceiptDialog] = useState<CommissionReceipt | 'new' | null>(null);
+  const [voucherReceipt, setVoucherReceipt] = useState<CommissionReceipt | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const base = `/b/${encodeURIComponent(slug)}/commission`;
   const when = (iso: string) => format.date(`${iso}T00:00:00+06:00`);
@@ -101,11 +103,20 @@ export function EntryDetail({
                       {receipt.note ? ` · ${receipt.note}` : ''}
                     </p>
                   </div>
-                  {canManage ? (
-                    <Button variant="secondary" onClick={() => setReceiptDialog(receipt)}>
-                      {tc('edit')}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setVoucherReceipt(receipt)}
+                      aria-label={tr('print')}
+                    >
+                      {tr('print')}
                     </Button>
-                  ) : null}
+                    {canManage ? (
+                      <Button variant="secondary" onClick={() => setReceiptDialog(receipt)}>
+                        {tc('edit')}
+                      </Button>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -140,6 +151,14 @@ export function EntryDetail({
           businessId={businessId}
           onClose={() => setReceiptDialog(null)}
           onSaved={(message) => (setReceiptDialog(null), setNotice(message))}
+        />
+      ) : null}
+      {voucherReceipt ? (
+        <ReceiptVoucher
+          entry={entry}
+          receipt={voucherReceipt}
+          supplierName="Akij Cement"
+          onClose={() => setVoucherReceipt(null)}
         />
       ) : null}
     </>
