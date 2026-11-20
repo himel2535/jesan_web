@@ -7,6 +7,7 @@ const ORIGINS = ['http://localhost:3000'];
 
 const MANAGER = [
   'cashbook.view',
+  'report.view',
   'collection.create',
   'collection.view',
   'delivery.create',
@@ -1872,6 +1873,267 @@ http
           pageSize: 10,
           total: full.days.length,
         });
+      }
+      // ---- Reports (docs/API.md §13) ----
+      const monthRange = (f) => {
+        const monthStart = today().slice(0, 7) + '-01';
+        return { from: f.from ?? monthStart, to: f.to ?? today() };
+      };
+      const deliveryQty = (d) => d.items.reduce((a, i) => a + Number(i.quantity), 0);
+      const deliveryAmount = (d) =>
+        Number(sumMoneyStr(d.items.map((i) => lineTotal(i.quantity, i.unitPrice))));
+      if (rest === 'reports/sales' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const { from, to } = monthRange(f);
+        const groupBy = f.groupBy ?? 'date';
+        const active = deliveries.filter(
+          (d) => d.status === 'active' && d.deliveryDate >= from && d.deliveryDate <= to,
+        );
+        const totalQuantity = qtyString(active.reduce((a, d) => a + deliveryQty(d), 0));
+        const totalAmount = fixed(active.reduce((a, d) => a + deliveryAmount(d), 0));
+        const byKey = new Map();
+        if (groupBy === 'customer') {
+          for (const d of active) {
+            const c = customers.find((x) => x.id === d.customerId);
+            const bucket = byKey.get(d.customerId) ?? {
+              label: `${c.code} ${c.nameEn}`,
+              quantity: 0,
+              amount: 0,
+            };
+            bucket.quantity += deliveryQty(d);
+            bucket.amount += deliveryAmount(d);
+            byKey.set(d.customerId, bucket);
+          }
+        } else if (groupBy === 'product' || groupBy === 'category') {
+          for (const d of active) {
+            for (const i of d.items) {
+              const p = products.find((x) => x.id === i.productId);
+              const key = groupBy === 'product' ? p.id : p.category.id;
+              const label = groupBy === 'product' ? `${p.code} ${p.nameEn}` : p.category.nameEn;
+              const bucket = byKey.get(key) ?? { label, quantity: 0, amount: 0 };
+              bucket.quantity += Number(i.quantity);
+              bucket.amount += Number(lineTotal(i.quantity, i.unitPrice));
+              byKey.set(key, bucket);
+            }
+          }
+        } else {
+          for (const d of active) {
+            const bucket = byKey.get(d.deliveryDate) ?? {
+              label: d.deliveryDate,
+              quantity: 0,
+              amount: 0,
+            };
+            bucket.quantity += deliveryQty(d);
+            bucket.amount += deliveryAmount(d);
+            byKey.set(d.deliveryDate, bucket);
+          }
+        }
+        const groups = [...byKey.entries()].map(([key, b]) => ({
+          key,
+          label: b.label,
+          quantity: qtyString(b.quantity),
+          amount: fixed(b.amount),
+        }));
+        groups.sort((a, b) =>
+          groupBy === 'date' ? (a.key < b.key ? 1 : -1) : Number(b.amount) - Number(a.amount),
+        );
+        const pg = pageOf(groups, page);
+        return send(res, 200, {
+          from,
+          to,
+          groupBy,
+          items: pg.items,
+          totalQuantity,
+          totalAmount,
+          page,
+          pageSize: 10,
+          total: groups.length,
+        });
+      }
+      if (rest === 'reports/collections' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const { from, to } = monthRange(f);
+        const groupBy = f.groupBy ?? 'date';
+        const active = collections.filter(
+          (c) => c.status === 'active' && c.collectionDate >= from && c.collectionDate <= to,
+        );
+        const totalAmount = fixed(active.reduce((a, c) => a + Number(c.amount), 0));
+        const byKey = new Map();
+        for (const c of active) {
+          const key = groupBy === 'method' ? c.method : c.collectionDate;
+          const bucket = byKey.get(key) ?? { count: 0, amount: 0 };
+          bucket.count += 1;
+          bucket.amount += Number(c.amount);
+          byKey.set(key, bucket);
+        }
+        const groups = [...byKey.entries()].map(([key, b]) => ({
+          key,
+          count: b.count,
+          amount: fixed(b.amount),
+        }));
+        groups.sort((a, b) =>
+          groupBy === 'date' ? (a.key < b.key ? 1 : -1) : a.key.localeCompare(b.key),
+        );
+        const pg = pageOf(groups, page);
+        return send(res, 200, {
+          from,
+          to,
+          groupBy,
+          items: pg.items,
+          totalAmount,
+          page,
+          pageSize: 10,
+          total: groups.length,
+        });
+      }
+      if (rest === 'reports/dues' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const list = customers
+          .filter((c) => c.isActive && Number(c.currentBalance) !== 0)
+          .sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+        const pg = pageOf(list, page);
+        const items = pg.items.map((c) => {
+          const bal = Number(c.currentBalance);
+          const due = bal > 0 ? bal : 0;
+          const advance = bal < 0 ? -bal : 0;
+          return {
+            id: c.id,
+            code: c.code,
+            nameEn: c.nameEn,
+            nameBn: c.nameBn,
+            currentBalance: fixed(bal),
+            dueAmount: fixed(due),
+            advanceAmount: fixed(advance),
+            // Simplified for the mock: FIFO aging isn't replicated, the whole due is "recent".
+            aging: { d0To7: fixed(due), d8To30: '0.00', d30Plus: '0.00' },
+          };
+        });
+        const totalDue = fixed(list.reduce((a, c) => a + Math.max(Number(c.currentBalance), 0), 0));
+        const totalAdvance = fixed(
+          list.reduce((a, c) => a + Math.max(-Number(c.currentBalance), 0), 0),
+        );
+        return send(res, 200, {
+          items,
+          totalDue,
+          totalAdvance,
+          page,
+          pageSize: 10,
+          total: list.length,
+        });
+      }
+      if (rest === 'reports/stock' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const list = products.filter((p) => p.isActive);
+        const pg = pageOf(list, page);
+        const items = pg.items.map((p) => ({
+          id: p.id,
+          code: p.code,
+          nameEn: p.nameEn,
+          nameBn: p.nameBn,
+          unitKey: p.unitKey,
+          currentStock: qtyString(stockOf.get(p.id) ?? 0),
+          isActive: p.isActive,
+        }));
+        return send(res, 200, { items, page, pageSize: 10, total: list.length });
+      }
+      if (rest === 'reports/stock-movements' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const { from, to } = monthRange(f);
+        const inRange = movements.filter((m) => m.movementDate >= from && m.movementDate <= to);
+        const byProduct = new Map();
+        for (const m of inRange) {
+          const bucket = byProduct.get(m.productId) ?? { net: 0, byKind: new Map() };
+          bucket.net += Number(m.quantity);
+          bucket.byKind.set(m.kind, (bucket.byKind.get(m.kind) ?? 0) + Number(m.quantity));
+          byProduct.set(m.productId, bucket);
+        }
+        const groups = [...byProduct.entries()].map(([productId, b]) => {
+          const p = products.find((x) => x.id === productId);
+          return {
+            productId,
+            code: p.code,
+            nameEn: p.nameEn,
+            nameBn: p.nameBn,
+            unitKey: p.unitKey,
+            net: qtyString(b.net),
+            byKind: [...b.byKind.entries()].map(([kind, quantity]) => ({
+              kind,
+              quantity: qtyString(quantity),
+            })),
+          };
+        });
+        groups.sort((a, b) => Number(b.net) - Number(a.net));
+        const pg = pageOf(groups, page);
+        return send(res, 200, {
+          from,
+          to,
+          items: pg.items,
+          page,
+          pageSize: 10,
+          total: groups.length,
+        });
+      }
+      if (rest === 'reports/expenses' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const { from, to } = monthRange(f);
+        const groupBy = f.groupBy ?? 'category';
+        const active = expenses.filter(
+          (e) => e.status === 'active' && e.expenseDate >= from && e.expenseDate <= to,
+        );
+        const totalAmount = fixed(active.reduce((a, e) => a + Number(e.amount), 0));
+        const byKey = new Map();
+        for (const e of active) {
+          const key =
+            groupBy === 'month' ? e.expenseDate.slice(0, 7).replace('-', '') : e.categoryId;
+          const label =
+            groupBy === 'month'
+              ? e.expenseDate.slice(0, 7)
+              : expenseCategories.find((c) => c.id === e.categoryId).nameEn;
+          const bucket = byKey.get(key) ?? { label, count: 0, amount: 0 };
+          bucket.count += 1;
+          bucket.amount += Number(e.amount);
+          byKey.set(key, bucket);
+        }
+        const items = [...byKey.entries()]
+          .map(([key, b]) => ({ key, label: b.label, count: b.count, amount: fixed(b.amount) }))
+          .sort((a, b) => Number(b.amount) - Number(a.amount));
+        return send(res, 200, { from, to, groupBy, items, totalAmount });
+      }
+      if (rest === 'reports/daily-summary' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const date = url.searchParams.get('date') || today();
+        const dayOrders = orders.filter((o) => o.status === 'active' && o.orderDate === date);
+        const dayDeliveries = deliveries.filter(
+          (d) => d.status === 'active' && d.deliveryDate === date,
+        );
+        const dayCollections = collections.filter(
+          (c) => c.status === 'active' && c.collectionDate === date,
+        );
+        const dayExpenses = expenses.filter((e) => e.status === 'active' && e.expenseDate === date);
+        const stat = (list, amountOf) => ({
+          count: list.length,
+          amount: fixed(list.reduce((a, x) => a + amountOf(x), 0)),
+        });
+        const out = {
+          date,
+          orders: stat(dayOrders, (o) => deliveryAmount(o)),
+          deliveries: stat(dayDeliveries, (d) => deliveryAmount(d)),
+          collections: stat(dayCollections, (c) => Number(c.amount)),
+          expenses: stat(dayExpenses, (e) => Number(e.amount)),
+        };
+        if (perms.includes('cashbook.view')) {
+          const cb = cashBookCompute(date, date);
+          out.cash = {
+            openingBalance: cb.openingBalance,
+            closingBalance: cb.closingBalance,
+            net: cb.totals.net,
+          };
+        }
+        return send(res, 200, out);
       }
       let lm = rest.match(/^customers\/([^/]+)\/ledger$/);
       if (lm && req.method === 'GET') {
