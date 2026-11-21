@@ -345,7 +345,7 @@ describe('<OrderDetail>', () => {
     expect(await screen.findByText('অর্ডার বাতিল হয়েছে।')).toBeInTheDocument();
   });
 
-  it('owner corrects: only the changed fields, with a reason; invalidates exactly four keys', async () => {
+  it('owner corrects: only the changed fields, with a reason; invalidates exactly five keys', async () => {
     const { calls } = mockApi({
       ...detailRoutes(),
       [`PATCH ${B}/orders/o1`]: () => json(200, order(WHOLE_UNIT)),
@@ -374,6 +374,7 @@ describe('<OrderDetail>', () => {
       JSON.stringify(['dealership', BID, 'deliveries']),
       JSON.stringify(['dealership', BID, 'customers']),
       JSON.stringify(['dealership', BID, 'ledger']),
+      JSON.stringify(['dealership', BID, 'accountsSummary']),
     ]);
   });
 
