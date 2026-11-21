@@ -1,7 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Balance, Money } from '../master-data/shared/display';
+import { isNegativeMoney } from '@/core/lib/money';
+import { cn } from '@/core/ui/cn';
+import { Money } from '../master-data/shared/display';
 import type { AccountsSummary } from './types';
 
 export function SummaryCardsSkeleton() {
@@ -35,8 +37,13 @@ export function SummaryCards({ summary }: { summary: AccountsSummary }) {
       </div>
       <div>
         <dt className="text-sm text-fg-muted">{t('net')}</dt>
-        <dd className="text-lg font-bold">
-          <Balance value={summary.net} />
+        <dd
+          className={cn(
+            'text-lg font-bold',
+            isNegativeMoney(summary.net) ? 'text-danger' : 'text-success',
+          )}
+        >
+          <Money value={summary.net} />
         </dd>
       </div>
       <div>

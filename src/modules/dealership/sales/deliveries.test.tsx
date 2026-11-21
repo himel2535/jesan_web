@@ -281,7 +281,7 @@ describe('<DeliveryDetail>', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('owner voids with a reason and refreshes stock, orders, customers and the ledger', async () => {
+  it('owner voids with a reason and refreshes stock, orders, customers, the ledger and accounts', async () => {
     const { calls } = mockApi({
       ...detailRoutes(),
       [`POST ${B}/deliveries/d1/void`]: () => json(200, delivery(WHOLE_UNIT, { status: 'void' })),
@@ -304,6 +304,7 @@ describe('<DeliveryDetail>', () => {
       JSON.stringify(['dealership', BID, 'stock']),
       JSON.stringify(['dealership', BID, 'customers']),
       JSON.stringify(['dealership', BID, 'ledger']),
+      JSON.stringify(['dealership', BID, 'accountsSummary']),
     ]);
   });
 

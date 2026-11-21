@@ -217,7 +217,7 @@ describe('<CollectionDetail>', () => {
     [`GET ${B}/collections/col1`]: () => json(200, c),
   });
 
-  it('owner voids with a reason; only collections, customers and the ledger refresh', async () => {
+  it('owner voids with a reason; refreshes collections, customers, the ledger and accounts', async () => {
     const { calls } = mockApi({
       ...detailRoutes(),
       [`POST ${B}/collections/col1/void`]: () => json(200, collection({ status: 'void' })),
@@ -237,6 +237,8 @@ describe('<CollectionDetail>', () => {
       JSON.stringify(['dealership', BID, 'collections']),
       JSON.stringify(['dealership', BID, 'customers']),
       JSON.stringify(['dealership', BID, 'ledger']),
+      JSON.stringify(['dealership', BID, 'accountsSummary']),
+      JSON.stringify(['dealership', BID, 'accountsLedger']),
     ]);
   });
 
