@@ -60,14 +60,15 @@ describe('Summary cards', () => {
     await expectNoA11yViolations(container);
   });
 
-  it('shows negative net with Balance (advance badge)', async () => {
+  it('shows a negative net with a minus sign, not an advance badge', async () => {
     setupRoutes({
       [`GET ${B}/accounts/summary`]: () => json(200, NEGATIVE_SUMMARY),
     });
     renderInBusiness(<AccountsView slug="example-cement" businessId={BID} />, {
       me: meWith(OWNER_PERMISSIONS),
     });
-    expect(await screen.findByText('৳5,000.00')).toBeInTheDocument();
+    expect(await screen.findByText('-৳5,000.00')).toBeInTheDocument();
+    expect(screen.queryByText('Advance')).not.toBeInTheDocument();
   });
 });
 

@@ -32,9 +32,28 @@ const base = (slug: string) => `/b/${encodeURIComponent(slug)}`;
  * - a collection only moves the balance and the ledger
  */
 export const ORDER_CREATE_REFRESH = ['orders', 'customers'] as const;
-export const ORDER_REFRESH = ['orders', 'deliveries', 'customers', 'ledger'] as const;
-export const DELIVERY_REFRESH = ['deliveries', 'orders', 'stock', 'customers', 'ledger'] as const;
-export const COLLECTION_REFRESH = ['collections', 'customers', 'ledger'] as const;
+export const ORDER_REFRESH = [
+  'orders',
+  'deliveries',
+  'customers',
+  'ledger',
+  'accountsSummary',
+] as const;
+export const DELIVERY_REFRESH = [
+  'deliveries',
+  'orders',
+  'stock',
+  'customers',
+  'ledger',
+  'accountsSummary',
+] as const;
+export const COLLECTION_REFRESH = [
+  'collections',
+  'customers',
+  'ledger',
+  'accountsSummary',
+  'accountsLedger',
+] as const;
 
 export function useRefreshEntities(businessId: string) {
   const queryClient = useQueryClient();
