@@ -1079,8 +1079,6 @@
       "page": {
         "title": "Accounts",
         "description": "The accounts ledger of {business}.",
-        "addEntry": "+ Manual Entry",
-        "addPayment": "+ Supplier Payment",
         "dateFrom": "From",
         "dateTo": "To",
         "rangeError": "Select a range of maximum 400 days."
@@ -1123,36 +1121,6 @@
           "status": "Status",
           "note": "Note"
         }
-      },
-      "entry": {
-        "title": "Manual Entry",
-        "direction": "Direction",
-        "directionIn": "Income",
-        "directionOut": "Expense",
-        "amount": "Amount",
-        "method": "Method",
-        "methodOptional": "Optional",
-        "entryDate": "Entry date",
-        "note": "Note",
-        "noteOptional": "Optional (up to 500 characters).",
-        "submit": "Save",
-        "submitting": "Saving…",
-        "amountInvalid": "Enter a valid amount.",
-        "methodRequired": "Choose a method.",
-        "done": "Manual entry saved."
-      },
-      "payment": {
-        "title": "Supplier Payment",
-        "amount": "Amount",
-        "method": "Method",
-        "paymentDate": "Payment date",
-        "note": "Note",
-        "noteOptional": "Optional (up to 500 characters).",
-        "submit": "Save",
-        "submitting": "Saving…",
-        "amountInvalid": "Enter a valid amount.",
-        "methodRequired": "Choose a method.",
-        "done": "Supplier payment saved."
       },
       "methodNames": {
         "cash": "Cash",

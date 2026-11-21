@@ -72,5 +72,3 @@ export const LEDGER_RESPONSE: LedgerResponse = {
   pageSize: 10,
   total: 3,
 };
-
-export const COLLECTION_METHODS = { items: ['cash', 'bkash', 'nagad', 'bank'] };
