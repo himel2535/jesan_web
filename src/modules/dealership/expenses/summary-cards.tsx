@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/core/api/errors';
 import { Money } from '../master-data/shared/display';
+import { LoadError } from '../master-data/shared/states';
 import { useExpensesSummary } from './api';
 import type { ExpenseSummaryRanges } from './shared';
 
@@ -27,7 +28,9 @@ export function ExpensesSummaryCardsSkeleton() {
  * Four KPI cards (`report.view`). The Expenses page itself only needs `expense.view`, so a user
  * without `report.view` gets a 403 on all four queries here — that's a UI-visibility gap, not an
  * error, so the cards simply don't render (same convention as the dashboard's cash stats, which
- * disappear instead of showing an error when their own extra permission is missing).
+ * disappear instead of showing an error when their own extra permission is missing). Any OTHER
+ * failure (network, 500, …) is a real error and must stay visible with a retry, not disappear
+ * silently — that would hide a genuine bug behind "the cards just aren't there".
  */
 export function ExpensesSummaryCards({
   slug,
@@ -40,28 +43,22 @@ export function ExpensesSummaryCards({
 }) {
   const t = useTranslations('dealership.expenses.summary');
   const { total, today, thisMonth, previousMonth } = useExpensesSummary(slug, businessId, ranges);
+  const queries = [total, today, thisMonth, previousMonth];
+  const firstError = queries.find((q) => q.error)?.error;
 
-  if (
-    isForbidden(total.error) ||
-    isForbidden(today.error) ||
-    isForbidden(thisMonth.error) ||
-    isForbidden(previousMonth.error)
-  ) {
+  if (isForbidden(firstError)) {
     return null;
   }
-  if (total.isPending || today.isPending || thisMonth.isPending || previousMonth.isPending) {
+  if (queries.some((q) => q.isPending)) {
     return <ExpensesSummaryCardsSkeleton />;
   }
-  if (
-    total.isError ||
-    today.isError ||
-    thisMonth.isError ||
-    previousMonth.isError ||
-    !total.data ||
-    !today.data ||
-    !thisMonth.data ||
-    !previousMonth.data
-  ) {
+  if (firstError) {
+    const retry = () => {
+      for (const q of queries) void q.refetch();
+    };
+    return <LoadError error={firstError} onRetry={retry} />;
+  }
+  if (!total.data || !today.data || !thisMonth.data || !previousMonth.data) {
     return null;
   }
 

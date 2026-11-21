@@ -173,6 +173,20 @@ describe('<ExpensesList>', () => {
     await screen.findByRole('rowheader', { name: 'EXP-0001' });
     expect(screen.queryByText('Total Partial Expenses')).not.toBeInTheDocument();
   });
+
+  it('a real failure on the KPI report (not a permission gap) shows an error, not silence', async () => {
+    mockApi({
+      ...routes,
+      [`GET ${B}/expenses`]: () => json(200, page([expense()])),
+      [`GET ${B}/reports/expenses`]: () => apiError(500, 'INTERNAL'),
+    });
+    renderInBusiness(<ExpensesList slug="example-cement" businessId={BID} />, { me: ownerP });
+    await screen.findByRole('rowheader', { name: 'EXP-0001' });
+    expect(screen.queryByText('Total Partial Expenses')).not.toBeInTheDocument();
+    expect(
+      await screen.findByText('The server is not reachable right now. Please try again shortly.'),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('<ExpenseDetail>', () => {
