@@ -178,7 +178,15 @@
       "EXPENSE_NOT_FOUND": "এই খরচ পাওয়া যায়নি।",
       "EXPENSE_CATEGORY_NOT_FOUND": "এই খরচের ধরন পাওয়া যায়নি।",
       "EXPENSE_ALREADY_VOID": "এই খরচ আগেই বাতিল হয়েছে; আবার বাতিল বা সংশোধন করা যায় না।",
-      "NAME_BN_DUPLICATE": "এই বাংলা নাম এই ব্যবসায় আগে থেকেই আছে।"
+      "NAME_BN_DUPLICATE": "এই বাংলা নাম এই ব্যবসায় আগে থেকেই আছে।",
+      "IDEMPOTENCY_KEY_REQUIRED": "অনুরোধ পাঠানো যায়নি, আবার চেষ্টা করুন।",
+      "LEDGER_ENTRY_METHOD_UNKNOWN": "এই পদ্ধতি ব্যবসার তালিকায় নেই।",
+      "ENTRY_DATE_INVALID": "তারিখটি সঠিক নয়।",
+      "ENTRY_DATE_IN_FUTURE": "ভবিষ্যতের তারিখ দেওয়া যাবে না।",
+      "ENTRY_DATE_TOO_OLD": "৭ দিনের আগের তারিখ দেওয়া যাবে না।",
+      "PAYMENT_DATE_INVALID": "তারিখটি সঠিক নয়।",
+      "PAYMENT_DATE_IN_FUTURE": "ভবিষ্যতের তারিখ দেওয়া যাবে না।",
+      "PAYMENT_DATE_TOO_OLD": "৭ দিনের আগের তারিখ দেওয়া যাবে না।"
     },
     "problems": {
       "REQUIRED": "এই ঘরটা পূরণ করুন।",
@@ -1065,6 +1073,95 @@
       "filters": {
         "from": "থেকে",
         "to": "পর্যন্ত"
+      }
+    },
+    "accounts": {
+      "page": {
+        "title": "হিসাব",
+        "description": "{business}-এর হিসাবের খাতা।",
+        "addEntry": "+ হাতে এন্ট্রি",
+        "addPayment": "+ সরবরাহকারী পেমেন্ট",
+        "dateFrom": "থেকে",
+        "dateTo": "পর্যন্ত",
+        "rangeError": "সর্বোচ্চ ৪০০ দিনের সীমা নির্বাচন করুন।"
+      },
+      "summary": {
+        "totalIn": "মোট আয়",
+        "totalOut": "মোট খরচ",
+        "net": "নিট",
+        "totalDue": "মোট বাকি",
+        "totalAdvance": "মোট অগ্রিম",
+        "totalDueNote": "সকল সক্রিয় গ্রাহকের বর্তমান বাকি (তারিখ-নিরপেক্ষ)।",
+        "totalAdvanceNote": "সকল সক্রিয় গ্রাহকের অগ্রিম জমা (তারিখ-নিরপেক্ষ)।"
+      },
+      "ledger": {
+        "title": "খাতা",
+        "empty": "এই সীমায় কোনো এন্ট্রি নেই।",
+        "typeFilter": "ধরন",
+        "allTypes": "সব ধরন",
+        "types": {
+          "collection": "আদায়",
+          "expense": "খরচ",
+          "purchase": "কেনাকাটা",
+          "commission_receipt": "কমিশন রসিদ",
+          "manual": "হাতে এন্ট্রি",
+          "supplier_payment": "সরবরাহকারী পেমেন্ট"
+        },
+        "direction": {
+          "in": "আয়",
+          "out": "খরচ"
+        },
+        "status": {
+          "void": "বাতিল"
+        },
+        "col": {
+          "date": "তারিখ",
+          "type": "ধরন",
+          "direction": "দিক",
+          "method": "পদ্ধতি",
+          "amount": "পরিমাণ",
+          "status": "অবস্থা",
+          "note": "নোট"
+        }
+      },
+      "entry": {
+        "title": "হাতে এন্ট্রি",
+        "direction": "দিক",
+        "directionIn": "আয়",
+        "directionOut": "খরচ",
+        "amount": "পরিমাণ",
+        "method": "পদ্ধতি",
+        "methodOptional": "ঐচ্ছিক",
+        "entryDate": "এন্ট্রির তারিখ",
+        "note": "নোট",
+        "noteOptional": "ঐচ্ছিক (সর্বোচ্চ ৫০০ অক্ষর)।",
+        "submit": "সংরক্ষণ করুন",
+        "submitting": "সংরক্ষণ হচ্ছে…",
+        "amountInvalid": "সঠিক পরিমাণ দিন।",
+        "methodRequired": "পদ্ধতি বেছে নিন।",
+        "done": "হাতে এন্ট্রি সংরক্ষিত হয়েছে।"
+      },
+      "payment": {
+        "title": "সরবরাহকারী পেমেন্ট",
+        "amount": "পরিমাণ",
+        "method": "পদ্ধতি",
+        "paymentDate": "পেমেন্টের তারিখ",
+        "note": "নোট",
+        "noteOptional": "ঐচ্ছিক (সর্বোচ্চ ৫০০ অক্ষর)।",
+        "submit": "সংরক্ষণ করুন",
+        "submitting": "সংরক্ষণ হচ্ছে…",
+        "amountInvalid": "সঠিক পরিমাণ দিন।",
+        "methodRequired": "পদ্ধতি বেছে নিন।",
+        "done": "সরবরাহকারী পেমেন্ট সংরক্ষিত হয়েছে।"
+      },
+      "methodNames": {
+        "cash": "নগদ",
+        "bkash": "বিকাশ",
+        "nagad": "নগদ (Nagad)",
+        "rocket": "রকেট",
+        "bank": "ব্যাংক ট্রান্সফার",
+        "cheque": "চেক",
+        "card": "কার্ড"
       }
     },
     "reports": {

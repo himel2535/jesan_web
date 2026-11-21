@@ -131,5 +131,7 @@ export const dealershipManifest = {
       path: 'expenses/categories/:id',
       invalidate: ['expenseCategories', 'expenses'],
     },
+    manual: { path: 'accounts', invalidate: ['accountsSummary', 'accountsLedger'] },
+    supplier_payment: { path: 'accounts', invalidate: ['accountsSummary', 'accountsLedger'] },
   },
 } as const satisfies ModuleManifest;
