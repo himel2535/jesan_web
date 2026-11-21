@@ -58,22 +58,3 @@ export interface LedgerFilters {
   type?: string;
   page: number;
 }
-
-export interface ManualEntryInput {
-  direction: LedgerDirection;
-  amount: string;
-  method?: string;
-  entryDate: string;
-  note?: string;
-}
-
-export interface SupplierPaymentInput {
-  amount: string;
-  method: string;
-  paymentDate: string;
-  note?: string;
-}
-
-export const ACCOUNTS_LIMITS = {
-  note: 500,
-} as const;

@@ -2,20 +2,14 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useId, useState } from 'react';
-import { useCan } from '@/core/auth/can';
+import { useId } from 'react';
 import { businessToday } from '@/core/i18n/format';
-import { Button } from '@/core/ui/button';
 import { inputClass } from '@/core/ui/text-field';
-import { LoadError, Notice } from '../master-data/shared/states';
+import { LoadError } from '../master-data/shared/states';
 import { useAccountsSummary } from './api';
 import { LedgerTable } from './ledger-table';
-import { ManualEntryDialog } from './manual-entry-dialog';
 import { dateParam, useSetFilters } from './shared';
 import { SummaryCards, SummaryCardsSkeleton } from './summary-cards';
-import { SupplierPaymentDialog } from './supplier-payment-dialog';
-
-type DialogMode = 'manual' | 'payment' | null;
 
 function firstOfMonth(): string {
   const today = businessToday();
@@ -27,13 +21,9 @@ export function AccountsView({ slug, businessId }: { slug: string; businessId: s
   const id = useId();
   const setFilters = useSetFilters();
   const params = useSearchParams();
-  const canEntry = useCan('ledger.entry.create');
-  const canPayment = useCan('payment.create');
 
   const from = dateParam(params, 'from') ?? firstOfMonth();
   const to = dateParam(params, 'to') ?? businessToday();
-  const [dialog, setDialog] = useState<DialogMode>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const summary = useAccountsSummary(slug, businessId, { from, to });
 
@@ -45,46 +35,30 @@ export function AccountsView({ slug, businessId }: { slug: string; businessId: s
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            {label(`${id}-from`, t('dateFrom'))}
-            <input
-              id={`${id}-from`}
-              type="date"
-              value={from}
-              max={to}
-              onChange={(e) => setFilters({ from: e.target.value || undefined })}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            {label(`${id}-to`, t('dateTo'))}
-            <input
-              id={`${id}-to`}
-              type="date"
-              value={to}
-              min={from}
-              onChange={(e) => setFilters({ to: e.target.value || undefined })}
-              className={inputClass}
-            />
-          </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          {label(`${id}-from`, t('dateFrom'))}
+          <input
+            id={`${id}-from`}
+            type="date"
+            value={from}
+            max={to}
+            onChange={(e) => setFilters({ from: e.target.value || undefined })}
+            className={inputClass}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          {canEntry ? (
-            <Button variant="secondary" onClick={() => setDialog('manual')}>
-              {t('addEntry')}
-            </Button>
-          ) : null}
-          {canPayment ? (
-            <Button variant="secondary" onClick={() => setDialog('payment')}>
-              {t('addPayment')}
-            </Button>
-          ) : null}
+        <div>
+          {label(`${id}-to`, t('dateTo'))}
+          <input
+            id={`${id}-to`}
+            type="date"
+            value={to}
+            min={from}
+            onChange={(e) => setFilters({ to: e.target.value || undefined })}
+            className={inputClass}
+          />
         </div>
       </div>
-
-      <Notice>{notice}</Notice>
 
       {summary.isPending ? (
         <SummaryCardsSkeleton />
@@ -95,29 +69,6 @@ export function AccountsView({ slug, businessId }: { slug: string; businessId: s
       )}
 
       <LedgerTable slug={slug} businessId={businessId} />
-
-      {dialog === 'manual' ? (
-        <ManualEntryDialog
-          slug={slug}
-          businessId={businessId}
-          onClose={() => setDialog(null)}
-          onDone={(message) => {
-            setDialog(null);
-            setNotice(message);
-          }}
-        />
-      ) : null}
-      {dialog === 'payment' ? (
-        <SupplierPaymentDialog
-          slug={slug}
-          businessId={businessId}
-          onClose={() => setDialog(null)}
-          onDone={(message) => {
-            setDialog(null);
-            setNotice(message);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

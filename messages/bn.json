@@ -1086,8 +1086,6 @@
       "page": {
         "title": "হিসাব",
         "description": "{business}-এর হিসাবের খাতা।",
-        "addEntry": "+ হাতে এন্ট্রি",
-        "addPayment": "+ সরবরাহকারী পেমেন্ট",
         "dateFrom": "থেকে",
         "dateTo": "পর্যন্ত",
         "rangeError": "সর্বোচ্চ ৪০০ দিনের সীমা নির্বাচন করুন।"
@@ -1130,36 +1128,6 @@
           "status": "অবস্থা",
           "note": "নোট"
         }
-      },
-      "entry": {
-        "title": "হাতে এন্ট্রি",
-        "direction": "দিক",
-        "directionIn": "আয়",
-        "directionOut": "খরচ",
-        "amount": "পরিমাণ",
-        "method": "পদ্ধতি",
-        "methodOptional": "ঐচ্ছিক",
-        "entryDate": "এন্ট্রির তারিখ",
-        "note": "নোট",
-        "noteOptional": "ঐচ্ছিক (সর্বোচ্চ ৫০০ অক্ষর)।",
-        "submit": "সংরক্ষণ করুন",
-        "submitting": "সংরক্ষণ হচ্ছে…",
-        "amountInvalid": "সঠিক পরিমাণ দিন।",
-        "methodRequired": "পদ্ধতি বেছে নিন।",
-        "done": "হাতে এন্ট্রি সংরক্ষিত হয়েছে।"
-      },
-      "payment": {
-        "title": "সরবরাহকারী পেমেন্ট",
-        "amount": "পরিমাণ",
-        "method": "পদ্ধতি",
-        "paymentDate": "পেমেন্টের তারিখ",
-        "note": "নোট",
-        "noteOptional": "ঐচ্ছিক (সর্বোচ্চ ৫০০ অক্ষর)।",
-        "submit": "সংরক্ষণ করুন",
-        "submitting": "সংরক্ষণ হচ্ছে…",
-        "amountInvalid": "সঠিক পরিমাণ দিন।",
-        "methodRequired": "পদ্ধতি বেছে নিন।",
-        "done": "সরবরাহকারী পেমেন্ট সংরক্ষিত হয়েছে।"
       },
       "methodNames": {
         "cash": "নগদ",
