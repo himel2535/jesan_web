@@ -317,7 +317,7 @@
       "purchases": "কেনা",
       "sales": "বিক্রি",
       "stock": "স্টক",
-      "expenses": "খরচ",
+      "expenses": "আংশিক খরচ",
       "cashbook": "ক্যাশ বই",
       "accounts": "হিসাব",
       "commission": "কমিশন",
@@ -965,7 +965,7 @@
       }
     },
     "expenses": {
-      "title": "খরচ",
+      "title": "আংশিক খরচ",
       "description": "{business}-এর দৈনিক খরচ।",
       "newTitle": "খরচ এন্ট্রি",
       "new": "খরচ এন্ট্রি",
@@ -1049,6 +1049,13 @@
         "bank": "ব্যাংক ট্রান্সফার",
         "cheque": "চেক",
         "card": "কার্ড"
+      },
+      "summary": {
+        "total": "সর্বমোট আংশিক খরচ",
+        "totalNote": "শেষ ৪০০ দিন।",
+        "today": "আজকের খরচ",
+        "thisMonth": "এই মাসের খরচ",
+        "previousMonth": "আগের মাসের খরচ"
       }
     },
     "cashBook": {

@@ -23,6 +23,8 @@ test('record an expense → the cash book counts it → void it → the cash boo
   browser,
 }) => {
   const manager = await as(browser, 'manager', '/b/example-cement/expenses');
+  await expect(manager.getByText('Total Partial Expenses')).toBeVisible();
+  await expect(manager.getByText("Today's Expenses")).toBeVisible();
   await manager.getByRole('link', { name: 'Record an expense' }).click();
   await expect(manager.getByRole('heading', { name: 'Record an expense' })).toBeVisible();
   await manager.getByLabel('Amount').fill('2500');
@@ -36,6 +38,11 @@ test('record an expense → the cash book counts it → void it → the cash boo
 
   await manager.goto('/b/example-cement/cashbook');
   await expect(manager.getByText('৳2,500.00').first()).toBeVisible();
+
+  await manager.goto('/b/example-cement/expenses');
+  await expect(
+    manager.locator('dt', { hasText: "Today's Expenses" }).locator('..').getByText('৳2,500.00'),
+  ).toBeVisible();
 
   // Voiding needs `expense.void` (owner-level by default).
   const owner = await as(browser, 'owner', '/b/example-cement/expenses');

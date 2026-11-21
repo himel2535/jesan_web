@@ -5,6 +5,8 @@ import { apiFetch } from '@/core/api/client';
 import { ApiError } from '@/core/api/errors';
 import { dealershipKeys } from '../master-data/api';
 import type { Page } from '../master-data/types';
+import { useExpensesReport } from '../reports/api';
+import type { ExpenseSummaryRanges } from './shared';
 import type {
   CashBookFilters,
   CashBookResponse,
@@ -19,12 +21,16 @@ import type {
 const base = (slug: string) => `/b/${encodeURIComponent(slug)}`;
 
 /**
- * What each change touches (docs/API.md §13): an expense only ever affects the expense list and
- * the derived cash book (it holds no table of its own); an expense type's status shows on every
- * expense row that uses it.
+ * What each change touches (docs/API.md §13): an expense only ever affects the expense list, the
+ * derived cash book and the Expenses-page KPI cards (`reports/expenses`, `report.view`); an
+ * expense type's status shows on every expense row that uses it.
  */
-export const EXPENSE_REFRESH = ['expenses', 'cashBook'] as const;
-export const EXPENSE_CATEGORY_REFRESH = ['expenseCategories', 'expenses'] as const;
+export const EXPENSE_REFRESH = ['expenses', 'cashBook', 'reportsExpenses'] as const;
+export const EXPENSE_CATEGORY_REFRESH = [
+  'expenseCategories',
+  'expenses',
+  'reportsExpenses',
+] as const;
 
 function useInvalidate(businessId: string) {
   const queryClient = useQueryClient();
@@ -114,6 +120,26 @@ export function useExpenses(
     placeholderData: keepPreviousData,
     enabled,
   });
+}
+
+/**
+ * The four KPI cards on the Expenses page. Each window reuses `GET reports/expenses` (the only
+ * endpoint with a real amount total — the plain `GET expenses` list only has a row count), so it
+ * needs `report.view`, not `expense.view`: a user without it gets a 403 on all four, and the page
+ * hides the cards rather than erroring (see `ExpensesSummaryCards`).
+ */
+export function useExpensesSummary(slug: string, businessId: string, ranges: ExpenseSummaryRanges) {
+  const total = useExpensesReport(slug, businessId, { groupBy: 'category', ...ranges.total });
+  const today = useExpensesReport(slug, businessId, { groupBy: 'category', ...ranges.today });
+  const thisMonth = useExpensesReport(slug, businessId, {
+    groupBy: 'category',
+    ...ranges.thisMonth,
+  });
+  const previousMonth = useExpensesReport(slug, businessId, {
+    groupBy: 'category',
+    ...ranges.previousMonth,
+  });
+  return { total, today, thisMonth, previousMonth };
 }
 
 export function useExpense(slug: string, businessId: string, id: string) {
