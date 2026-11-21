@@ -23,8 +23,10 @@ import {
   StatusText,
   dateParam,
   useBusinessDay,
+  useSalesSummaryRanges,
   useSetFilters,
 } from '../shared';
+import { SalesSummaryCards } from '../summary-cards';
 import { ORDER_STATUS_FILTERS, type OrderFilters, type OrderSummary } from '../types';
 
 const buttonLink =
@@ -63,6 +65,7 @@ export function OrdersList({ slug, businessId }: { slug: string; businessId: str
   const setFilters = useSetFilters();
   const canCreate = useCan('sale.create');
   const filters = useOrderFilters();
+  const summaryRanges = useSalesSummaryRanges();
   const query = useOrders(slug, businessId, filters);
   const base = `/b/${encodeURIComponent(slug)}/sales`;
 
@@ -90,6 +93,7 @@ export function OrdersList({ slug, businessId }: { slug: string; businessId: str
 
   return (
     <div className="space-y-4">
+      <SalesSummaryCards slug={slug} businessId={businessId} ranges={summaryRanges} />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <div>

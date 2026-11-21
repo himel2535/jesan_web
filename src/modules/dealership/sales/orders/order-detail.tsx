@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useCan } from '@/core/auth/can';
 import { useFormat } from '@/core/i18n/use-format';
+import { sumMoney } from '@/core/lib/money';
 import { PageHeader } from '@/core/ui/page-header';
 import { DetailList, type DetailRow } from '../../master-data/shared/detail-list';
 import { Money, useNameOf } from '../../master-data/shared/display';
@@ -68,6 +69,23 @@ export function OrderDetail({
   const showPrices = o.items.some((i) => 'unitPrice' in i);
   const when = (iso: string) => format.date(iso, { dateStyle: 'medium', timeStyle: 'short' });
 
+  // Due for this order only, approximated client-side for display: the API carries no per-order
+  // due field, and a collection only references an order — it is never allocated to it (CLAUDE.md,
+  // docs/API.md §11) — so this is (delivered amount) − (collections that reference this order),
+  // not a true allocation. Hidden entirely when any piece it needs is missing (no `collection.view`,
+  // or the viewer's prices are hidden), never shown as zero or an incomplete number.
+  const activeDeliveries = o.deliveries.filter((d) => d.status === 'active');
+  const hasDeliveredAmounts = activeDeliveries.every((d) => d.totalAmount !== undefined);
+  const due =
+    canSeeCollections && hasDeliveredAmounts && collections.data
+      ? sumMoney([
+          ...activeDeliveries.map((d) => d.totalAmount as string),
+          ...collections.data.items
+            .filter((c) => c.status === 'active')
+            .map((c) => (c.amount.startsWith('-') ? c.amount.slice(1) : `-${c.amount}`)),
+        ])
+      : null;
+
   const rows: DetailRow[] = [
     { label: tc('code'), value: <span className="font-mono">{o.code}</span> },
     { label: t('orderDate'), value: day(o.orderDate) },
@@ -94,6 +112,7 @@ export function OrderDetail({
     ...(o.totalAmount !== undefined
       ? [{ label: tc('totalAmount'), value: <Money value={o.totalAmount} /> }]
       : []),
+    ...(due !== null ? [{ label: t('detail.due'), value: <Money value={due} /> }] : []),
     { label: tc('note'), value: o.note ?? '—' },
     { label: tc('createdBy'), value: o.createdBy.name },
     { label: tc('createdAt'), value: when(o.createdAt) },

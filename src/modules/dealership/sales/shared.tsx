@@ -3,9 +3,10 @@
 import { Search, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { ApiError } from '@/core/api/errors';
 import { localizedName } from '@/core/auth/types';
+import { businessToday } from '@/core/i18n/format';
 import { useDynamicT } from '@/core/i18n/use-dynamic-t';
 import { useFormat } from '@/core/i18n/use-format';
 import { cn } from '@/core/ui/cn';
@@ -15,6 +16,37 @@ import type { Customer } from '../master-data/types';
 import type { DocumentStatus, OrderDeliveryStatus, ProductRef } from './types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** `reports/sales` caps any single range at 400 days (`RANGE_TOO_LARGE`); 399 stays inside it. */
+const MAX_REPORT_RANGE_DAYS = 399;
+
+function isoOf(y: number, m: number, d: number): string {
+  return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+}
+
+export interface SalesSummaryRanges {
+  total: { from: string; to: string };
+  today: { from: string; to: string };
+  thisMonth: { from: string; to: string };
+}
+
+/**
+ * The date windows the sales KPI cards need, anchored on the business's "today" (Dhaka time).
+ * `total` is capped to the last 399 days (the reports endpoint's own limit), not true all-time.
+ */
+export function useSalesSummaryRanges(): SalesSummaryRanges {
+  const today = useMemo(() => businessToday(), []);
+  return useMemo(() => {
+    const y = Number(today.slice(0, 4));
+    const m = Number(today.slice(5, 7));
+    const d = Number(today.slice(8, 10));
+    return {
+      total: { from: isoOf(y, m - 1, d - MAX_REPORT_RANGE_DAYS), to: today },
+      today: { from: today, to: today },
+      thisMonth: { from: isoOf(y, m - 1, 1), to: today },
+    };
+  }, [today]);
+}
 
 /** A `YYYY-MM-DD` business day from the API → a localized date. */
 export function useBusinessDay() {
