@@ -198,13 +198,19 @@ export function CustomerLedger({
   );
 }
 
-/** A signed ledger amount: the sign is kept, the number is formatted, nothing is calculated. */
+/**
+ * A signed ledger amount: shown from the money-movement side, the opposite of the API's
+ * balance-effect sign (`amount` positive means the customer owes more). Money coming in
+ * (collection, or any entry that reduces what the customer owes) shows "+"; money going
+ * out on credit (delivery, or any entry that increases what the customer owes) shows "−".
+ * Nothing is calculated — only the displayed sign is flipped.
+ */
 function SignedAmount({ value }: { value: string }) {
   const format = useFormat();
   const negative = isNegativeMoney(value);
   return (
     <span>
-      {negative ? '−' : '+'}
+      {negative ? '+' : '−'}
       {format.money(absoluteMoney(value))}
     </span>
   );
