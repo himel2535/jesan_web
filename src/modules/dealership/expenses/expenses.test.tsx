@@ -10,6 +10,7 @@ import {
 } from '../../../../test/fixtures/me';
 import { apiError, json, mockApi, renderInBusiness } from '../../../../test/settings-utils';
 import { expectNoA11yViolations } from '../../../../test/utils';
+import { expensesReportResponse } from '../reports/fixtures';
 import { B, BID, categoryRef, expense, expenseCategory, page } from './fixtures';
 import { ExpenseDetail } from './expense-detail';
 import { ExpenseForm } from './expense-form';
@@ -145,6 +146,33 @@ describe('<ExpensesList>', () => {
     expect(screen.queryByRole('link', { name: 'Record an expense' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Manage expense types' })).not.toBeInTheDocument();
   });
+
+  it('shows the four KPI cards with totals from the expenses report (report.view)', async () => {
+    mockApi({
+      ...routes,
+      [`GET ${B}/expenses`]: () => json(200, page([expense()])),
+      [`GET ${B}/reports/expenses`]: () =>
+        json(200, expensesReportResponse({ totalAmount: '19200.00' })),
+    });
+    renderInBusiness(<ExpensesList slug="example-cement" businessId={BID} />, { me: ownerP });
+    await screen.findByRole('rowheader', { name: 'EXP-0001' });
+    expect(await screen.findByText('Total Partial Expenses')).toBeInTheDocument();
+    expect(screen.getByText("Today's Expenses")).toBeInTheDocument();
+    expect(screen.getByText("This Month's Expenses")).toBeInTheDocument();
+    expect(screen.getByText("Previous Month's Expenses")).toBeInTheDocument();
+    expect(screen.getAllByText('৳19,200.00')).toHaveLength(4);
+  });
+
+  it('hides the KPI cards without report.view; the list itself still works', async () => {
+    mockApi({
+      ...routes,
+      [`GET ${B}/expenses`]: () => json(200, page([expense()])),
+      [`GET ${B}/reports/expenses`]: () => apiError(403, 'FORBIDDEN'),
+    });
+    renderInBusiness(<ExpensesList slug="example-cement" businessId={BID} />, { me: managerP });
+    await screen.findByRole('rowheader', { name: 'EXP-0001' });
+    expect(screen.queryByText('Total Partial Expenses')).not.toBeInTheDocument();
+  });
 });
 
 describe('<ExpenseDetail>', () => {
@@ -153,7 +181,7 @@ describe('<ExpenseDetail>', () => {
     [`GET ${B}/expenses/exp1`]: () => json(200, e),
   });
 
-  it('owner voids with a reason; only expenses and the cash book refresh', async () => {
+  it('owner voids with a reason; expenses, the cash book and the KPI report refresh', async () => {
     const { calls } = mockApi({
       ...detailRoutes(),
       [`POST ${B}/expenses/exp1/void`]: () => json(200, expense({ status: 'void' })),
@@ -175,6 +203,7 @@ describe('<ExpenseDetail>', () => {
     expect(invalidate.mock.calls.map((c) => JSON.stringify(c[0]?.queryKey))).toEqual([
       JSON.stringify(['dealership', BID, 'expenses']),
       JSON.stringify(['dealership', BID, 'cashBook']),
+      JSON.stringify(['dealership', BID, 'reportsExpenses']),
     ]);
   });
 

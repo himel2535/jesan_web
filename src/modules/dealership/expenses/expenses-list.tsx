@@ -16,7 +16,15 @@ import { DetailsLink } from '../master-data/shared/row-actions';
 import { ListEmpty, LoadError } from '../master-data/shared/states';
 import { useExpenseCategories, useExpenseMethods, useExpenses } from './api';
 import { ListSkeleton } from './skeletons';
-import { StatusText, dateParam, useBusinessDay, useMethodLabel, useSetFilters } from './shared';
+import {
+  StatusText,
+  dateParam,
+  useBusinessDay,
+  useExpenseSummaryRanges,
+  useMethodLabel,
+  useSetFilters,
+} from './shared';
+import { ExpensesSummaryCards } from './summary-cards';
 import type { ExpenseFilters } from './types';
 
 const buttonLink =
@@ -52,6 +60,7 @@ export function ExpensesList({ slug, businessId }: { slug: string; businessId: s
   const canCreate = useCan('expense.create');
   const canManageCategories = useCan('expense.category.manage');
   const filters = useExpenseFilters();
+  const summaryRanges = useExpenseSummaryRanges();
   const query = useExpenses(slug, businessId, filters);
   const categories = useExpenseCategories(slug, businessId, 'all');
   const methods = useExpenseMethods(slug, businessId, canCreate || Boolean(filters.method));
@@ -70,6 +79,7 @@ export function ExpensesList({ slug, businessId }: { slug: string; businessId: s
 
   return (
     <div className="space-y-4">
+      <ExpensesSummaryCards slug={slug} businessId={businessId} ranges={summaryRanges} />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <div>

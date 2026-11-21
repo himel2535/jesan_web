@@ -317,7 +317,7 @@
       "purchases": "Purchases",
       "sales": "Sales",
       "stock": "Stock",
-      "expenses": "Expenses",
+      "expenses": "Partial Expenses",
       "cashbook": "Cash book",
       "accounts": "Accounts",
       "commission": "Commission",
@@ -965,7 +965,7 @@
       }
     },
     "expenses": {
-      "title": "Expenses",
+      "title": "Partial Expenses",
       "description": "Daily expenses of {business}.",
       "newTitle": "Record an expense",
       "new": "Record an expense",
@@ -1049,6 +1049,13 @@
         "bank": "Bank transfer",
         "cheque": "Cheque",
         "card": "Card"
+      },
+      "summary": {
+        "total": "Total Partial Expenses",
+        "totalNote": "Last 400 days.",
+        "today": "Today's Expenses",
+        "thisMonth": "This Month's Expenses",
+        "previousMonth": "Previous Month's Expenses"
       }
     },
     "cashBook": {

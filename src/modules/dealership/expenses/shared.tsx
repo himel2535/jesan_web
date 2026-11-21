@@ -2,12 +2,51 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useMemo } from 'react';
+import { businessToday } from '@/core/i18n/format';
 import { useDynamicT } from '@/core/i18n/use-dynamic-t';
 import { useFormat } from '@/core/i18n/use-format';
 import { cn } from '@/core/ui/cn';
 import type { DocumentStatus } from './types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Reports endpoints cap any single range at 400 days (`RANGE_TOO_LARGE`); 399 stays inside it. */
+const MAX_REPORT_RANGE_DAYS = 399;
+
+function isoOf(y: number, m: number, d: number): string {
+  return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+}
+
+export interface ExpenseSummaryRanges {
+  total: { from: string; to: string };
+  today: { from: string; to: string };
+  thisMonth: { from: string; to: string };
+  previousMonth: { from: string; to: string };
+}
+
+/**
+ * The four fixed date windows the Expenses KPI cards need, anchored on the business's "today"
+ * (Dhaka time). Memoized so the four report queries below don't re-fire every render.
+ */
+export function useExpenseSummaryRanges(): ExpenseSummaryRanges {
+  const today = useBusinessTodayIso();
+  return useMemo(() => {
+    const y = Number(today.slice(0, 4));
+    const m = Number(today.slice(5, 7));
+    const d = Number(today.slice(8, 10));
+    return {
+      total: { from: isoOf(y, m - 1, d - MAX_REPORT_RANGE_DAYS), to: today },
+      today: { from: today, to: today },
+      thisMonth: { from: isoOf(y, m - 1, 1), to: today },
+      previousMonth: { from: isoOf(y, m - 2, 1), to: isoOf(y, m - 1, 0) },
+    };
+  }, [today]);
+}
+
+function useBusinessTodayIso(): string {
+  return useMemo(() => businessToday(), []);
+}
 
 /** A `YYYY-MM-DD` business day from the API → a localized date. */
 export function useBusinessDay() {
