@@ -98,8 +98,6 @@ export const dealershipManifest = {
       permission: 'cashbook.view',
       prefetch: 'hover',
     },
-    // Future step (proposal §7.8): one combined accounts/ledger page. Different permission and
-    // scope from expenses/cashbook above, so left untouched.
     { key: 'accounts', path: 'accounts', icon: 'wallet', permission: 'ledger.view' },
     { key: 'commission', path: 'commission', icon: 'percent', permission: 'commission.view' },
     { key: 'reports', path: 'reports', icon: 'chart', permission: 'reports.finance.view' },

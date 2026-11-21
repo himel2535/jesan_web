@@ -55,9 +55,9 @@ export function ManualEntryDialog({
     const cleanAmount = cleanMoneyInput(amount);
     const found: typeof errors = {};
     if (!cleanAmount || !MONEY_PATTERN.test(cleanAmount) || !/[1-9]/.test(cleanAmount)) {
-      found.amount = t('amount') + ' ✗';
+      found.amount = t('amountInvalid');
     }
-    if (!entryDate) found.entryDate = t('entryDate') + ' ✗';
+    if (!entryDate) found.entryDate = tc('required');
     setErrors(found);
     setFormError(null);
     if (Object.keys(found).length) return;
@@ -74,7 +74,7 @@ export function ManualEntryDialog({
     inFlight.current = true;
     try {
       await mutation.mutateAsync({ input, idempotencyKey });
-      onDone(t('title'));
+      onDone(t('done'));
     } catch (cause) {
       if (cause instanceof ApiError) {
         const split = errorMessage.split(cause, FIELDS);

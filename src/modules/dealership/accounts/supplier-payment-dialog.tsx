@@ -54,10 +54,10 @@ export function SupplierPaymentDialog({
     const cleanAmount = cleanMoneyInput(amount);
     const found: typeof errors = {};
     if (!cleanAmount || !MONEY_PATTERN.test(cleanAmount) || !/[1-9]/.test(cleanAmount)) {
-      found.amount = t('amount') + ' ✗';
+      found.amount = t('amountInvalid');
     }
-    if (!method) found.method = t('method') + ' ✗';
-    if (!paymentDate) found.paymentDate = t('paymentDate') + ' ✗';
+    if (!method) found.method = t('methodRequired');
+    if (!paymentDate) found.paymentDate = tc('required');
     setErrors(found);
     setFormError(null);
     if (Object.keys(found).length) return;
@@ -73,7 +73,7 @@ export function SupplierPaymentDialog({
     inFlight.current = true;
     try {
       await mutation.mutateAsync({ input, idempotencyKey });
-      onDone(t('title'));
+      onDone(t('done'));
     } catch (cause) {
       if (cause instanceof ApiError) {
         const split = errorMessage.split(cause, FIELDS);

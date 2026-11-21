@@ -19,8 +19,9 @@ API বদলালে এই ফাইলও একই PR-এ হালনা�
 11. [অর্ডার, ডেলিভারি ও আদায়](#১১-অর্ডার-ডেলিভারি-ও-আদায়)
 12. [সংশোধনের অনুরোধ ও অনুমোদন](#১২-সংশোধনের-অনুরোধ-ও-অনুমোদন)
 13. [খরচ, ক্যাশ বই ও মূল রিপোর্ট](#১৩-খরচ-ক্যাশ-বই-ও-মূল-রিপোর্ট)
-14. [ত্রুটির রূপ ও কোড](#১৪-ত্রুটির-রূপ-ও-কোড)
-15. [রোল ও অনুমতি](#১৫-রোল-ও-অনুমতি)
+14. [হিসাব (Accounts)](#১৪-হিসাব-accounts)
+15. [ত্রুটির রূপ ও কোড](#১৫-ত্রুটির-রূপ-ও-কোড)
+16. [রোল ও অনুমতি](#১৬-রোল-ও-অনুমতি)
 
 ---
 
@@ -227,6 +228,10 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | GET | `/b/:businessSlug/reports/stock-movements?from=&to=&page=` | হ্যাঁ | `report.view` | 200 |
 | GET | `/b/:businessSlug/reports/expenses?groupBy=&from=&to=` | হ্যাঁ | `report.view` | 200 |
 | GET | `/b/:businessSlug/reports/daily-summary?date=` | হ্যাঁ | `report.view` (নগদ অংশ `cashbook.view`) | 200 |
+| GET | `/b/:businessSlug/accounts/summary?from=&to=` | হ্যাঁ | `ledger.view` | 200 |
+| GET | `/b/:businessSlug/accounts/ledger?from=&to=&type=&page=` | হ্যাঁ | `ledger.view` | 200 |
+| POST | `/b/:businessSlug/accounts/entries` | হ্যাঁ | `ledger.entry.create` | 201 (একই `Idempotency-Key`: 200) |
+| POST | `/b/:businessSlug/accounts/payments` | হ্যাঁ | `payment.create` | 201 (একই `Idempotency-Key`: 200) |
 
 `/b/:businessSlug/...` পথে আগে যাচাই হয় ইউজার ওই ব্যবসায় ঢুকতে পারেন কি না, তারপর অনুমতি। অজানা ব্যবসা আর ঢোকার অনুমতি নেই, দুটোই একই 403।
 
@@ -481,7 +486,7 @@ Response: **204**, body নেই।
 - `roles`: চারটা রোল, Settings-এর কলামের ক্রমে। প্রতিটায় চালু অনুমতির তালিকা।
 - `locked: true` (শুধু `owner` রোলে): এই রোলের অনুমতি বদলানো যায় না; সবসময় সব owner-only-বহির্ভূত অনুমতি।
 
-Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৫০টা, অংশ ১৪-এর টেবিলে সব):
+Response 200 (`permissions` সংক্ষিপ্ত; আসলে ৫০টা, অংশ ১৬-এর টেবিলে সব):
 
 ```json
 {
@@ -1973,7 +1978,105 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ---
 
-## ১৪. ত্রুটির রূপ ও কোড
+## ১৪. হিসাব (Accounts)
+
+ব্যবসার সব টাকার movement এক জায়গায় (general ledger): আদায়, খরচ, কেনা, কমিশন রসিদ — এগুলো নিজ নিজ module থেকেই স্বয়ংক্রিয়ভাবে বসে — আর হাতে দেওয়া entry ও সরবরাহকারীর পেমেন্ট, এই দুটো সরাসরি এখানে। সব পথ `/api/v1/b/:businessSlug/accounts/...`-এর নিচে। `GET reports/dues` (অংশ ১৩) অপরিবর্তিত; `totalDue`/`totalAdvance` এখানে আর তার হিসাব একই উৎস (গ্রাহকের `currentBalance`), কিন্তু এখানে তারিখ-নিরপেক্ষ সার্বক্ষণিক স্নাপশট।
+
+### সারাংশ
+
+**`GET accounts/summary?from=&to=`** (`ledger.view`): না দিলে `from`/`to` চলতি মাস। `totalIn`/`totalOut`/`net`/`byType` তারিখ-সীমার ভেতরের active এন্ট্রি থেকে; `totalDue`/`totalAdvance` তারিখ-সীমার বাইরে, সার্বক্ষণিক (active গ্রাহকদের `currentBalance` যোগ করে, ধনাত্মক ও ঋণাত্মক আলাদাভাবে)।
+
+```json
+{
+  "from": "2026-11-01", "to": "2026-11-20",
+  "totalIn": "9500.00", "totalOut": "3000.00", "net": "6500.00",
+  "totalDue": "145000.00", "totalAdvance": "8000.00",
+  "byType": [
+    { "type": "collection", "in": "9500.00", "out": "0.00" },
+    { "type": "expense", "in": "0.00", "out": "2000.00" },
+    { "type": "purchase", "in": "0.00", "out": "1000.00" },
+    { "type": "commission_receipt", "in": "0.00", "out": "0.00" },
+    { "type": "manual", "in": "0.00", "out": "0.00" },
+    { "type": "supplier_payment", "in": "0.00", "out": "0.00" }
+  ]
+}
+```
+
+- `byType`-এ ব্যবসার সবরকম ধরন সবসময় থাকে, কোনো এন্ট্রি না থাকলেও (`"0.00"`)।
+- বাতিল (`status: "void"`) হওয়া এন্ট্রি কখনো গোনা হয় না।
+
+### খাতা (ledger)
+
+**`GET accounts/ledger?from=&to=&type=&page=`** (`ledger.view`): না দিলে `from`/`to` চলতি মাস, সর্বোচ্চ ৪০০ দিন একসাথে (বেশি হলে 400 `RANGE_TOO_LARGE`)। পাতাভাগ ১০ সারি, নতুন থেকে পুরনো। `type` ঐচ্ছিক ফিল্টার (`collection` | `expense` | `purchase` | `commission_receipt` | `manual` | `supplier_payment`)।
+
+```json
+{
+  "items": [
+    { "id": "...", "type": "collection", "direction": "in", "amount": "3000.00",
+      "method": "bkash", "referenceType": "collection", "referenceId": "...",
+      "entryDate": "2026-11-20", "note": null, "status": "active",
+      "createdBy": { "id": "...", "name": "..." }, "createdAt": "2026-11-20T10:00:00.000Z" }
+  ],
+  "page": 1, "pageSize": 10, "total": 37
+}
+```
+
+- `referenceType`/`referenceId` উৎস দলিল দেখায় (যেমন `collection`); হাতে দেওয়া entry ও payment-এ `null`।
+- উৎস দলিল বাতিল হলে এখানকার এন্ট্রিও `status: "void"` হয় (নিজে বাতিলযোগ্য নয়)।
+
+### হাতে দেওয়া entry
+
+**`POST accounts/entries`** (`ledger.entry.create`; হিসাবরক্ষক)। **`Idempotency-Key` header বাধ্যতামূলক** (না দিলে 400 `IDEMPOTENCY_KEY_REQUIRED`)।
+
+```json
+{ "direction": "in", "amount": "500.00", "method": "cash", "entryDate": "2026-11-20", "note": "মালিকের নগদ জমা" }
+```
+
+- `direction`: `"in"` বা `"out"`। `type` সবসময় `"manual"` বসে।
+- `entryDate` না দিলে আজ (ব্যবসার সময়-অঞ্চলে); ভবিষ্যৎ নয়; সর্বোচ্চ ৭ দিন আগে, ছাড় নেই।
+- `method` ঐচ্ছিক; দিলে ব্যবসার `collectionMethods`-এর একটা হতে হবে।
+- একই `Idempotency-Key` দ্বিতীয়বার: 200, নতুন সারি তৈরি হয় না।
+
+### সরবরাহকারীর পেমেন্ট
+
+**`POST accounts/payments`** (`payment.create`; হিসাবরক্ষক)। **`Idempotency-Key` header বাধ্যতামূলক।**
+
+```json
+{ "amount": "9000.00", "method": "bank", "paymentDate": "2026-11-20", "note": "Cement Ltd চালান #112" }
+```
+
+- `type` সবসময় `"supplier_payment"`, `direction` সবসময় `"out"`।
+- `method` বাধ্যতামূলক, ব্যবসার `collectionMethods`-এর একটা হতে হবে।
+- `paymentDate` না দিলে আজ; ভবিষ্যৎ নয়; সর্বোচ্চ ৭ দিন আগে, ছাড় নেই।
+
+### স্বয়ংক্রিয় এন্ট্রি
+
+নিচের প্রতিটা নিজের module-এর create/void-এর একই transaction-এ, কোনো আলাদা call নয়:
+
+| উৎস | `type` | `direction` |
+|---|---|---|
+| আদায় (`collection`) তৈরি | `collection` | `in` |
+| খরচ (`expense`) তৈরি | `expense` | `out` |
+| কেনা (`purchase`) তৈরি | `purchase` | `out` |
+| কমিশন রসিদ (`commission_receipt`) তৈরি | `commission_receipt` | `in` |
+
+আদায়/খরচ/কেনা বাতিল হলে সংশ্লিষ্ট এন্ট্রি `status: "void"` হয়ে যায় (নতুন উল্টো এন্ট্রি নয়)।
+
+### ত্রুটি
+
+| Status | `code` (`field`) | কখন |
+|---|---|---|
+| 400 | `IDEMPOTENCY_KEY_REQUIRED` (`Idempotency-Key`) | `entries`/`payments`-এ header নেই |
+| 400 | `AMOUNT_TOO_SMALL` (`amount`) | টাকা শূন্য বা তার কম |
+| 400 | `LEDGER_ENTRY_METHOD_UNKNOWN` (`method`) | পদ্ধতি ব্যবসার তালিকায় নেই |
+| 400 | `ENTRY_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`, `entryDate`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
+| 400 | `PAYMENT_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`, `paymentDate`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
+| 400 | `FROM_INVALID` / `TO_INVALID` (`from` / `to`) | তারিখ আসল নয়, বা `to` < `from` |
+| 400 | `RANGE_TOO_LARGE` (`to`) | তারিখ-সীমা ৪০০ দিনের বেশি |
+
+---
+
+## ১৫. ত্রুটির রূপ ও কোড
 
 ### রূপ
 
@@ -2153,6 +2256,11 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `EXPENSE_NOT_FOUND` | 404 | - | খরচ নেই বা অন্য ব্যবসার |
 | `EXPENSE_CATEGORY_NOT_FOUND` | 404 | - | ধরন নেই বা অন্য ব্যবসার |
 | `EXPENSE_ALREADY_VOID` | 409 | - | বাতিল খরচে আবার বদল বা বাতিলের চেষ্টা |
+| **হিসাব** (অংশ ১৪) | | | |
+| `IDEMPOTENCY_KEY_REQUIRED` | 400 | `Idempotency-Key` | `accounts/entries` বা `accounts/payments`-এ header নেই |
+| `LEDGER_ENTRY_METHOD_UNKNOWN` | 400 | `method` | পদ্ধতি ব্যবসার তালিকায় নেই |
+| `ENTRY_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `entryDate` | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
+| `PAYMENT_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `paymentDate` | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 
 429-এর আসল উত্তর (`Retry-After` header আগের মতোই):
 
@@ -2165,7 +2273,7 @@ Retry-After: 60
 
 ---
 
-## ১৫. রোল ও অনুমতি
+## ১৬. রোল ও অনুমতি
 
 ### রোল
 

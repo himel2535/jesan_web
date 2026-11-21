@@ -7,7 +7,7 @@ import { useCan } from '@/core/auth/can';
 import { businessToday } from '@/core/i18n/format';
 import { Button } from '@/core/ui/button';
 import { inputClass } from '@/core/ui/text-field';
-import { LoadError } from '../master-data/shared/states';
+import { LoadError, Notice } from '../master-data/shared/states';
 import { useAccountsSummary } from './api';
 import { LedgerTable } from './ledger-table';
 import { ManualEntryDialog } from './manual-entry-dialog';
@@ -33,6 +33,7 @@ export function AccountsView({ slug, businessId }: { slug: string; businessId: s
   const from = dateParam(params, 'from') ?? firstOfMonth();
   const to = dateParam(params, 'to') ?? businessToday();
   const [dialog, setDialog] = useState<DialogMode>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const summary = useAccountsSummary(slug, businessId, { from, to });
 
@@ -83,6 +84,8 @@ export function AccountsView({ slug, businessId }: { slug: string; businessId: s
         </div>
       </div>
 
+      <Notice>{notice}</Notice>
+
       {summary.isPending ? (
         <SummaryCardsSkeleton />
       ) : summary.isError ? (
@@ -98,7 +101,10 @@ export function AccountsView({ slug, businessId }: { slug: string; businessId: s
           slug={slug}
           businessId={businessId}
           onClose={() => setDialog(null)}
-          onDone={() => setDialog(null)}
+          onDone={(message) => {
+            setDialog(null);
+            setNotice(message);
+          }}
         />
       ) : null}
       {dialog === 'payment' ? (
@@ -106,7 +112,10 @@ export function AccountsView({ slug, businessId }: { slug: string; businessId: s
           slug={slug}
           businessId={businessId}
           onClose={() => setDialog(null)}
-          onDone={() => setDialog(null)}
+          onDone={(message) => {
+            setDialog(null);
+            setNotice(message);
+          }}
         />
       ) : null}
     </div>
