@@ -4,6 +4,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiFetch } from '@/core/api/client';
 import { dealershipKeys } from '../master-data/api';
 import type { Page } from '../master-data/types';
+import { useSalesReport } from '../reports/api';
+import type { SalesSummaryRanges } from './shared';
 import type {
   Collection,
   CollectionFilters,
@@ -38,6 +40,7 @@ export const ORDER_REFRESH = [
   'customers',
   'ledger',
   'accountsSummary',
+  'reportsSales',
 ] as const;
 export const DELIVERY_REFRESH = [
   'deliveries',
@@ -46,6 +49,7 @@ export const DELIVERY_REFRESH = [
   'customers',
   'ledger',
   'accountsSummary',
+  'reportsSales',
 ] as const;
 export const COLLECTION_REFRESH = [
   'collections',
@@ -277,6 +281,56 @@ export function useVoidCollection(slug: string, businessId: string) {
       }),
     onSuccess: () => refresh(COLLECTION_REFRESH),
   });
+}
+
+/**
+ * The sales KPI cards' amount group (`report.view`, `reports/sales` is delivery-based). A user
+ * without `report.view` gets a 403 on all three, and the cards hide rather than erroring (see
+ * `SalesSummaryCards`). `total` is capped to the report endpoint's own 400-day limit.
+ */
+export function useSalesSummaryAmounts(
+  slug: string,
+  businessId: string,
+  ranges: SalesSummaryRanges,
+) {
+  const total = useSalesReport(slug, businessId, { groupBy: 'date', ...ranges.total, page: 1 });
+  const today = useSalesReport(slug, businessId, { groupBy: 'date', ...ranges.today, page: 1 });
+  const thisMonth = useSalesReport(slug, businessId, {
+    groupBy: 'date',
+    ...ranges.thisMonth,
+    page: 1,
+  });
+  return { total, today, thisMonth };
+}
+
+/**
+ * The sales KPI cards' order-count group. Same `sale.view.all`/`sale.view.own` permission as the
+ * page itself, so it never 403s here; `GET orders` has no date-range cap, so "total" is truly
+ * all orders ever, not a 399-day approximation like the amount cards.
+ */
+export function useOrderCounts(slug: string, businessId: string, ranges: SalesSummaryRanges) {
+  const total = useOrders(slug, businessId, { page: 1 });
+  const thisMonth = useOrders(slug, businessId, {
+    from: ranges.thisMonth.from,
+    to: ranges.thisMonth.to,
+    page: 1,
+  });
+  return { total, thisMonth };
+}
+
+/**
+ * The sales KPI cards' delivery-count group. `delivery.view` is separate from the page's own
+ * `sale.view.*`, so a salesman without it gets a 403 here and the cards hide (see
+ * `SalesSummaryCards`). `GET deliveries` has no date-range cap either.
+ */
+export function useDeliveryCounts(slug: string, businessId: string, ranges: SalesSummaryRanges) {
+  const total = useDeliveries(slug, businessId, { page: 1 });
+  const thisMonth = useDeliveries(slug, businessId, {
+    from: ranges.thisMonth.from,
+    to: ranges.thisMonth.to,
+    page: 1,
+  });
+  return { total, thisMonth };
 }
 
 // ---- Customer ledger ----

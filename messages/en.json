@@ -814,7 +814,8 @@
           "collections": "Collections against this order",
           "noCollections": "No collection recorded against this order.",
           "back": "Back to orders",
-          "deliver": "Deliver"
+          "deliver": "Deliver",
+          "due": "Due for this order"
         },
         "actions": {
           "correct": "Correct",
@@ -962,6 +963,16 @@
           "noOrders": "No order for this customer.",
           "noDeliveries": "No delivery for this customer."
         }
+      },
+      "summary": {
+        "todaySales": "Today's Sales",
+        "thisMonthSales": "This Month's Sales",
+        "totalSales": "Total Sales",
+        "totalSalesNote": "Last 400 days.",
+        "totalOrders": "Total Orders",
+        "thisMonthOrders": "This Month's Orders",
+        "totalDeliveries": "Total Deliveries",
+        "thisMonthDeliveries": "This Month's Deliveries"
       }
     },
     "expenses": {

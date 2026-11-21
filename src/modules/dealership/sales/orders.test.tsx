@@ -11,12 +11,14 @@ import {
 } from '../../../../test/fixtures/me';
 import { apiError, json, mockApi, renderInBusiness } from '../../../../test/settings-utils';
 import { expectNoA11yViolations } from '../../../../test/utils';
+import { salesReportResponse } from '../reports/fixtures';
 import {
   B,
   BID,
   DECIMAL_UNIT,
   WHOLE_UNIT,
   customerRecord,
+  customerRef,
   order,
   orderSummary,
   page,
@@ -72,6 +74,9 @@ const routes = (unit: UnitFixture) => ({
   [`GET ${B}/customers`]: () => json(200, page([customerRecord()])),
   [`GET ${B}/collection-methods`]: () => json(200, { items: ['cash', 'bkash'] }),
   [`GET ${B}/collections`]: () => json(200, page([])),
+  // The sales KPI cards on <OrdersList>: a delivery count and a sales-amount report.
+  [`GET ${B}/deliveries`]: () => json(200, page([])),
+  [`GET ${B}/reports/sales`]: () => json(200, salesReportResponse()),
 });
 
 describe('<OrdersList>', () => {
@@ -94,7 +99,7 @@ describe('<OrdersList>', () => {
       'href',
       `${B}/sales/new`,
     );
-    expect(calls.find((c) => c.path === `${B}/orders`)!.url).toBe(
+    expect(calls.find((c) => c.path === `${B}/orders` && c.url.includes('status=open'))!.url).toBe(
       '/api/v1/b/example-cement/orders?page=2&status=open',
     );
     await userEvent.hover(row);
@@ -104,6 +109,43 @@ describe('<OrdersList>', () => {
       scroll: false,
     });
     await expectNoA11yViolations(container);
+  });
+
+  it('manager: all seven KPI cards, from three independent report/order/delivery calls', async () => {
+    mockApi({
+      ...routes(WHOLE_UNIT),
+      [`GET ${B}/orders`]: () => json(200, page([orderSummary()])),
+    });
+    renderInBusiness(<OrdersList slug="example-cement" businessId={BID} />, { me: managerP });
+    await screen.findByRole('rowheader', { name: 'ORD-0001' });
+    expect(screen.getByText("Today's Sales").nextElementSibling).toHaveTextContent('৳1,20,000.00');
+    expect(screen.getByText("This Month's Sales").nextElementSibling).toHaveTextContent(
+      '৳1,20,000.00',
+    );
+    expect(screen.getByText('Total Sales').nextElementSibling).toHaveTextContent(
+      '৳1,20,000.00Last 400 days.',
+    );
+    expect(screen.getByText('Total Orders').nextElementSibling).toHaveTextContent('1');
+    expect(screen.getByText("This Month's Orders").nextElementSibling).toHaveTextContent('1');
+    expect(screen.getByText('Total Deliveries').nextElementSibling).toHaveTextContent('0');
+    expect(screen.getByText("This Month's Deliveries").nextElementSibling).toHaveTextContent('0');
+  });
+
+  it('salesman: order-count cards only; sales-amount and delivery-count cards hide on their own 403', async () => {
+    mockApi({
+      ...routes(WHOLE_UNIT),
+      [`GET ${B}/orders`]: () => json(200, page([orderSummary()])),
+      [`GET ${B}/reports/sales`]: () => apiError(403, 'FORBIDDEN'),
+      [`GET ${B}/deliveries`]: () => apiError(403, 'FORBIDDEN'),
+    });
+    renderInBusiness(<OrdersList slug="example-cement" businessId={BID} />, {
+      me: meWith(['sale.view.own', 'sale.create', 'customer.view']),
+    });
+    await screen.findByRole('rowheader', { name: 'ORD-0001' });
+    expect(screen.getByText('Total Orders').nextElementSibling).toHaveTextContent('1');
+    expect(screen.queryByText("Today's Sales")).not.toBeInTheDocument();
+    expect(screen.queryByText('Total Sales')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total Deliveries')).not.toBeInTheDocument();
   });
 
   /**
@@ -127,6 +169,9 @@ describe('<OrdersList>', () => {
     mockApi({
       ...routes(WHOLE_UNIT),
       [`GET ${B}/orders`]: () => json(200, page([orderSummary({}, false)])),
+      // This viewer has neither report.view nor delivery.view: the KPI amount/delivery cards hide.
+      [`GET ${B}/reports/sales`]: () => apiError(403, 'FORBIDDEN'),
+      [`GET ${B}/deliveries`]: () => apiError(403, 'FORBIDDEN'),
     });
     const { container } = renderInBusiness(<OrdersList slug="example-cement" businessId={BID} />, {
       me: meWith(['sale.view.all', 'customer.view']),
@@ -300,7 +345,82 @@ describe('<OrderDetail>', () => {
       'href',
       `${B}/deliveries/new?orderId=o1`,
     );
+    // Due = the one active delivery's amount (৳22,600.00); no collections recorded against it.
+    expect(screen.getByText('Due for this order').nextElementSibling).toHaveTextContent(
+      '৳22,600.00',
+    );
     await expectNoA11yViolations(container);
+  });
+
+  it('due for this order = delivered amount minus collections referencing it (not its own allocation)', async () => {
+    mockApi({
+      ...routes(WHOLE_UNIT),
+      [`GET ${B}/orders/o1`]: () => json(200, order(WHOLE_UNIT)),
+      [`GET ${B}/collections`]: () =>
+        json(
+          200,
+          page([
+            {
+              id: 'co1',
+              code: 'COL-0001',
+              customer: customerRef,
+              order: { id: 'o1', code: 'ORD-0001' },
+              collectionDate: '2026-11-19',
+              method: 'cash',
+              amount: '10000.00',
+              reference: null,
+              note: null,
+              status: 'active',
+              version: 1,
+              createdBy: { id: 'u1', name: 'Karim Mia' },
+              createdAt: '2026-11-19T10:08:50.959Z',
+              voidedAt: null,
+              voidReason: null,
+              voidedBy: null,
+              updatedAt: '2026-11-19T10:08:50.959Z',
+            },
+            {
+              id: 'co2',
+              code: 'COL-0002',
+              customer: customerRef,
+              order: { id: 'o1', code: 'ORD-0001' },
+              collectionDate: '2026-11-19',
+              method: 'cash',
+              amount: '9999.00',
+              reference: null,
+              note: null,
+              status: 'void',
+              version: 1,
+              createdBy: { id: 'u1', name: 'Karim Mia' },
+              createdAt: '2026-11-19T10:08:50.959Z',
+              voidedAt: '2026-11-19T11:00:00.000Z',
+              voidReason: 'Wrong amount',
+              voidedBy: { id: 'u1', name: 'Karim Mia' },
+              updatedAt: '2026-11-19T11:00:00.000Z',
+            },
+          ]),
+        ),
+    });
+    renderInBusiness(<OrderDetail slug="example-cement" businessId={BID} id="o1" />, {
+      me: managerP,
+    });
+    await screen.findByRole('heading', { name: 'Order ORD-0001' });
+    // ৳22,600.00 delivered − ৳10,000.00 collected (the voided ৳9,999.00 collection does not count).
+    expect(screen.getByText('Due for this order').nextElementSibling).toHaveTextContent(
+      '৳12,600.00',
+    );
+  });
+
+  it('no due row without collection.view', async () => {
+    mockApi({
+      ...routes(WHOLE_UNIT),
+      [`GET ${B}/orders/o1`]: () => json(200, order(WHOLE_UNIT)),
+    });
+    renderInBusiness(<OrderDetail slug="example-cement" businessId={BID} id="o1" />, {
+      me: meWith(['sale.view.all', 'customer.view']),
+    });
+    await screen.findByRole('heading', { name: 'Order ORD-0001' });
+    expect(screen.queryByText('Due for this order')).not.toBeInTheDocument();
   });
 
   it('salesman: no price columns, no Deliver, delivery codes without links', async () => {
@@ -345,7 +465,7 @@ describe('<OrderDetail>', () => {
     expect(await screen.findByText('অর্ডার বাতিল হয়েছে।')).toBeInTheDocument();
   });
 
-  it('owner corrects: only the changed fields, with a reason; invalidates exactly five keys', async () => {
+  it('owner corrects: only the changed fields, with a reason; invalidates exactly six keys', async () => {
     const { calls } = mockApi({
       ...detailRoutes(),
       [`PATCH ${B}/orders/o1`]: () => json(200, order(WHOLE_UNIT)),
@@ -375,6 +495,7 @@ describe('<OrderDetail>', () => {
       JSON.stringify(['dealership', BID, 'customers']),
       JSON.stringify(['dealership', BID, 'ledger']),
       JSON.stringify(['dealership', BID, 'accountsSummary']),
+      JSON.stringify(['dealership', BID, 'reportsSales']),
     ]);
   });
 

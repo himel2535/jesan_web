@@ -814,7 +814,8 @@
           "collections": "এই অর্ডারের বিপরীতে আদায়",
           "noCollections": "এই অর্ডারের বিপরীতে কোনো আদায় নেই।",
           "back": "অর্ডারের তালিকায়",
-          "deliver": "ডেলিভারি দিন"
+          "deliver": "ডেলিভারি দিন",
+          "due": "এই অর্ডারের বাকি"
         },
         "actions": {
           "correct": "সংশোধন",
@@ -962,6 +963,16 @@
           "noOrders": "এই গ্রাহকের কোনো অর্ডার নেই।",
           "noDeliveries": "এই গ্রাহকের কোনো ডেলিভারি নেই।"
         }
+      },
+      "summary": {
+        "todaySales": "আজকের বিক্রি",
+        "thisMonthSales": "এই মাসের বিক্রি",
+        "totalSales": "সর্বমোট বিক্রি",
+        "totalSalesNote": "শেষ ৪০০ দিন।",
+        "totalOrders": "সর্বমোট অর্ডার",
+        "thisMonthOrders": "এই মাসের অর্ডার",
+        "totalDeliveries": "সর্বমোট ডেলিভারি",
+        "thisMonthDeliveries": "এই মাসের ডেলিভারি"
       }
     },
     "expenses": {
