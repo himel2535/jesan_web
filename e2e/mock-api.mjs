@@ -67,6 +67,9 @@ const OWNER = [
   'expense.edit',
   'expense.void',
   'stock.adjust.large',
+  'ledger.view',
+  'ledger.entry.create',
+  'payment.create',
   'change.view.all',
   'change.approve',
 ];
@@ -3085,6 +3088,115 @@ http
         return need('supplier.view') && send(res, 200, pageOf(suppliers.filter(activeOk), page));
       r = rest.match(/^suppliers\/([^/]+)$/);
       if (r) return need('supplier.view') && send(res, 200, suppliers[0]);
+
+      // ---- Accounts ----
+      if (rest === 'accounts/summary' && req.method === 'GET') {
+        if (!need('ledger.view')) return;
+        return send(res, 200, {
+          from: url.searchParams.get('from') || '2025-01-01',
+          to: url.searchParams.get('to') || '2025-01-31',
+          totalIn: '250000.00',
+          totalOut: '180000.00',
+          net: '70000.00',
+          totalDue: '45000.00',
+          totalAdvance: '12000.00',
+          byType: [
+            { type: 'collection', in: '200000.00', out: '0.00' },
+            { type: 'expense', in: '0.00', out: '50000.00' },
+            { type: 'purchase', in: '0.00', out: '120000.00' },
+            { type: 'manual', in: '50000.00', out: '10000.00' },
+          ],
+        });
+      }
+      if (rest === 'accounts/ledger' && req.method === 'GET') {
+        if (!need('ledger.view')) return;
+        const typeFilter = url.searchParams.get('type');
+        let items = [
+          {
+            id: 'le-1',
+            type: 'collection',
+            direction: 'in',
+            amount: '50000.00',
+            method: 'cash',
+            referenceType: 'collection',
+            referenceId: 'col-1',
+            entryDate: '2025-01-15',
+            note: 'Monthly collection',
+            status: 'active',
+            createdBy: { id: 'u1', name: 'Admin' },
+            createdAt: '2025-01-15T10:00:00Z',
+          },
+          {
+            id: 'le-2',
+            type: 'expense',
+            direction: 'out',
+            amount: '10000.00',
+            method: 'bkash',
+            referenceType: 'expense',
+            referenceId: 'exp-1',
+            entryDate: '2025-01-16',
+            note: null,
+            status: 'active',
+            createdBy: { id: 'u1', name: 'Admin' },
+            createdAt: '2025-01-16T11:00:00Z',
+          },
+          {
+            id: 'le-3',
+            type: 'manual',
+            direction: 'in',
+            amount: '5000.00',
+            method: null,
+            referenceType: null,
+            referenceId: null,
+            entryDate: '2025-01-17',
+            note: 'Misc income',
+            status: 'void',
+            createdBy: { id: 'u1', name: 'Admin' },
+            createdAt: '2025-01-17T09:00:00Z',
+          },
+        ];
+        if (typeFilter) items = items.filter((e) => e.type === typeFilter);
+        return send(res, 200, { items, page: page || 1, pageSize: 10, total: items.length });
+      }
+      if (rest === 'accounts/entries' && req.method === 'POST') {
+        if (!need('ledger.entry.create')) return;
+        const ik = req.headers['idempotency-key'];
+        if (!ik) return err(res, 400, 'Idempotency key required', 'IDEMPOTENCY_KEY_REQUIRED');
+        return send(res, 201, {
+          id: 'le-new-' + Date.now(),
+          type: 'manual',
+          direction: body.direction || 'in',
+          amount: body.amount || '0.00',
+          method: body.method || null,
+          referenceType: null,
+          referenceId: null,
+          entryDate: body.entryDate || '2025-01-20',
+          note: body.note || null,
+          status: 'active',
+          createdBy: { id: 'u1', name: 'Admin' },
+          createdAt: new Date().toISOString(),
+        });
+      }
+      if (rest === 'accounts/payments' && req.method === 'POST') {
+        if (!need('payment.create')) return;
+        const ik = req.headers['idempotency-key'];
+        if (!ik) return err(res, 400, 'Idempotency key required', 'IDEMPOTENCY_KEY_REQUIRED');
+        return send(res, 201, {
+          id: 'le-pay-' + Date.now(),
+          type: 'supplier_payment',
+          direction: 'out',
+          amount: body.amount || '0.00',
+          method: body.method || 'cash',
+          referenceType: null,
+          referenceId: null,
+          entryDate: body.paymentDate || '2025-01-20',
+          note: body.note || null,
+          status: 'active',
+          createdBy: { id: 'u1', name: 'Admin' },
+          createdAt: new Date().toISOString(),
+        });
+      }
+
       return err(res, 404, 'Not Found', 'ROUTE_NOT_FOUND');
     });
   })

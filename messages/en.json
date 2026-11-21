@@ -178,7 +178,15 @@
       "EXPENSE_NOT_FOUND": "This expense was not found.",
       "EXPENSE_CATEGORY_NOT_FOUND": "This expense type was not found.",
       "EXPENSE_ALREADY_VOID": "This expense is already void; it cannot be corrected or voided again.",
-      "NAME_BN_DUPLICATE": "This Bangla name is already used in this business."
+      "NAME_BN_DUPLICATE": "This Bangla name is already used in this business.",
+      "IDEMPOTENCY_KEY_REQUIRED": "Request could not be sent, please try again.",
+      "LEDGER_ENTRY_METHOD_UNKNOWN": "This method is not in the business list.",
+      "ENTRY_DATE_INVALID": "Date is invalid.",
+      "ENTRY_DATE_IN_FUTURE": "Future date is not allowed.",
+      "ENTRY_DATE_TOO_OLD": "Date cannot be older than 7 days.",
+      "PAYMENT_DATE_INVALID": "Date is invalid.",
+      "PAYMENT_DATE_IN_FUTURE": "Future date is not allowed.",
+      "PAYMENT_DATE_TOO_OLD": "Date cannot be older than 7 days."
     },
     "problems": {
       "REQUIRED": "This field is required.",
@@ -1065,6 +1073,95 @@
       "filters": {
         "from": "From",
         "to": "To"
+      }
+    },
+    "accounts": {
+      "page": {
+        "title": "Accounts",
+        "description": "The accounts ledger of {business}.",
+        "addEntry": "+ Manual Entry",
+        "addPayment": "+ Supplier Payment",
+        "dateFrom": "From",
+        "dateTo": "To",
+        "rangeError": "Select a range of maximum 400 days."
+      },
+      "summary": {
+        "totalIn": "Total income",
+        "totalOut": "Total expense",
+        "net": "Net",
+        "totalDue": "Total due",
+        "totalAdvance": "Total advance",
+        "totalDueNote": "Current due of all active customers (date-independent).",
+        "totalAdvanceNote": "Advance balance of all active customers (date-independent)."
+      },
+      "ledger": {
+        "title": "Ledger",
+        "empty": "No entries in this range.",
+        "typeFilter": "Type",
+        "allTypes": "All types",
+        "types": {
+          "collection": "Collection",
+          "expense": "Expense",
+          "purchase": "Purchase",
+          "commission_receipt": "Commission Receipt",
+          "manual": "Manual Entry",
+          "supplier_payment": "Supplier Payment"
+        },
+        "direction": {
+          "in": "Income",
+          "out": "Expense"
+        },
+        "status": {
+          "void": "Void"
+        },
+        "col": {
+          "date": "Date",
+          "type": "Type",
+          "direction": "Direction",
+          "method": "Method",
+          "amount": "Amount",
+          "status": "Status",
+          "note": "Note"
+        }
+      },
+      "entry": {
+        "title": "Manual Entry",
+        "direction": "Direction",
+        "directionIn": "Income",
+        "directionOut": "Expense",
+        "amount": "Amount",
+        "method": "Method",
+        "methodOptional": "Optional",
+        "entryDate": "Entry date",
+        "note": "Note",
+        "noteOptional": "Optional (up to 500 characters).",
+        "submit": "Save",
+        "submitting": "Saving…",
+        "amountInvalid": "Enter a valid amount.",
+        "methodRequired": "Choose a method.",
+        "done": "Manual entry saved."
+      },
+      "payment": {
+        "title": "Supplier Payment",
+        "amount": "Amount",
+        "method": "Method",
+        "paymentDate": "Payment date",
+        "note": "Note",
+        "noteOptional": "Optional (up to 500 characters).",
+        "submit": "Save",
+        "submitting": "Saving…",
+        "amountInvalid": "Enter a valid amount.",
+        "methodRequired": "Choose a method.",
+        "done": "Supplier payment saved."
+      },
+      "methodNames": {
+        "cash": "Cash",
+        "bkash": "bKash",
+        "nagad": "Nagad",
+        "rocket": "Rocket",
+        "bank": "Bank transfer",
+        "cheque": "Cheque",
+        "card": "Card"
       }
     },
     "reports": {
