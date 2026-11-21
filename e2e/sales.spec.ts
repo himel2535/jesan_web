@@ -75,8 +75,8 @@ test('order → partial delivery → collection → the ledger adds up', async (
 
   // The ledger: a delivery line, a collection line, and the summary the server computed.
   await manager.goto('/b/example-cement/customers/cu1/ledger');
-  await expect(manager.getByRole('row', { name: /Delivery/ })).toContainText('+৳22,600.00');
-  await expect(manager.getByRole('row', { name: /Collection/ })).toContainText('−৳20,000.00');
+  await expect(manager.getByRole('row', { name: /Delivery/ })).toContainText('−৳22,600.00');
+  await expect(manager.getByRole('row', { name: /Collection/ })).toContainText('+৳20,000.00');
   await expect(manager.getByText('৳22,600.00').first()).toBeVisible();
   // opening 12,500 + delivered 22,600 − collected 20,000 = 15,100
   await expect(manager.getByText('৳15,100.00')).toBeVisible();

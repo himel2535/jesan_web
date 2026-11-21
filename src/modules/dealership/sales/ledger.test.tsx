@@ -54,7 +54,7 @@ describe('<CustomerLedger>', () => {
     expect(screen.getByText('৳30,000.00')).toBeInTheDocument(); // credit limit
     const row = (await screen.findByRole('rowheader', { name: 'COL-0001' })).closest('tr')!;
     expect(row).toHaveTextContent('Collection');
-    expect(row).toHaveTextContent('−৳20,000.00');
+    expect(row).toHaveTextContent('+৳20,000.00');
     expect(screen.getByRole('link', { name: 'DEL-0001' })).toHaveAttribute(
       'href',
       `${B}/deliveries/d1`,
@@ -127,8 +127,8 @@ describe('<CustomerLedger>', () => {
     expect(await screen.findByText('Collection voided')).toBeInTheDocument();
     expect(screen.getByText('Delivery corrected')).toBeInTheDocument();
     expect(screen.getByText('Money refunded')).toBeInTheDocument();
-    expect(screen.getByText('+৳20,000.00')).toBeInTheDocument();
-    expect(screen.getByText('−৳500.00')).toBeInTheDocument();
+    expect(screen.getByText('−৳20,000.00')).toBeInTheDocument();
+    expect(screen.getByText('+৳500.00')).toBeInTheDocument();
   });
 
   it('the date filter goes into the URL and the query', async () => {
