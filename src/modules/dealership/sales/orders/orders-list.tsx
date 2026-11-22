@@ -18,11 +18,13 @@ import { ListEmpty, LoadError } from '../../master-data/shared/states';
 import { useOrders } from '../api';
 import { ListSkeleton } from '../skeletons';
 import {
-  CustomerFilter,
+  CustomerFilterPanel,
+  CustomerFilterTrigger,
   DeliveryProgress,
   StatusText,
   dateParam,
   useBusinessDay,
+  useCustomerFilterController,
   useSalesSummaryRanges,
   useSetFilters,
 } from '../shared';
@@ -66,6 +68,7 @@ export function OrdersList({ slug, businessId }: { slug: string; businessId: str
   const canCreate = useCan('sale.create');
   const filters = useOrderFilters();
   const summaryRanges = useSalesSummaryRanges();
+  const customerFilter = useCustomerFilterController();
   const query = useOrders(slug, businessId, filters);
   const base = `/b/${encodeURIComponent(slug)}/sales`;
 
@@ -96,6 +99,9 @@ export function OrdersList({ slug, businessId }: { slug: string; businessId: str
       <SalesSummaryCards slug={slug} businessId={businessId} ranges={summaryRanges} />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
+          <div className="pb-0.5">
+            <CustomerFilterTrigger customerId={filters.customerId} controller={customerFilter} />
+          </div>
           <div>
             {label(`${id}-from`, tf('from'))}
             <input
@@ -143,7 +149,12 @@ export function OrdersList({ slug, businessId }: { slug: string; businessId: str
         ) : null}
       </div>
 
-      <CustomerFilter slug={slug} businessId={businessId} customerId={filters.customerId} />
+      <CustomerFilterPanel
+        slug={slug}
+        businessId={businessId}
+        customerId={filters.customerId}
+        controller={customerFilter}
+      />
 
       {query.isPending ? (
         <ListSkeleton />
