@@ -122,9 +122,7 @@ describe('<OrdersList>', () => {
     expect(screen.getByText("This Month's Sales").nextElementSibling).toHaveTextContent(
       '৳1,20,000.00',
     );
-    expect(screen.getByText('Total Sales').nextElementSibling).toHaveTextContent(
-      '৳1,20,000.00Last 400 days.',
-    );
+    expect(screen.getByText('Total Sales').nextElementSibling).toHaveTextContent('৳1,20,000.00');
     expect(screen.getByText('Total Orders').nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText("This Month's Orders").nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText('Total Deliveries').nextElementSibling).toHaveTextContent('0');

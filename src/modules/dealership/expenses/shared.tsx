@@ -11,8 +11,11 @@ import type { DocumentStatus } from './types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Reports endpoints cap any single range at 400 days (`RANGE_TOO_LARGE`); 399 stays inside it. */
-const MAX_REPORT_RANGE_DAYS = 399;
+/**
+ * Reports endpoints no longer cap the range width, so this anchors "total" at a date well before
+ * any real business can have data — the window is effectively the business's full lifetime.
+ */
+export const LIFETIME_FROM = '2000-01-01';
 
 function isoOf(y: number, m: number, d: number): string {
   return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
@@ -34,9 +37,8 @@ export function useExpenseSummaryRanges(): ExpenseSummaryRanges {
   return useMemo(() => {
     const y = Number(today.slice(0, 4));
     const m = Number(today.slice(5, 7));
-    const d = Number(today.slice(8, 10));
     return {
-      total: { from: isoOf(y, m - 1, d - MAX_REPORT_RANGE_DAYS), to: today },
+      total: { from: LIFETIME_FROM, to: today },
       today: { from: today, to: today },
       thisMonth: { from: isoOf(y, m - 1, 1), to: today },
       previousMonth: { from: isoOf(y, m - 2, 1), to: isoOf(y, m - 1, 0) },

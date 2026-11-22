@@ -4,6 +4,7 @@ import { BookOpen } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
+import { businessToday } from '@/core/i18n/format';
 import { cn } from '@/core/ui/cn';
 import { EmptyState } from '@/core/ui/empty-state';
 import { Pagination } from '@/core/ui/pagination';
@@ -12,7 +13,13 @@ import { inputClass } from '@/core/ui/text-field';
 import { Money } from '../master-data/shared/display';
 import { LoadError } from '../master-data/shared/states';
 import { useCashBook } from '../expenses/api';
-import { dateParam, useBusinessDay, useMethodLabel, useSetFilters } from '../expenses/shared';
+import {
+  LIFETIME_FROM,
+  dateParam,
+  useBusinessDay,
+  useMethodLabel,
+  useSetFilters,
+} from '../expenses/shared';
 import { ListSkeleton } from '../expenses/skeletons';
 
 /**
@@ -97,6 +104,13 @@ export function CashBookView({ slug, businessId }: { slug: string; businessId: s
             className={inputClass}
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setFilters({ from: LIFETIME_FROM, to: businessToday() })}
+          className="inline-flex min-h-10 items-center rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-muted"
+        >
+          {t('filters.lifetime')}
+        </button>
       </div>
 
       {data.byMethod.length > 0 ? (

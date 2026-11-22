@@ -8,7 +8,7 @@ import { inputClass } from '@/core/ui/text-field';
 import { LoadError } from '../master-data/shared/states';
 import { useAccountsSummary } from './api';
 import { LedgerTable } from './ledger-table';
-import { dateParam, useSetFilters } from './shared';
+import { LIFETIME_FROM, dateParam, useSetFilters } from './shared';
 import { SummaryCards, SummaryCardsSkeleton } from './summary-cards';
 
 function firstOfMonth(): string {
@@ -58,6 +58,13 @@ export function AccountsView({ slug, businessId }: { slug: string; businessId: s
             className={inputClass}
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setFilters({ from: LIFETIME_FROM, to: businessToday() })}
+          className="inline-flex min-h-10 items-center rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-muted"
+        >
+          {t('lifetime')}
+        </button>
       </div>
 
       {summary.isPending ? (

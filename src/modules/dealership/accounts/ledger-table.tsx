@@ -4,7 +4,6 @@ import { BookOpen } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
-import { ApiError } from '@/core/api/errors';
 import { cn } from '@/core/ui/cn';
 import { EmptyState } from '@/core/ui/empty-state';
 import { Pagination } from '@/core/ui/pagination';
@@ -34,16 +33,6 @@ export function LedgerTable({ slug, businessId }: { slug: string; businessId: st
   const query = useAccountsLedger(slug, businessId, filters);
 
   if (query.isError) {
-    if (query.error instanceof ApiError && query.error.code === 'RANGE_TOO_LARGE') {
-      return (
-        <p
-          role="alert"
-          className="rounded-card border border-danger bg-surface p-4 text-sm text-danger"
-        >
-          {t('page.rangeError')}
-        </p>
-      );
-    }
     return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   }
 
