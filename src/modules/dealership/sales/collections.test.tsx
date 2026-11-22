@@ -10,6 +10,7 @@ import {
 } from '../../../../test/fixtures/me';
 import { apiError, json, mockApi, renderInBusiness } from '../../../../test/settings-utils';
 import { expectNoA11yViolations } from '../../../../test/utils';
+import { collectionsReportResponse } from '../reports/fixtures';
 import {
   B,
   BID,
@@ -63,6 +64,7 @@ const routes = {
   // The methods are the business's own list; no method name lives in the code.
   [`GET ${B}/collection-methods`]: () => json(200, { items: ['cash', 'bkash', 'cheque'] }),
   [`GET ${B}/orders`]: () => json(200, page([orderSummary()])),
+  [`GET ${B}/reports/collections`]: () => json(200, collectionsReportResponse()),
 };
 
 describe('<CollectionForm>', () => {
@@ -208,6 +210,47 @@ describe('<CollectionsList>', () => {
     await screen.findByRole('rowheader', { name: 'COL-0001' });
     expect(screen.queryByRole('columnheader', { name: 'Current due' })).not.toBeInTheDocument();
     expect(container).not.toHaveTextContent('৳12,500.00');
+  });
+
+  it('shows the three KPI cards with totals from the collections report (report.view)', async () => {
+    mockApi({
+      ...routes,
+      [`GET ${B}/collections`]: () => json(200, page([collection()])),
+      [`GET ${B}/reports/collections`]: () =>
+        json(200, collectionsReportResponse({ totalAmount: '11500.00' })),
+    });
+    renderInBusiness(<CollectionsList slug="example-cement" businessId={BID} />, { me: ownerP });
+    await screen.findByRole('rowheader', { name: 'COL-0001' });
+    expect(await screen.findByText('Total Collection Amount')).toBeInTheDocument();
+    expect(screen.getByText("Today's Collection")).toBeInTheDocument();
+    expect(screen.getByText("This Month's Collection")).toBeInTheDocument();
+    expect(screen.getAllByText('৳11,500.00')).toHaveLength(3);
+  });
+
+  it('hides the KPI cards without report.view; the list itself still works', async () => {
+    mockApi({
+      ...routes,
+      [`GET ${B}/collections`]: () => json(200, page([collection()])),
+      [`GET ${B}/reports/collections`]: () => apiError(403, 'FORBIDDEN'),
+    });
+    renderInBusiness(<CollectionsList slug="example-cement" businessId={BID} />, {
+      me: meWith(['collection.view', 'collection.create', 'customer.view']),
+    });
+    await screen.findByRole('rowheader', { name: 'COL-0001' });
+    expect(screen.queryByText('Total Collection Amount')).not.toBeInTheDocument();
+  });
+
+  it('puts the customer filter button on the same line as the other filters', async () => {
+    mockApi({ ...routes, [`GET ${B}/collections`]: () => json(200, page([collection()])) });
+    renderInBusiness(<CollectionsList slug="example-cement" businessId={BID} />, {
+      me: managerP,
+    });
+    await screen.findByRole('rowheader', { name: 'COL-0001' });
+    const customerButton = screen.getByRole('button', { name: 'Customer' });
+    const fromInput = screen.getByLabelText('From');
+    expect(customerButton.closest('div.flex.items-end')).toBe(
+      fromInput.closest('div.flex.items-end'),
+    );
   });
 });
 

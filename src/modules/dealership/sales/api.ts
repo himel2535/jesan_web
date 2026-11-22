@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiFetch } from '@/core/api/client';
 import { dealershipKeys } from '../master-data/api';
 import type { Page } from '../master-data/types';
-import { useSalesReport } from '../reports/api';
+import { useCollectionsReport, useSalesReport } from '../reports/api';
 import type { SalesSummaryRanges } from './shared';
 import type {
   Collection,
@@ -331,6 +331,34 @@ export function useDeliveryCounts(slug: string, businessId: string, ranges: Sale
     page: 1,
   });
   return { total, thisMonth };
+}
+
+/**
+ * The collections KPI cards' amount group (`report.view`, `reports/collections`). A user
+ * without `report.view` gets a 403 on all three, and the cards hide rather than erroring (see
+ * `CollectionsSummaryCards`). `total` is capped to the report endpoint's own 400-day limit.
+ */
+export function useCollectionsSummaryAmounts(
+  slug: string,
+  businessId: string,
+  ranges: SalesSummaryRanges,
+) {
+  const total = useCollectionsReport(slug, businessId, {
+    groupBy: 'date',
+    ...ranges.total,
+    page: 1,
+  });
+  const today = useCollectionsReport(slug, businessId, {
+    groupBy: 'date',
+    ...ranges.today,
+    page: 1,
+  });
+  const thisMonth = useCollectionsReport(slug, businessId, {
+    groupBy: 'date',
+    ...ranges.thisMonth,
+    page: 1,
+  });
+  return { total, today, thisMonth };
 }
 
 // ---- Customer ledger ----
