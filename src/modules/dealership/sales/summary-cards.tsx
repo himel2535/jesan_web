@@ -40,8 +40,13 @@ function Card({ label, value, note }: { label: string; value: ReactNode; note?: 
 
 export function SalesSummaryCardsSkeleton() {
   return (
-    <div className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
-      <CardSkeleton count={7} />
+    <div className="space-y-4 rounded-card border border-border bg-surface p-4">
+      <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-3">
+        <CardSkeleton count={3} />
+      </dl>
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+        <CardSkeleton count={4} />
+      </dl>
     </div>
   );
 }
@@ -91,62 +96,84 @@ export function SalesSummaryCards({
     return null;
   }
 
+  const showOrdersRow = !orderForbidden || !deliveryForbidden;
+
   return (
-    <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
-      {salesForbidden ? null : salesPending ? (
-        <CardSkeleton count={3} />
-      ) : salesError ? (
-        <div className="col-span-full">
-          <LoadError
-            error={salesError}
-            onRetry={() => salesQueries.forEach((q) => void q.refetch())}
-          />
-        </div>
-      ) : sales.total.data && sales.today.data && sales.thisMonth.data ? (
-        <>
-          <Card label={t('todaySales')} value={<Money value={sales.today.data.totalAmount} />} />
-          <Card
-            label={t('thisMonthSales')}
-            value={<Money value={sales.thisMonth.data.totalAmount} />}
-          />
-          <Card label={t('totalSales')} value={<Money value={sales.total.data.totalAmount} />} />
-        </>
-      ) : null}
+    <div className="space-y-4 rounded-card border border-border bg-surface p-4">
+      {salesForbidden ? null : (
+        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-3">
+          {salesPending ? (
+            <CardSkeleton count={3} />
+          ) : salesError ? (
+            <div className="col-span-full">
+              <LoadError
+                error={salesError}
+                onRetry={() => salesQueries.forEach((q) => void q.refetch())}
+              />
+            </div>
+          ) : sales.total.data && sales.today.data && sales.thisMonth.data ? (
+            <>
+              <Card
+                label={t('todaySales')}
+                value={<Money value={sales.today.data.totalAmount} />}
+              />
+              <Card
+                label={t('thisMonthSales')}
+                value={<Money value={sales.thisMonth.data.totalAmount} />}
+              />
+              <Card
+                label={t('totalSales')}
+                value={<Money value={sales.total.data.totalAmount} />}
+              />
+            </>
+          ) : null}
+        </dl>
+      )}
 
-      {orderForbidden ? null : orderPending ? (
-        <CardSkeleton count={2} />
-      ) : orderError ? (
-        <div className="col-span-full">
-          <LoadError
-            error={orderError}
-            onRetry={() => orderQueries.forEach((q) => void q.refetch())}
-          />
-        </div>
-      ) : orders.total.data && orders.thisMonth.data ? (
-        <>
-          <Card label={t('totalOrders')} value={format.number(orders.total.data.total)} />
-          <Card label={t('thisMonthOrders')} value={format.number(orders.thisMonth.data.total)} />
-        </>
-      ) : null}
+      {showOrdersRow ? (
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+          {orderForbidden ? null : orderPending ? (
+            <CardSkeleton count={2} />
+          ) : orderError ? (
+            <div className="col-span-full">
+              <LoadError
+                error={orderError}
+                onRetry={() => orderQueries.forEach((q) => void q.refetch())}
+              />
+            </div>
+          ) : orders.total.data && orders.thisMonth.data ? (
+            <>
+              <Card label={t('totalOrders')} value={format.number(orders.total.data.total)} />
+              <Card
+                label={t('thisMonthOrders')}
+                value={format.number(orders.thisMonth.data.total)}
+              />
+            </>
+          ) : null}
 
-      {deliveryForbidden ? null : deliveryPending ? (
-        <CardSkeleton count={2} />
-      ) : deliveryError ? (
-        <div className="col-span-full">
-          <LoadError
-            error={deliveryError}
-            onRetry={() => deliveryQueries.forEach((q) => void q.refetch())}
-          />
-        </div>
-      ) : deliveries.total.data && deliveries.thisMonth.data ? (
-        <>
-          <Card label={t('totalDeliveries')} value={format.number(deliveries.total.data.total)} />
-          <Card
-            label={t('thisMonthDeliveries')}
-            value={format.number(deliveries.thisMonth.data.total)}
-          />
-        </>
+          {deliveryForbidden ? null : deliveryPending ? (
+            <CardSkeleton count={2} />
+          ) : deliveryError ? (
+            <div className="col-span-full">
+              <LoadError
+                error={deliveryError}
+                onRetry={() => deliveryQueries.forEach((q) => void q.refetch())}
+              />
+            </div>
+          ) : deliveries.total.data && deliveries.thisMonth.data ? (
+            <>
+              <Card
+                label={t('totalDeliveries')}
+                value={format.number(deliveries.total.data.total)}
+              />
+              <Card
+                label={t('thisMonthDeliveries')}
+                value={format.number(deliveries.thisMonth.data.total)}
+              />
+            </>
+          ) : null}
+        </dl>
       ) : null}
-    </dl>
+    </div>
   );
 }

@@ -575,3 +575,9 @@
 - **`RANGE_TOO_LARGE` dead code**: `src/core/api/error-codes.ts` আর দুই অনুবাদ ফাইলের `apiErrors.RANGE_TOO_LARGE` entry সরানো হয়েছে — backend আর কখনো এই code পাঠাবে না।
 - এই দুই সিদ্ধান্ত (৩৯৯-দিনের approximation, ও `RANGE_TOO_LARGE` cap) আগের এন্ট্রিতে (২০২৬-১১-২১, Sales KPI) নথিভুক্ত ছিল — এটা সেই সিদ্ধান্তগুলো বাতিল করে।
 - `sales/api.ts`-এর `ORDER_REFRESH`/`DELIVERY_REFRESH`-এ `reportsSales` entity যোগ করা হয়েছে (Expenses-এর `reportsExpenses` ফিক্সের precedent), যাতে ডেলিভারি/অর্ডার create-correct-void-এর পর "Sales" কার্ডগুলো stale না থাকে।
+
+## ২০২৬-১১-২২ — Sales পেজের ৭টা KPI কার্ড দুই সারিতে সাজানো + Customer বাটন New order-এর পাশে (মালিকের অনুরোধে)
+
+- **KPI কার্ড লেআউট**: `SalesSummaryCards`-এর আগের একক `sm:grid-cols-2 lg:grid-cols-4` grid-টা দুইটা আলাদা সারিতে ভাগ করা হয়েছে: উপরে Today's/This Month's/Total Sales (৩-কলাম, মাঝেরটা স্বাভাবিকভাবেই মাঝে বসে), নিচে Total/This Month's Orders ও Total/This Month's Deliveries (৪-কলাম)। প্রতিটা group-এর আলাদা permission-gating (403-এ লুকানো, অন্য error-এ `LoadError`) আগের মতোই আছে, শুধু JSX দুই সারিতে ভাগ হয়েছে। `SalesSummaryCardsSkeleton`-ও মিলিয়ে ৩+৪ সারিতে ভাগ করা হয়েছে।
+- **Customer বাটন**: Orders পেজে (`orders-list.tsx`) আগে পুরো-প্রস্থের আলাদা সারিতে ছিল (`CustomerFilter`); এখন Collections পেজের (`collections-list.tsx`) প্যাটার্ন অনুসরণ করে `CustomerFilterTrigger`/`CustomerFilterPanel` আলাদা করে filter-এর সারিতে বসানো হয়েছে — তাই এখন date/status filter আর "New order" বাটনের সাথে একই লাইনে থাকে, প্যানেল আগের জায়গাতেই নিচে খোলে।
+- **"Last 400 days" টেক্সট**: কোডে আর নেই (আগের এন্ট্রি, commit cad847e/PR #31-এ আগেই সরানো হয়েছে) — মালিক কনফার্ম করেছেন এটা আর কোথাও দেখা যাচ্ছে না।
