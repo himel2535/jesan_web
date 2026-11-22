@@ -1,10 +1,16 @@
 'use client';
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { apiFetch } from '@/core/api/client';
 import { dealershipKeys } from '../master-data/api';
 import type { Page } from '../master-data/types';
-import { useCollectionsReport, useSalesReport } from '../reports/api';
+import { collectionsReportQuery, salesReportQuery } from '../reports/api';
 import type { SalesSummaryRanges } from './shared';
 import type {
   Collection,
@@ -83,15 +89,18 @@ function clean<T extends { page: number }>(filters: T, keys: readonly (keyof T)[
 
 const ORDER_FILTER_KEYS = ['status', 'customerId', 'from', 'to'] as const;
 
-export function useOrders(slug: string, businessId: string, filters: OrderFilters, enabled = true) {
+function ordersQuery(slug: string, businessId: string, filters: OrderFilters) {
   const query = clean(filters, ORDER_FILTER_KEYS);
-  return useQuery({
+  return {
     queryKey: dealershipKeys.list(businessId, 'orders', query),
-    queryFn: ({ signal }) =>
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
       apiFetch<Page<OrderSummary>>(`${base(slug)}/orders`, { query, signal }),
     placeholderData: keepPreviousData,
-    enabled,
-  });
+  };
+}
+
+export function useOrders(slug: string, businessId: string, filters: OrderFilters, enabled = true) {
+  return useQuery({ ...ordersQuery(slug, businessId, filters), enabled });
 }
 
 export function useOrder(slug: string, businessId: string, id: string) {
@@ -144,20 +153,23 @@ export function useVoidOrder(slug: string, businessId: string) {
 
 const DELIVERY_FILTER_KEYS = ['orderId', 'customerId', 'status', 'from', 'to'] as const;
 
+function deliveriesQuery(slug: string, businessId: string, filters: DeliveryFilters) {
+  const query = clean(filters, DELIVERY_FILTER_KEYS);
+  return {
+    queryKey: dealershipKeys.list(businessId, 'deliveries', query),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      apiFetch<Page<DeliverySummary>>(`${base(slug)}/deliveries`, { query, signal }),
+    placeholderData: keepPreviousData,
+  };
+}
+
 export function useDeliveries(
   slug: string,
   businessId: string,
   filters: DeliveryFilters,
   enabled = true,
 ) {
-  const query = clean(filters, DELIVERY_FILTER_KEYS);
-  return useQuery({
-    queryKey: dealershipKeys.list(businessId, 'deliveries', query),
-    queryFn: ({ signal }) =>
-      apiFetch<Page<DeliverySummary>>(`${base(slug)}/deliveries`, { query, signal }),
-    placeholderData: keepPreviousData,
-    enabled,
-  });
+  return useQuery({ ...deliveriesQuery(slug, businessId, filters), enabled });
 }
 
 export function useDelivery(slug: string, businessId: string, id: string) {
@@ -293,12 +305,12 @@ export function useSalesSummaryAmounts(
   businessId: string,
   ranges: SalesSummaryRanges,
 ) {
-  const total = useSalesReport(slug, businessId, { groupBy: 'date', ...ranges.total, page: 1 });
-  const today = useSalesReport(slug, businessId, { groupBy: 'date', ...ranges.today, page: 1 });
-  const thisMonth = useSalesReport(slug, businessId, {
-    groupBy: 'date',
-    ...ranges.thisMonth,
-    page: 1,
+  const [total, today, thisMonth] = useQueries({
+    queries: [
+      salesReportQuery(slug, businessId, { groupBy: 'date', ...ranges.total, page: 1 }),
+      salesReportQuery(slug, businessId, { groupBy: 'date', ...ranges.today, page: 1 }),
+      salesReportQuery(slug, businessId, { groupBy: 'date', ...ranges.thisMonth, page: 1 }),
+    ],
   });
   return { total, today, thisMonth };
 }
@@ -309,11 +321,18 @@ export function useSalesSummaryAmounts(
  * all orders ever.
  */
 export function useOrderCounts(slug: string, businessId: string, ranges: SalesSummaryRanges) {
-  const total = useOrders(slug, businessId, { page: 1 });
-  const thisMonth = useOrders(slug, businessId, {
-    from: ranges.thisMonth.from,
-    to: ranges.thisMonth.to,
-    page: 1,
+  const [total, thisMonth] = useQueries({
+    queries: [
+      { ...ordersQuery(slug, businessId, { page: 1 }), staleTime: 60_000 },
+      {
+        ...ordersQuery(slug, businessId, {
+          from: ranges.thisMonth.from,
+          to: ranges.thisMonth.to,
+          page: 1,
+        }),
+        staleTime: 60_000,
+      },
+    ],
   });
   return { total, thisMonth };
 }
@@ -324,11 +343,18 @@ export function useOrderCounts(slug: string, businessId: string, ranges: SalesSu
  * `SalesSummaryCards`). `GET deliveries` has no date-range cap either.
  */
 export function useDeliveryCounts(slug: string, businessId: string, ranges: SalesSummaryRanges) {
-  const total = useDeliveries(slug, businessId, { page: 1 });
-  const thisMonth = useDeliveries(slug, businessId, {
-    from: ranges.thisMonth.from,
-    to: ranges.thisMonth.to,
-    page: 1,
+  const [total, thisMonth] = useQueries({
+    queries: [
+      { ...deliveriesQuery(slug, businessId, { page: 1 }), staleTime: 60_000 },
+      {
+        ...deliveriesQuery(slug, businessId, {
+          from: ranges.thisMonth.from,
+          to: ranges.thisMonth.to,
+          page: 1,
+        }),
+        staleTime: 60_000,
+      },
+    ],
   });
   return { total, thisMonth };
 }
@@ -344,20 +370,16 @@ export function useCollectionsSummaryAmounts(
   businessId: string,
   ranges: SalesSummaryRanges,
 ) {
-  const total = useCollectionsReport(slug, businessId, {
-    groupBy: 'date',
-    ...ranges.total,
-    page: 1,
-  });
-  const today = useCollectionsReport(slug, businessId, {
-    groupBy: 'date',
-    ...ranges.today,
-    page: 1,
-  });
-  const thisMonth = useCollectionsReport(slug, businessId, {
-    groupBy: 'date',
-    ...ranges.thisMonth,
-    page: 1,
+  const [total, today, thisMonth] = useQueries({
+    queries: [
+      collectionsReportQuery(slug, businessId, { groupBy: 'date', ...ranges.total, page: 1 }),
+      collectionsReportQuery(slug, businessId, { groupBy: 'date', ...ranges.today, page: 1 }),
+      collectionsReportQuery(slug, businessId, {
+        groupBy: 'date',
+        ...ranges.thisMonth,
+        page: 1,
+      }),
+    ],
   });
   return { total, today, thisMonth };
 }

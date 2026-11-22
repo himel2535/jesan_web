@@ -33,31 +33,47 @@ function clean<T extends { page: number }>(filters: T, keys: readonly (keyof T)[
 
 const SALES_FILTER_KEYS = ['groupBy', 'from', 'to'] as const;
 
-/** Every report is `report.view`, read-only, and never carries a purchase price, profit or commission figure. */
-export function useSalesReport(slug: string, businessId: string, filters: SalesReportFilters) {
+/** Query options for a sales report window; shared by `useSalesReport` and KPI-card `useQueries` groups. */
+export function salesReportQuery(slug: string, businessId: string, filters: SalesReportFilters) {
   const query = clean(filters, SALES_FILTER_KEYS);
-  return useQuery({
+  return {
     queryKey: dealershipKeys.list(businessId, 'reportsSales', query),
-    queryFn: ({ signal }) =>
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
       apiFetch<SalesReportResponse>(`${base(slug)}/reports/sales`, { query, signal }),
     placeholderData: keepPreviousData,
-  });
+    staleTime: 60_000,
+  };
+}
+
+/** Every report is `report.view`, read-only, and never carries a purchase price, profit or commission figure. */
+export function useSalesReport(slug: string, businessId: string, filters: SalesReportFilters) {
+  return useQuery(salesReportQuery(slug, businessId, filters));
 }
 
 const COLLECTIONS_FILTER_KEYS = ['groupBy', 'from', 'to'] as const;
+
+/** Query options for a collections report window; shared by `useCollectionsReport` and KPI-card `useQueries` groups. */
+export function collectionsReportQuery(
+  slug: string,
+  businessId: string,
+  filters: CollectionsReportFilters,
+) {
+  const query = clean(filters, COLLECTIONS_FILTER_KEYS);
+  return {
+    queryKey: dealershipKeys.list(businessId, 'reportsCollections', query),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      apiFetch<CollectionsReportResponse>(`${base(slug)}/reports/collections`, { query, signal }),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  };
+}
 
 export function useCollectionsReport(
   slug: string,
   businessId: string,
   filters: CollectionsReportFilters,
 ) {
-  const query = clean(filters, COLLECTIONS_FILTER_KEYS);
-  return useQuery({
-    queryKey: dealershipKeys.list(businessId, 'reportsCollections', query),
-    queryFn: ({ signal }) =>
-      apiFetch<CollectionsReportResponse>(`${base(slug)}/reports/collections`, { query, signal }),
-    placeholderData: keepPreviousData,
-  });
+  return useQuery(collectionsReportQuery(slug, businessId, filters));
 }
 
 export function useDuesReport(slug: string, businessId: string, filters: DuesReportFilters) {
@@ -99,8 +115,8 @@ export function useStockMovementsReport(
   });
 }
 
-/** No `page`: jesan-api never paginates this one. */
-export function useExpensesReport(
+/** Query options for an expenses report window; shared by `useExpensesReport` and KPI-card `useQueries` groups. No `page`: jesan-api never paginates this one. */
+export function expensesReportQuery(
   slug: string,
   businessId: string,
   filters: ExpensesReportFilters,
@@ -108,12 +124,21 @@ export function useExpensesReport(
   const query: Record<string, string> = { groupBy: filters.groupBy };
   if (filters.from) query.from = filters.from;
   if (filters.to) query.to = filters.to;
-  return useQuery({
+  return {
     queryKey: dealershipKeys.list(businessId, 'reportsExpenses', query),
-    queryFn: ({ signal }) =>
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
       apiFetch<ExpensesReportResponse>(`${base(slug)}/reports/expenses`, { query, signal }),
     placeholderData: keepPreviousData,
-  });
+    staleTime: 60_000,
+  };
+}
+
+export function useExpensesReport(
+  slug: string,
+  businessId: string,
+  filters: ExpensesReportFilters,
+) {
+  return useQuery(expensesReportQuery(slug, businessId, filters));
 }
 
 /** No filter on the dashboard: an empty `date` is a deliberate request for "today", not stale. */
@@ -122,5 +147,7 @@ export function useDailySummary(slug: string, businessId: string) {
     queryKey: dealershipKeys.list(businessId, 'dailySummary', {}),
     queryFn: ({ signal }) =>
       apiFetch<DailySummaryResponse>(`${base(slug)}/reports/daily-summary`, { signal }),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
   });
 }

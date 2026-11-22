@@ -1,6 +1,12 @@
 'use client';
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { apiFetch } from '@/core/api/client';
 import { dealershipKeys } from '../master-data/api';
 import type { Page } from '../master-data/types';
@@ -94,24 +100,30 @@ export function useVoidPurchase(slug: string, businessId: string) {
   });
 }
 
-function usePurchaseTotals(slug: string, businessId: string, filters: PurchaseTotalsFilters) {
+function purchaseTotalsQuery(slug: string, businessId: string, filters: PurchaseTotalsFilters) {
   const query = { from: filters.from, to: filters.to };
-  return useQuery({
+  return {
     queryKey: dealershipKeys.list(businessId, 'purchasesSummary', query),
-    queryFn: ({ signal }) => apiFetch<PurchaseTotals>(`${base(slug)}/summary`, { query, signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      apiFetch<PurchaseTotals>(`${base(slug)}/summary`, { query, signal }),
     placeholderData: keepPreviousData,
-  });
+    staleTime: 60_000,
+  };
 }
 
-/** The KPI cards' four fixed date windows (`total`/`today`/`thisMonth`/`thisYear`). */
+/** The KPI cards' four fixed date windows (`total`/`today`/`thisMonth`/`thisYear`), fetched together. */
 export function usePurchasesSummary(
   slug: string,
   businessId: string,
   ranges: PurchaseSummaryRanges,
 ) {
-  const total = usePurchaseTotals(slug, businessId, ranges.total);
-  const today = usePurchaseTotals(slug, businessId, ranges.today);
-  const thisMonth = usePurchaseTotals(slug, businessId, ranges.thisMonth);
-  const thisYear = usePurchaseTotals(slug, businessId, ranges.thisYear);
+  const [total, today, thisMonth, thisYear] = useQueries({
+    queries: [
+      purchaseTotalsQuery(slug, businessId, ranges.total),
+      purchaseTotalsQuery(slug, businessId, ranges.today),
+      purchaseTotalsQuery(slug, businessId, ranges.thisMonth),
+      purchaseTotalsQuery(slug, businessId, ranges.thisYear),
+    ],
+  });
   return { total, today, thisMonth, thisYear };
 }
