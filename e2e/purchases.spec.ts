@@ -111,6 +111,27 @@ test('adjustment above the daily limit goes to the owner as a request', async ({
   await expect(await stockOf(owner, 'Sample PCC 11')).toContainText('30 Bag');
 });
 
+test('purchases page shows the five KPI cards, with the product filter on the filter row', async ({
+  browser,
+}) => {
+  const owner = await as(browser, 'owner', '/b/example-cement/purchases');
+  for (const label of [
+    'Total purchase amount',
+    'Total quantity',
+    "Today's purchases",
+    "This month's purchases",
+    "This year's purchases",
+  ]) {
+    await expect(owner.getByRole('term').filter({ hasText: label })).toBeVisible();
+  }
+
+  const statusBox = await owner.getByLabel('Status', { exact: true }).boundingBox();
+  const productBox = await owner.getByRole('button', { name: 'Product' }).boundingBox();
+  expect(statusBox).not.toBeNull();
+  expect(productBox).not.toBeNull();
+  expect(Math.abs(statusBox!.y - productBox!.y)).toBeLessThan(10);
+});
+
 test('Bengali and dark theme: purchase and stock pages render without errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));

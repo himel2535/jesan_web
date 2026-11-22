@@ -485,6 +485,13 @@
         "productChipUnknown": "একটা পণ্য",
         "clearProduct": "পণ্যের ফিল্টার মুছুন"
       },
+      "summary": {
+        "totalAmount": "মোট কেনার পরিমাণ",
+        "totalQuantity": "মোট পরিমাণ",
+        "today": "আজকের কেনা",
+        "thisMonth": "এই মাসের কেনা",
+        "thisYear": "এই বছরের কেনা"
+      },
       "emptyTitle": "এখনো কোনো কেনা নেই",
       "emptyDescription": "কেনা লিখলে এখানে দেখা যাবে।",
       "noResultsTitle": "কিছু মেলেনি",

@@ -1153,6 +1153,29 @@ http
         if (key) purchaseIdempotency.set(`${email}:${key}`, pu);
         return send(res, 201, purchaseView(pu, perms));
       }
+      if (rest === 'purchases/summary' && req.method === 'GET') {
+        if (!need('purchase.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const today = new Date().toISOString().slice(0, 10);
+        const from = f.from || `${today.slice(0, 7)}-01`;
+        const to = f.to || (today > from ? today : from);
+        const inRange = purchases.filter(
+          (pu) => pu.status === 'active' && pu.purchaseDate >= from && pu.purchaseDate <= to,
+        );
+        const out = {
+          from,
+          to,
+          count: inRange.length,
+          totalQuantity: qtyString(
+            inRange.reduce((s, pu) => s + pu.items.reduce((a, i) => a + Number(i.quantity), 0), 0),
+          ),
+          totalAmount: sumMoneyStr(
+            inRange.flatMap((pu) => pu.items.map((i) => lineTotal(i.quantity, i.unitPrice))),
+          ),
+        };
+        if (!perms.includes('product.cost.view')) delete out.totalAmount;
+        return send(res, 200, out);
+      }
       if (rest === 'purchases' && req.method === 'GET') {
         if (!need('purchase.view')) return;
         const f = Object.fromEntries(url.searchParams);

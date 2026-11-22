@@ -132,6 +132,17 @@ const product = (id: string, code: string, nameEn: string) => ({
   createdAt: '2026-11-17T08:38:04.236Z',
   updatedAt: '2026-11-17T08:38:04.236Z',
 });
+const totals = (withCost = true) => {
+  const out: Record<string, unknown> = {
+    from: '2026-11-01',
+    to: '2026-11-22',
+    count: 0,
+    totalQuantity: '0',
+    totalAmount: '0.00',
+  };
+  if (!withCost) delete out.totalAmount;
+  return out;
+};
 const baseRoutes = {
   [`GET ${B}/product-units`]: () =>
     json(200, {
@@ -145,6 +156,7 @@ const baseRoutes = {
     ),
   [`GET ${B}/products`]: () =>
     json(200, page([product('p1', 'P-0001', 'Sample OPC'), product('p3', 'P-0003', 'Sample PCC')])),
+  [`GET ${B}/purchases/summary`]: () => json(200, totals()),
 };
 
 describe('<PurchasesList>', () => {
@@ -182,7 +194,11 @@ describe('<PurchasesList>', () => {
   });
 
   it('without product.cost.view: no total column or amount; no New purchase', async () => {
-    mockApi({ ...baseRoutes, [`GET ${B}/purchases`]: () => json(200, page([summary({}, false)])) });
+    mockApi({
+      ...baseRoutes,
+      [`GET ${B}/purchases`]: () => json(200, page([summary({}, false)])),
+      [`GET ${B}/purchases/summary`]: () => json(200, totals(false)),
+    });
     const { container } = renderInBusiness(
       <PurchasesList slug="example-cement" businessId={BID} />,
       { me: salesmanP },
@@ -217,6 +233,27 @@ describe('<PurchasesList>', () => {
     expect(nav.replace).toHaveBeenLastCalledWith('/b/example-cement/purchases?productId=p3', {
       scroll: false,
     });
+  });
+
+  it('KPI cards: shows the five totals; hides amounts without product.cost.view', async () => {
+    mockApi({
+      ...baseRoutes,
+      [`GET ${B}/purchases`]: () => json(200, page([])),
+      [`GET ${B}/purchases/summary`]: () =>
+        json(200, { from: '2026-11-01', to: '2026-11-22', count: 3, totalQuantity: '700' }),
+    });
+    renderInBusiness(<PurchasesList slug="example-cement" businessId={BID} />, { me: salesmanP });
+    for (const label of [
+      'Total purchase amount',
+      'Total quantity',
+      "Today's purchases",
+      "This month's purchases",
+      "This year's purchases",
+    ]) {
+      expect(await screen.findByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getAllByText('700')).not.toHaveLength(0);
+    expect(screen.queryByText(/৳/)).not.toBeInTheDocument();
   });
 });
 
