@@ -168,6 +168,7 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | GET | `/b/:businessSlug/suppliers/:id` | হ্যাঁ | `supplier.view` | 200 |
 | POST | `/b/:businessSlug/purchases` | হ্যাঁ | `purchase.create` + `product.cost.view` | 201 (একই `Idempotency-Key` আবার: 200) |
 | GET | `/b/:businessSlug/purchases?from=&to=&supplierId=&productId=&status=&page=` | হ্যাঁ | `purchase.view` | 200 |
+| GET | `/b/:businessSlug/purchases/summary?from=&to=` | হ্যাঁ | `purchase.view` (টাকায় `product.cost.view`) | 200 |
 | GET | `/b/:businessSlug/purchases/:id` | হ্যাঁ | `purchase.view` | 200 |
 | PATCH | `/b/:businessSlug/purchases/:id` | হ্যাঁ | নোট/রেফারেন্সে `purchase.create`; তারিখ/বস্তা/দামে `purchase.edit` + `reason` | 200 |
 | POST | `/b/:businessSlug/purchases/:id/void` | হ্যাঁ | `purchase.void` | 200 |
@@ -1010,6 +1011,20 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
   "page": 1,
   "pageSize": 10,
   "total": 1
+}
+```
+
+### `GET purchases/summary?from=&to=`
+
+অনুমতি: `purchase.view`। সক্রিয় (`active`) কেনার উপর একটা সরল যোগফল — কোনো `groupBy` বা পাতাভাগ নেই, `reports/*`-এর বদলে এখানে রাখা হয়েছে কারণ `reports/*`-এর কোনো endpoint-এ কেনা-দাম থাকে না (অংশ ৯-এর রিপোর্ট প্রসঙ্গ দেখো), কিন্তু এখানে `totalAmount` আসলে কেনা-দামের যোগফল। `from`/`to` না দিলে চলতি মাস (অন্য ranged endpoint-এর মতোই); রেঞ্জের প্রস্থে কোনো সীমা নেই। `totalAmount` শুধু `product.cost.view` থাকলে; না থাকলে ঘরটাই উত্তরে নেই।
+
+```json
+{
+  "from": "2026-11-01",
+  "to": "2026-11-22",
+  "count": 14,
+  "totalQuantity": "9800",
+  "totalAmount": "5523400.00"
 }
 ```
 
@@ -1933,7 +1948,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ### রিপোর্ট
 
-সব শুধু-পড়া, `report.view`। তারিখ-সীমা না দিলে চলতি মাস; রেঞ্জের প্রস্থে কোনো সীমা নেই, lifetime (all-time) total চাইলে একটা পুরনো `from` দিয়ে পুরো ইতিহাস আনা যায়। কোনো রিপোর্টে কেনা-দাম, লাভ বা কমিশন নেই।
+সব শুধু-পড়া, `report.view`। তারিখ-সীমা না দিলে চলতি মাস; রেঞ্জের প্রস্থে কোনো সীমা নেই, lifetime (all-time) total চাইলে একটা পুরনো `from` দিয়ে পুরো ইতিহাস আনা যায়। কোনো রিপোর্টে কেনা-দাম, লাভ বা কমিশন নেই — কেনার মোট টাকার যোগফল লাগলে `GET purchases/summary?from=&to=` (অংশ ৫, `purchase.view` + `product.cost.view`), `reports/*`-এ নয়।
 
 | Route | `groupBy` | উত্তরের মূল ঘর |
 |---|---|---|
