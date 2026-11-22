@@ -264,7 +264,7 @@ export function useSalesErrorMessage() {
   };
 }
 
-/** Shared state behind `CustomerFilter`'s chip/button and its search panel. */
+/** Shared state behind the customer filter's chip/button and its search panel. */
 export function useCustomerFilterController() {
   const [pickedName, setPickedName] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -274,9 +274,9 @@ export function useCustomerFilterController() {
 type CustomerFilterController = ReturnType<typeof useCustomerFilterController>;
 
 /**
- * The chip with the chosen customer, or the button that opens the search panel below it. Split
- * out from `CustomerFilter` so a page can place this on the same line as its other filters while
- * `CustomerFilterPanel` stays its own row.
+ * The chip with the chosen customer, or the button that opens the search panel below it. Kept
+ * separate from `CustomerFilterPanel` so a page can place this on the same line as its other
+ * filters while the search panel stays its own row below.
  */
 export function CustomerFilterTrigger({
   customerId,
@@ -352,33 +352,6 @@ export function CustomerFilterPanel({
           setPicking(false);
           setFilters({ customerId: c.id });
         }}
-      />
-    </div>
-  );
-}
-
-/**
- * The customer filter of a list: a chip with the chosen customer, or a search panel. The URL
- * keeps only the id, so the name is read from the chosen record while this page lives.
- */
-export function CustomerFilter({
-  slug,
-  businessId,
-  customerId,
-}: {
-  slug: string;
-  businessId: string;
-  customerId: string | undefined;
-}) {
-  const controller = useCustomerFilterController();
-  return (
-    <div className="space-y-3">
-      <CustomerFilterTrigger customerId={customerId} controller={controller} />
-      <CustomerFilterPanel
-        slug={slug}
-        businessId={businessId}
-        customerId={customerId}
-        controller={controller}
       />
     </div>
   );

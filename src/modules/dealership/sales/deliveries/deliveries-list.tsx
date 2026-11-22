@@ -16,7 +16,15 @@ import { DetailsLink } from '../../master-data/shared/row-actions';
 import { ListEmpty, LoadError } from '../../master-data/shared/states';
 import { useDeliveries } from '../api';
 import { ListSkeleton } from '../skeletons';
-import { CustomerFilter, StatusText, dateParam, useBusinessDay, useSetFilters } from '../shared';
+import {
+  CustomerFilterPanel,
+  CustomerFilterTrigger,
+  StatusText,
+  dateParam,
+  useBusinessDay,
+  useCustomerFilterController,
+  useSetFilters,
+} from '../shared';
 import type { DeliveryFilters } from '../types';
 
 function useDeliveryFilters(): DeliveryFilters {
@@ -47,6 +55,7 @@ export function DeliveriesList({ slug, businessId }: { slug: string; businessId:
   const isDesktop = useIsDesktop();
   const setFilters = useSetFilters();
   const filters = useDeliveryFilters();
+  const customerFilter = useCustomerFilterController();
   const query = useDeliveries(slug, businessId, filters);
   const base = `/b/${encodeURIComponent(slug)}`;
 
@@ -65,6 +74,9 @@ export function DeliveriesList({ slug, businessId }: { slug: string; businessId:
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
+        <div className="pb-0.5">
+          <CustomerFilterTrigger customerId={filters.customerId} controller={customerFilter} />
+        </div>
         <div>
           {label(`${id}-from`, tf('from'))}
           <input
@@ -102,7 +114,12 @@ export function DeliveriesList({ slug, businessId }: { slug: string; businessId:
         </div>
       </div>
 
-      <CustomerFilter slug={slug} businessId={businessId} customerId={filters.customerId} />
+      <CustomerFilterPanel
+        slug={slug}
+        businessId={businessId}
+        customerId={filters.customerId}
+        controller={customerFilter}
+      />
 
       {query.isPending ? (
         <ListSkeleton />
