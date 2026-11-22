@@ -18,6 +18,8 @@ import { DetailsLink } from '../master-data/shared/row-actions';
 import { ListEmpty, ListSkeleton, LoadError } from '../master-data/shared/states';
 import { usePurchases } from './api';
 import { ProductPicker } from './product-picker';
+import { usePurchaseSummaryRanges } from './shared';
+import { PurchasesSummaryCards } from './summary-cards';
 import type { PurchaseFilters, PurchaseStatus, PurchaseSummary } from './types';
 
 const buttonLink =
@@ -71,6 +73,7 @@ export function PurchasesList({ slug, businessId }: { slug: string; businessId: 
   const tc = useTranslations('dealership.common');
   const filters = usePurchaseFilters();
   const query = usePurchases(slug, businessId, filters);
+  const summaryRanges = usePurchaseSummaryRanges();
   const suppliers = useSuppliers(slug, businessId, { active: 'all', page: 1 });
   // Name of a product picked in this session (the URL keeps only the id).
   const [pickedName, setPickedName] = useState<string | null>(null);
@@ -103,6 +106,8 @@ export function PurchasesList({ slug, businessId }: { slug: string; businessId: 
 
   return (
     <div className="space-y-4">
+      <PurchasesSummaryCards slug={slug} businessId={businessId} ranges={summaryRanges} />
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <div>
@@ -156,6 +161,36 @@ export function PurchasesList({ slug, businessId }: { slug: string; businessId: 
               <option value="void">{t('status.void')}</option>
             </select>
           </div>
+          <div>
+            {label(`${id}-product`, t('filters.product'))}
+            {filters.productId ? (
+              <div className="flex min-h-10 flex-wrap items-center gap-2 text-sm">
+                <span className="rounded-full border border-border px-3 py-1">
+                  {t('filters.productChip', {
+                    name: pickedName ?? t('filters.productChipUnknown'),
+                  })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => (setPickedName(null), setParams({ productId: undefined }))}
+                  className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 font-medium underline"
+                >
+                  <X aria-hidden className="size-4" />
+                  {t('filters.clearProduct')}
+                </button>
+              </div>
+            ) : (
+              <button
+                id={`${id}-product`}
+                type="button"
+                aria-expanded={picking}
+                onClick={() => setPicking((v) => !v)}
+                className="inline-flex min-h-10 items-center rounded-lg border border-border px-3 font-medium hover:bg-surface-muted"
+              >
+                {t('filters.product')}
+              </button>
+            )}
+          </div>
         </div>
         {canCreate ? (
           <Link href={`${base}/new`} prefetch={false} className={buttonLink}>
@@ -165,32 +200,6 @@ export function PurchasesList({ slug, businessId }: { slug: string; businessId: 
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        {filters.productId ? (
-          <>
-            <span className="rounded-full border border-border px-3 py-1">
-              {t('filters.productChip', { name: pickedName ?? t('filters.productChipUnknown') })}
-            </span>
-            <button
-              type="button"
-              onClick={() => (setPickedName(null), setParams({ productId: undefined }))}
-              className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 font-medium underline"
-            >
-              <X aria-hidden className="size-4" />
-              {t('filters.clearProduct')}
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            aria-expanded={picking}
-            onClick={() => setPicking((v) => !v)}
-            className="inline-flex min-h-10 items-center rounded-lg border border-border px-3 font-medium hover:bg-surface-muted"
-          >
-            {t('filters.product')}
-          </button>
-        )}
-      </div>
       {picking && !filters.productId ? (
         <div className="max-w-xl">
           <ProductPicker

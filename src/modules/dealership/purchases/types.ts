@@ -76,3 +76,17 @@ export interface PurchasePatch {
 }
 
 export const PURCHASE_LIMITS = { lines: 50, note: 500, supplierReference: 64 } as const;
+
+export interface PurchaseTotalsFilters {
+  from: string;
+  to: string;
+}
+
+export interface PurchaseTotals {
+  from: string;
+  to: string;
+  count: number;
+  totalQuantity: string;
+  /** Absent without `product.cost.view`. */
+  totalAmount?: string;
+}

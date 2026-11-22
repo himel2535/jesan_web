@@ -10,12 +10,15 @@ import type {
   PurchaseInput,
   PurchasePatch,
   PurchaseSummary,
+  PurchaseTotals,
+  PurchaseTotalsFilters,
 } from './types';
+import type { PurchaseSummaryRanges } from './shared';
 
 const base = (slug: string) => `/b/${encodeURIComponent(slug)}/purchases`;
 
 /** A purchase changes stock and the products' last purchase price: refresh exactly those. */
-export const PURCHASE_REFRESH = ['purchases', 'stock', 'products'] as const;
+export const PURCHASE_REFRESH = ['purchases', 'purchasesSummary', 'stock', 'products'] as const;
 
 export function useRefreshAfterPurchase(businessId: string) {
   const queryClient = useQueryClient();
@@ -89,4 +92,26 @@ export function useVoidPurchase(slug: string, businessId: string) {
       }),
     onSuccess: () => refresh(),
   });
+}
+
+function usePurchaseTotals(slug: string, businessId: string, filters: PurchaseTotalsFilters) {
+  const query = { from: filters.from, to: filters.to };
+  return useQuery({
+    queryKey: dealershipKeys.list(businessId, 'purchasesSummary', query),
+    queryFn: ({ signal }) => apiFetch<PurchaseTotals>(`${base(slug)}/summary`, { query, signal }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** The KPI cards' four fixed date windows (`total`/`today`/`thisMonth`/`thisYear`). */
+export function usePurchasesSummary(
+  slug: string,
+  businessId: string,
+  ranges: PurchaseSummaryRanges,
+) {
+  const total = usePurchaseTotals(slug, businessId, ranges.total);
+  const today = usePurchaseTotals(slug, businessId, ranges.today);
+  const thisMonth = usePurchaseTotals(slug, businessId, ranges.thisMonth);
+  const thisYear = usePurchaseTotals(slug, businessId, ranges.thisYear);
+  return { total, today, thisMonth, thisYear };
 }

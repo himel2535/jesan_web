@@ -485,6 +485,13 @@
         "productChipUnknown": "one product",
         "clearProduct": "Remove product filter"
       },
+      "summary": {
+        "totalAmount": "Total purchase amount",
+        "totalQuantity": "Total quantity",
+        "today": "Today's purchases",
+        "thisMonth": "This month's purchases",
+        "thisYear": "This year's purchases"
+      },
       "emptyTitle": "No purchases yet",
       "emptyDescription": "Purchases will appear here once entered.",
       "noResultsTitle": "Nothing matches",
