@@ -17,7 +17,7 @@ function CardSkeleton({ count }: { count: number }) {
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="space-y-2">
+        <div key={i} className="flex flex-col items-center space-y-2">
           <div className="h-4 w-28 animate-pulse rounded bg-surface-muted" />
           <div className="h-6 w-24 animate-pulse rounded bg-surface-muted" />
         </div>
@@ -28,7 +28,7 @@ function CardSkeleton({ count }: { count: number }) {
 
 function Card({ label, value, note }: { label: string; value: ReactNode; note?: string }) {
   return (
-    <div>
+    <div className="text-center">
       <dt className="text-sm text-fg-muted">{label}</dt>
       <dd className="font-semibold">
         {value}
