@@ -1903,7 +1903,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ### ক্যাশ বই
 
-**`GET cash-book?from=&to=&page=`** (`cashbook.view`; ম্যানেজার, হিসাবরক্ষক): কোনো টেবিল নয় — আসল আদায়, খরচ ও নগদ কেনা থেকে সরাসরি গোনা। না দিলে `from`/`to` চলতি মাস; সর্বোচ্চ ৪০০ দিন একসাথে (বেশি হলে 400 `RANGE_TOO_LARGE`)।
+**`GET cash-book?from=&to=&page=`** (`cashbook.view`; ম্যানেজার, হিসাবরক্ষক): কোনো টেবিল নয় — আসল আদায়, খরচ ও নগদ কেনা থেকে সরাসরি গোনা। না দিলে `from`/`to` চলতি মাস; রেঞ্জের প্রস্থে কোনো সীমা নেই, ব্যবসার lifetime পর্যন্ত চাওয়া যায় (দিনের তালিকা তবু পাতাভাগ ১০ সারি)।
 
 ```json
 {
@@ -1933,7 +1933,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ### রিপোর্ট
 
-সব শুধু-পড়া, `report.view`। তারিখ-সীমা না দিলে চলতি মাস, সর্বোচ্চ ৪০০ দিন একসাথে (400 `RANGE_TOO_LARGE`)। কোনো রিপোর্টে কেনা-দাম, লাভ বা কমিশন নেই।
+সব শুধু-পড়া, `report.view`। তারিখ-সীমা না দিলে চলতি মাস; রেঞ্জের প্রস্থে কোনো সীমা নেই, lifetime (all-time) total চাইলে একটা পুরনো `from` দিয়ে পুরো ইতিহাস আনা যায়। কোনো রিপোর্টে কেনা-দাম, লাভ বা কমিশন নেই।
 
 | Route | `groupBy` | উত্তরের মূল ঘর |
 |---|---|---|
@@ -1971,7 +1971,6 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 | 400 | `AMOUNT_TOO_SMALL` / `AMOUNT_INVALID` (`amount`) | টাকা শূন্য বা তার কম, বা রূপ ভুল |
 | 400 | `EXPENSE_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`, `expenseDate`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | 400 | `FROM_INVALID` / `TO_INVALID` (`from` / `to`) | তারিখ আসল নয়, বা `to` < `from` |
-| 400 | `RANGE_TOO_LARGE` (`to`) | তারিখ-সীমা ৪০০ দিনের বেশি |
 | 404 | `EXPENSE_NOT_FOUND`, `EXPENSE_CATEGORY_NOT_FOUND` | নেই বা অন্য ব্যবসার |
 | 409 | `EXPENSE_ALREADY_VOID` | বাতিল খরচে আবার বদল বা বাতিল |
 | 409 | `NAME_EN_DUPLICATE` / `NAME_BN_DUPLICATE` (`nameEn` / `nameBn`) | এই নামের ধরন আগেই আছে |
@@ -2007,7 +2006,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ### খাতা (ledger)
 
-**`GET accounts/ledger?from=&to=&type=&page=`** (`ledger.view`): না দিলে `from`/`to` চলতি মাস, সর্বোচ্চ ৪০০ দিন একসাথে (বেশি হলে 400 `RANGE_TOO_LARGE`)। পাতাভাগ ১০ সারি, নতুন থেকে পুরনো। `type` ঐচ্ছিক ফিল্টার (`collection` | `expense` | `purchase` | `commission_receipt` | `manual` | `supplier_payment`)।
+**`GET accounts/ledger?from=&to=&type=&page=`** (`ledger.view`): না দিলে `from`/`to` চলতি মাস; রেঞ্জের প্রস্থে কোনো সীমা নেই, lifetime পর্যন্ত চাওয়া যায়। পাতাভাগ ১০ সারি, নতুন থেকে পুরনো। `type` ঐচ্ছিক ফিল্টার (`collection` | `expense` | `purchase` | `commission_receipt` | `manual` | `supplier_payment`)।
 
 ```json
 {
@@ -2072,7 +2071,6 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 | 400 | `ENTRY_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`, `entryDate`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | 400 | `PAYMENT_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`, `paymentDate`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | 400 | `FROM_INVALID` / `TO_INVALID` (`from` / `to`) | তারিখ আসল নয়, বা `to` < `from` |
-| 400 | `RANGE_TOO_LARGE` (`to`) | তারিখ-সীমা ৪০০ দিনের বেশি |
 
 ---
 
@@ -2252,7 +2250,6 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE` | 400 | `categoryId` | ধরন নেই, অন্য ব্যবসার, বা নিষ্ক্রিয় |
 | `EXPENSE_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `expenseDate` | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | `FROM_INVALID` / `TO_INVALID` | 400 | `from` / `to` | তারিখ আসল নয়, বা `to` < `from` |
-| `RANGE_TOO_LARGE` | 400 | `to` | রিপোর্ট বা ক্যাশ বইয়ের তারিখ-সীমা ৪০০ দিনের বেশি |
 | `EXPENSE_NOT_FOUND` | 404 | - | খরচ নেই বা অন্য ব্যবসার |
 | `EXPENSE_CATEGORY_NOT_FOUND` | 404 | - | ধরন নেই বা অন্য ব্যবসার |
 | `EXPENSE_ALREADY_VOID` | 409 | - | বাতিল খরচে আবার বদল বা বাতিলের চেষ্টা |

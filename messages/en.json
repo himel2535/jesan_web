@@ -174,7 +174,6 @@
       "EXPENSE_DATE_TOO_OLD": "This expense date is older than you may enter.",
       "FROM_INVALID": "This start date does not exist.",
       "TO_INVALID": "This end date does not exist, or comes before the start date.",
-      "RANGE_TOO_LARGE": "This date range is too large; choose a shorter one.",
       "EXPENSE_NOT_FOUND": "This expense was not found.",
       "EXPENSE_CATEGORY_NOT_FOUND": "This expense type was not found.",
       "EXPENSE_ALREADY_VOID": "This expense is already void; it cannot be corrected or voided again.",
@@ -931,8 +930,7 @@
         "summary": {
           "today": "Today's Collection",
           "thisMonth": "This Month's Collection",
-          "total": "Total Collection Amount",
-          "totalNote": "Last 400 days."
+          "total": "Total Collection Amount"
         }
       },
       "ledger": {
@@ -974,7 +972,6 @@
         "todaySales": "Today's Sales",
         "thisMonthSales": "This Month's Sales",
         "totalSales": "Total Sales",
-        "totalSalesNote": "Last 400 days.",
         "totalOrders": "Total Orders",
         "thisMonthOrders": "This Month's Orders",
         "totalDeliveries": "Total Deliveries",
@@ -1069,7 +1066,6 @@
       },
       "summary": {
         "total": "Total Partial Expenses",
-        "totalNote": "Last 400 days.",
         "today": "Today's Expenses",
         "thisMonth": "This Month's Expenses",
         "previousMonth": "Previous Month's Expenses"
@@ -1096,7 +1092,8 @@
       "emptyDescription": "Collections, expenses and cash purchases appear here by day.",
       "filters": {
         "from": "From",
-        "to": "To"
+        "to": "To",
+        "lifetime": "All time"
       }
     },
     "accounts": {
@@ -1105,7 +1102,7 @@
         "description": "The accounts ledger of {business}.",
         "dateFrom": "From",
         "dateTo": "To",
-        "rangeError": "Select a range of maximum 400 days."
+        "lifetime": "All time"
       },
       "summary": {
         "totalIn": "Total income",

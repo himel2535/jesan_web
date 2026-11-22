@@ -109,11 +109,7 @@ export function SalesSummaryCards({
             label={t('thisMonthSales')}
             value={<Money value={sales.thisMonth.data.totalAmount} />}
           />
-          <Card
-            label={t('totalSales')}
-            value={<Money value={sales.total.data.totalAmount} />}
-            note={t('totalSalesNote')}
-          />
+          <Card label={t('totalSales')} value={<Money value={sales.total.data.totalAmount} />} />
         </>
       ) : null}
 

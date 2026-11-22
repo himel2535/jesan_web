@@ -17,8 +17,11 @@ import type { DocumentStatus, OrderDeliveryStatus, ProductRef } from './types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** `reports/sales` caps any single range at 400 days (`RANGE_TOO_LARGE`); 399 stays inside it. */
-const MAX_REPORT_RANGE_DAYS = 399;
+/**
+ * `reports/sales` no longer caps the range width, so this anchors "total" at a date well before
+ * any real business can have data — the window is effectively the business's full lifetime.
+ */
+export const LIFETIME_FROM = '2000-01-01';
 
 function isoOf(y: number, m: number, d: number): string {
   return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
@@ -30,18 +33,14 @@ export interface SalesSummaryRanges {
   thisMonth: { from: string; to: string };
 }
 
-/**
- * The date windows the sales KPI cards need, anchored on the business's "today" (Dhaka time).
- * `total` is capped to the last 399 days (the reports endpoint's own limit), not true all-time.
- */
+/** The date windows the sales KPI cards need, anchored on the business's "today" (Dhaka time). */
 export function useSalesSummaryRanges(): SalesSummaryRanges {
   const today = useMemo(() => businessToday(), []);
   return useMemo(() => {
     const y = Number(today.slice(0, 4));
     const m = Number(today.slice(5, 7));
-    const d = Number(today.slice(8, 10));
     return {
-      total: { from: isoOf(y, m - 1, d - MAX_REPORT_RANGE_DAYS), to: today },
+      total: { from: LIFETIME_FROM, to: today },
       today: { from: today, to: today },
       thisMonth: { from: isoOf(y, m - 1, 1), to: today },
     };

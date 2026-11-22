@@ -174,7 +174,6 @@
       "EXPENSE_DATE_TOO_OLD": "খরচের এই তারিখ আপনার বসানোর সীমার চেয়ে পুরনো।",
       "FROM_INVALID": "শুরুর এই তারিখ নেই।",
       "TO_INVALID": "শেষের এই তারিখ নেই, বা শুরুর তারিখের আগের।",
-      "RANGE_TOO_LARGE": "এই তারিখ-সীমা অনেক বড়; ছোট সীমা বেছে নিন।",
       "EXPENSE_NOT_FOUND": "এই খরচ পাওয়া যায়নি।",
       "EXPENSE_CATEGORY_NOT_FOUND": "এই খরচের ধরন পাওয়া যায়নি।",
       "EXPENSE_ALREADY_VOID": "এই খরচ আগেই বাতিল হয়েছে; আবার বাতিল বা সংশোধন করা যায় না।",
@@ -931,8 +930,7 @@
         "summary": {
           "today": "আজকের আদায়",
           "thisMonth": "এই মাসের আদায়",
-          "total": "সর্বমোট আদায়",
-          "totalNote": "শেষ ৪০০ দিন।"
+          "total": "সর্বমোট আদায়"
         }
       },
       "ledger": {
@@ -974,7 +972,6 @@
         "todaySales": "আজকের বিক্রি",
         "thisMonthSales": "এই মাসের বিক্রি",
         "totalSales": "সর্বমোট বিক্রি",
-        "totalSalesNote": "শেষ ৪০০ দিন।",
         "totalOrders": "সর্বমোট অর্ডার",
         "thisMonthOrders": "এই মাসের অর্ডার",
         "totalDeliveries": "সর্বমোট ডেলিভারি",
@@ -1069,7 +1066,6 @@
       },
       "summary": {
         "total": "সর্বমোট আংশিক খরচ",
-        "totalNote": "শেষ ৪০০ দিন।",
         "today": "আজকের খরচ",
         "thisMonth": "এই মাসের খরচ",
         "previousMonth": "আগের মাসের খরচ"
@@ -1096,7 +1092,8 @@
       "emptyDescription": "আদায়, খরচ ও নগদ কেনা এখানে দিনভিত্তিক দেখা যাবে।",
       "filters": {
         "from": "থেকে",
-        "to": "পর্যন্ত"
+        "to": "পর্যন্ত",
+        "lifetime": "সব সময়"
       }
     },
     "accounts": {
@@ -1105,7 +1102,7 @@
         "description": "{business}-এর হিসাবের খাতা।",
         "dateFrom": "থেকে",
         "dateTo": "পর্যন্ত",
-        "rangeError": "সর্বোচ্চ ৪০০ দিনের সীমা নির্বাচন করুন।"
+        "lifetime": "সব সময়"
       },
       "summary": {
         "totalIn": "মোট আয়",

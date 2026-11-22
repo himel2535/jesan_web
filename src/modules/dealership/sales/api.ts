@@ -286,7 +286,7 @@ export function useVoidCollection(slug: string, businessId: string) {
 /**
  * The sales KPI cards' amount group (`report.view`, `reports/sales` is delivery-based). A user
  * without `report.view` gets a 403 on all three, and the cards hide rather than erroring (see
- * `SalesSummaryCards`). `total` is capped to the report endpoint's own 400-day limit.
+ * `SalesSummaryCards`). `total` is a true lifetime total (`reports/sales` has no range cap).
  */
 export function useSalesSummaryAmounts(
   slug: string,
@@ -306,7 +306,7 @@ export function useSalesSummaryAmounts(
 /**
  * The sales KPI cards' order-count group. Same `sale.view.all`/`sale.view.own` permission as the
  * page itself, so it never 403s here; `GET orders` has no date-range cap, so "total" is truly
- * all orders ever, not a 399-day approximation like the amount cards.
+ * all orders ever.
  */
 export function useOrderCounts(slug: string, businessId: string, ranges: SalesSummaryRanges) {
   const total = useOrders(slug, businessId, { page: 1 });
@@ -336,7 +336,8 @@ export function useDeliveryCounts(slug: string, businessId: string, ranges: Sale
 /**
  * The collections KPI cards' amount group (`report.view`, `reports/collections`). A user
  * without `report.view` gets a 403 on all three, and the cards hide rather than erroring (see
- * `CollectionsSummaryCards`). `total` is capped to the report endpoint's own 400-day limit.
+ * `CollectionsSummaryCards`). `total` is a true lifetime total (`reports/collections` has no
+ * range cap).
  */
 export function useCollectionsSummaryAmounts(
   slug: string,

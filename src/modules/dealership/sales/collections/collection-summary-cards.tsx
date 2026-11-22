@@ -67,7 +67,6 @@ export function CollectionsSummaryCards({
         <dd className="font-semibold">
           <Money value={total.data.totalAmount} />
         </dd>
-        <p className="mt-1 text-xs text-fg-muted">{t('totalNote')}</p>
       </div>
       <div>
         <dt className="text-sm text-fg-muted">{t('today')}</dt>
