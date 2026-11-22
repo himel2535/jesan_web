@@ -18,14 +18,18 @@ import { ListEmpty, LoadError } from '../../master-data/shared/states';
 import { useCollectionMethods, useCollections } from '../api';
 import { ListSkeleton } from '../skeletons';
 import {
-  CustomerFilter,
+  CustomerFilterPanel,
+  CustomerFilterTrigger,
   StatusText,
   dateParam,
   useBusinessDay,
+  useCustomerFilterController,
   useMethodLabel,
+  useSalesSummaryRanges,
   useSetFilters,
 } from '../shared';
 import type { CollectionFilters } from '../types';
+import { CollectionsSummaryCards } from './collection-summary-cards';
 
 const buttonLink =
   'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-fg hover:opacity-90';
@@ -82,6 +86,8 @@ export function CollectionsList({ slug, businessId }: { slug: string; businessId
   const filters = useCollectionFilters();
   const query = useCollections(slug, businessId, filters);
   const methods = useCollectionMethods(slug, businessId, canCreate);
+  const summaryRanges = useSalesSummaryRanges();
+  const customerFilter = useCustomerFilterController();
   const base = `/b/${encodeURIComponent(slug)}/collections`;
 
   const items = query.data?.items ?? [];
@@ -97,8 +103,13 @@ export function CollectionsList({ slug, businessId }: { slug: string; businessId
 
   return (
     <div className="space-y-4">
+      <CollectionsSummaryCards slug={slug} businessId={businessId} ranges={summaryRanges} />
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
+          <div className="pb-0.5">
+            <CustomerFilterTrigger customerId={filters.customerId} controller={customerFilter} />
+          </div>
           <div>
             {label(`${id}-from`, tf('from'))}
             <input
@@ -161,7 +172,12 @@ export function CollectionsList({ slug, businessId }: { slug: string; businessId
         ) : null}
       </div>
 
-      <CustomerFilter slug={slug} businessId={businessId} customerId={filters.customerId} />
+      <CustomerFilterPanel
+        slug={slug}
+        businessId={businessId}
+        customerId={filters.customerId}
+        controller={customerFilter}
+      />
 
       {query.isPending ? (
         <ListSkeleton />

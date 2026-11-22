@@ -265,6 +265,99 @@ export function useSalesErrorMessage() {
   };
 }
 
+/** Shared state behind `CustomerFilter`'s chip/button and its search panel. */
+export function useCustomerFilterController() {
+  const [pickedName, setPickedName] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  return { pickedName, setPickedName, picking, setPicking };
+}
+
+type CustomerFilterController = ReturnType<typeof useCustomerFilterController>;
+
+/**
+ * The chip with the chosen customer, or the button that opens the search panel below it. Split
+ * out from `CustomerFilter` so a page can place this on the same line as its other filters while
+ * `CustomerFilterPanel` stays its own row.
+ */
+export function CustomerFilterTrigger({
+  customerId,
+  controller,
+}: {
+  customerId: string | undefined;
+  controller: CustomerFilterController;
+}) {
+  const t = useTranslations('dealership.sales.filters');
+  const setFilters = useSetFilters();
+  const { pickedName, setPickedName, picking, setPicking } = controller;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      {customerId ? (
+        <>
+          <span className="rounded-full border border-border px-3 py-1">
+            {t('chip', { name: pickedName ?? t('unknown') })}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setPickedName(null);
+              setFilters({ customerId: undefined });
+            }}
+            className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 font-medium underline"
+          >
+            <X aria-hidden className="size-4" />
+            {t('clearCustomer')}
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          aria-expanded={picking}
+          onClick={() => setPicking((v) => !v)}
+          className="inline-flex min-h-10 items-center rounded-lg border border-border px-3 font-medium hover:bg-surface-muted"
+        >
+          {t('customer')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** The search panel `CustomerFilterTrigger`'s button opens; renders nothing until it is. */
+export function CustomerFilterPanel({
+  slug,
+  businessId,
+  customerId,
+  controller,
+}: {
+  slug: string;
+  businessId: string;
+  customerId: string | undefined;
+  controller: CustomerFilterController;
+}) {
+  const t = useTranslations('dealership.sales.filters');
+  const locale = useLocale();
+  const setFilters = useSetFilters();
+  const { setPickedName, picking, setPicking } = controller;
+
+  if (!picking || customerId) return null;
+  return (
+    <div className="max-w-xl">
+      <CustomerPicker
+        slug={slug}
+        businessId={businessId}
+        label={t('customer')}
+        active="all"
+        onPick={(c) => {
+          setPickedName(localizedName({ nameEn: c.nameEn, nameBn: c.nameBn ?? c.nameEn }, locale));
+          setPicking(false);
+          setFilters({ customerId: c.id });
+        }}
+      />
+    </div>
+  );
+}
+
 /**
  * The customer filter of a list: a chip with the chosen customer, or a search panel. The URL
  * keeps only the id, so the name is read from the chosen record while this page lives.
@@ -278,60 +371,16 @@ export function CustomerFilter({
   businessId: string;
   customerId: string | undefined;
 }) {
-  const t = useTranslations('dealership.sales.filters');
-  const locale = useLocale();
-  const setFilters = useSetFilters();
-  const [pickedName, setPickedName] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
-
+  const controller = useCustomerFilterController();
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        {customerId ? (
-          <>
-            <span className="rounded-full border border-border px-3 py-1">
-              {t('chip', { name: pickedName ?? t('unknown') })}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setPickedName(null);
-                setFilters({ customerId: undefined });
-              }}
-              className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 font-medium underline"
-            >
-              <X aria-hidden className="size-4" />
-              {t('clearCustomer')}
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            aria-expanded={picking}
-            onClick={() => setPicking((v) => !v)}
-            className="inline-flex min-h-10 items-center rounded-lg border border-border px-3 font-medium hover:bg-surface-muted"
-          >
-            {t('customer')}
-          </button>
-        )}
-      </div>
-      {picking && !customerId ? (
-        <div className="max-w-xl">
-          <CustomerPicker
-            slug={slug}
-            businessId={businessId}
-            label={t('customer')}
-            active="all"
-            onPick={(c) => {
-              setPickedName(
-                localizedName({ nameEn: c.nameEn, nameBn: c.nameBn ?? c.nameEn }, locale),
-              );
-              setPicking(false);
-              setFilters({ customerId: c.id });
-            }}
-          />
-        </div>
-      ) : null}
+      <CustomerFilterTrigger customerId={customerId} controller={controller} />
+      <CustomerFilterPanel
+        slug={slug}
+        businessId={businessId}
+        customerId={customerId}
+        controller={controller}
+      />
     </div>
   );
 }

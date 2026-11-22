@@ -927,6 +927,12 @@
           "bank": "Bank transfer",
           "cheque": "Cheque",
           "card": "Card"
+        },
+        "summary": {
+          "today": "Today's Collection",
+          "thisMonth": "This Month's Collection",
+          "total": "Total Collection Amount",
+          "totalNote": "Last 400 days."
         }
       },
       "ledger": {
