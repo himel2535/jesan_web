@@ -1,11 +1,17 @@
 'use client';
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { apiFetch } from '@/core/api/client';
 import { ApiError } from '@/core/api/errors';
 import { dealershipKeys } from '../master-data/api';
 import type { Page } from '../master-data/types';
-import { useExpensesReport } from '../reports/api';
+import { expensesReportQuery } from '../reports/api';
 import type { ExpenseSummaryRanges } from './shared';
 import type {
   CashBookFilters,
@@ -129,15 +135,13 @@ export function useExpenses(
  * hides the cards rather than erroring (see `ExpensesSummaryCards`).
  */
 export function useExpensesSummary(slug: string, businessId: string, ranges: ExpenseSummaryRanges) {
-  const total = useExpensesReport(slug, businessId, { groupBy: 'category', ...ranges.total });
-  const today = useExpensesReport(slug, businessId, { groupBy: 'category', ...ranges.today });
-  const thisMonth = useExpensesReport(slug, businessId, {
-    groupBy: 'category',
-    ...ranges.thisMonth,
-  });
-  const previousMonth = useExpensesReport(slug, businessId, {
-    groupBy: 'category',
-    ...ranges.previousMonth,
+  const [total, today, thisMonth, previousMonth] = useQueries({
+    queries: [
+      expensesReportQuery(slug, businessId, { groupBy: 'category', ...ranges.total }),
+      expensesReportQuery(slug, businessId, { groupBy: 'category', ...ranges.today }),
+      expensesReportQuery(slug, businessId, { groupBy: 'category', ...ranges.thisMonth }),
+      expensesReportQuery(slug, businessId, { groupBy: 'category', ...ranges.previousMonth }),
+    ],
   });
   return { total, today, thisMonth, previousMonth };
 }
