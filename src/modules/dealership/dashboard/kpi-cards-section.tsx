@@ -2,7 +2,7 @@
 
 import { ReactNode, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Award, Banknote, Receipt, ShoppingCart, TrendingUp, Wallet } from 'lucide-react';
+import { Award, Banknote, Receipt, ShoppingCart, Target, TrendingUp, Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCan } from '@/core/auth/can';
 import { ApiError } from '@/core/api/errors';
@@ -15,8 +15,13 @@ import { useAccountsSummary, useAccountsSummaryRanges } from '../accounts/api';
 import { useSalesSummaryAmounts } from '../sales/api';
 import { purchaseTotalsQuery } from '../purchases/api';
 import { useCollectionsSummaryAmounts } from '../sales/api';
-import { useCommissionSummary } from '../commission/api';
-import { useDashboardRanges, monthOverMonthChange } from './shared';
+import { useCommissionScheme, useCommissionSummary, usePurchaseCounters } from '../commission/api';
+import {
+  achievedQtyForMonth,
+  commissionProgress,
+  useDashboardRanges,
+  monthOverMonthChange,
+} from './shared';
 
 function isForbidden(error: unknown): boolean {
   return error instanceof ApiError && error.status === 403;
@@ -51,11 +56,13 @@ function Grid({ cards }: { cards: CardSpec[] }) {
 }
 
 /**
- * The 7 primary KPI cards shown on the business dashboard (reference design): Total Sales, Total
- * Purchase, Total Collection, Customer Due, Cash & Bank, Commission, Net Profit. "Net Profit" is
- * the Accounts module's cash-basis `net` (income − expense) relabeled — there is no cost-based
- * profit endpoint yet (see DECISIONS.md). "Target Achievement" from the original reference design
- * has no backend sales-target concept and was dropped (see DECISIONS.md).
+ * The 8 KPI cards shown on the business dashboard (reference design): Total Sales, Total
+ * Purchase, Total Collection, Customer Due, Cash & Bank, Commission, Net Profit, Commission
+ * Target Progress. "Net Profit" is the Accounts module's cash-basis `net` (income − expense)
+ * relabeled — there is no cost-based profit endpoint yet (see DECISIONS.md). "Commission Target
+ * Progress" is purchase-based (bags bought from Akij), not a sales target — the backend has no
+ * sales-target concept; it reuses the commission scheme's bonus threshold instead (see
+ * DECISIONS.md "Commission Target Progress").
  */
 export function KPICardsSection({ slug, businessId }: { slug: string; businessId: string }) {
   const t = useTranslations('dealership.dashboard.kpi');
@@ -113,6 +120,13 @@ export function KPICardsSection({ slug, businessId }: { slug: string; businessId
 
   // ---- Commission (owner-only; the permission itself is the gate) ----
   const commission = useCommissionSummary(slug, businessId, year);
+
+  // ---- Commission Target Progress (owner-only; purchase-based, see shared.tsx) ----
+  const commissionScheme = useCommissionScheme(slug, businessId);
+  const purchaseCounters = usePurchaseCounters(slug, businessId, year, canViewCommission);
+  const currentMonth = businessToday().slice(0, 7);
+  const achievedQty = achievedQtyForMonth(purchaseCounters.data?.months, currentMonth);
+  const targetProgress = commissionProgress(commissionScheme.data, achievedQty);
 
   const netChange = useMemo(
     () =>
@@ -248,6 +262,23 @@ export function KPICardsSection({ slug, businessId }: { slug: string; businessId
             loading: accountsPending || !accounts.total.data,
           },
         ]),
+    ...(!canViewCommission
+      ? []
+      : [
+          {
+            id: 'commission-target',
+            variant: 'indigo' as KPIVariant,
+            icon: <Target aria-hidden className="size-5" />,
+            label: t('commissionTarget'),
+            value:
+              commissionScheme.data === undefined
+                ? ''
+                : !targetProgress
+                  ? t('notConfigured')
+                  : `${targetProgress.achievementPct.toFixed(0)}%`,
+            loading: commissionScheme.isPending || purchaseCounters.isPending,
+          },
+        ]),
   ];
 
   const groupErrors: { key: string; error: unknown; retry: () => void }[] = [];
@@ -287,6 +318,20 @@ export function KPICardsSection({ slug, businessId }: { slug: string; businessId
       key: 'commission',
       error: commission.error,
       retry: () => void commission.refetch(),
+    });
+  }
+  if (
+    canViewCommission &&
+    ((commissionScheme.isError && !isForbidden(commissionScheme.error)) ||
+      (purchaseCounters.isError && !isForbidden(purchaseCounters.error)))
+  ) {
+    groupErrors.push({
+      key: 'commission-target',
+      error: commissionScheme.error ?? purchaseCounters.error,
+      retry: () => {
+        void commissionScheme.refetch();
+        void purchaseCounters.refetch();
+      },
     });
   }
 

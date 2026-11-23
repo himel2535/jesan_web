@@ -1413,6 +1413,19 @@ http
           receiptCount: yearReceipts.length,
         });
       }
+      if (rest === 'purchase-counters' && req.method === 'GET') {
+        if (!need('commission.view')) return;
+        const year = String(url.searchParams.get('year') ?? new Date().getFullYear());
+        const months = Array.from({ length: 12 }, (_, i) => {
+          const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+          const quantity = purchases
+            .filter((pu) => pu.status !== 'void' && pu.purchaseDate.startsWith(month))
+            .flatMap((pu) => pu.items.map((item) => Number(item.quantity)))
+            .reduce((sum, qty) => sum + qty, 0);
+          return { month, quantity: String(quantity) };
+        });
+        return send(res, 200, { year: Number(year), months });
+      }
       // ---- Orders, deliveries and collections (docs/API.md §11) ----
       if (rest === 'collection-methods' && req.method === 'GET')
         return need('collection.create') && send(res, 200, { items: COLLECTION_METHODS });

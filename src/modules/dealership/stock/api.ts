@@ -17,15 +17,20 @@ function cleanStock(f: StockFilters) {
   return out;
 }
 
+/** Query options for `GET stock`, for composing with `useQueries` (e.g. multi-page totals). */
+export function stockQuery(slug: string, businessId: string, filters: StockFilters) {
+  const clean = cleanStock(filters);
+  return {
+    queryKey: dealershipKeys.list(businessId, 'stock', clean),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      apiFetch<Page<StockRow>>(base(slug), { query: clean, signal }),
+    placeholderData: keepPreviousData,
+  };
+}
+
 /** Current stock per product (`stock.view`); `enabled: false` skips the call entirely. */
 export function useStock(slug: string, businessId: string, filters: StockFilters, enabled = true) {
-  const clean = cleanStock(filters);
-  return useQuery({
-    queryKey: dealershipKeys.list(businessId, 'stock', clean),
-    queryFn: ({ signal }) => apiFetch<Page<StockRow>>(base(slug), { query: clean, signal }),
-    placeholderData: keepPreviousData,
-    enabled,
-  });
+  return useQuery({ ...stockQuery(slug, businessId, filters), enabled });
 }
 
 export function useMovements(

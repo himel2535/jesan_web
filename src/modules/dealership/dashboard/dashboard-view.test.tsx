@@ -14,7 +14,10 @@ const meWith = (permissions: string[]): Me => ({
   businesses: [business({ permissions })],
 });
 
-/** Mock endpoints every dashboard panel (KPI cards, Revenue Overview, Top 5, Sales Summary) needs. */
+/**
+ * Mock endpoints every dashboard panel needs: KPI cards, Revenue Overview, Top 5, Sales Summary,
+ * Target & Commission Progress, Stock Overview, Sales & Delivery Overview, Recent Transactions.
+ */
 const dashboardRoutes = () =>
   Object.fromEntries([
     [
@@ -49,6 +52,67 @@ const dashboardRoutes = () =>
     [
       `GET ${B}/commission-summary`,
       () => json(200, { totalCalculated: '0', totalReceived: '0', totalPending: '0' }),
+    ],
+    [
+      `GET ${B}/commission-scheme`,
+      () =>
+        json(200, {
+          scheme: {
+            rateBase: '10.00',
+            targetQty: '10000',
+            bonusRate: '1.00',
+            updatedAt: '2026-11-01T00:00:00Z',
+          },
+        }),
+    ],
+    [
+      `GET ${B}/purchase-counters`,
+      () =>
+        json(200, {
+          year: 2026,
+          months: Array.from({ length: 12 }, (_, i) => ({
+            month: `2026-${String(i + 1).padStart(2, '0')}`,
+            quantity: '0',
+          })),
+        }),
+    ],
+    [
+      `GET ${B}/product-categories`,
+      () =>
+        json(200, {
+          items: [
+            {
+              id: 'cat-opc',
+              nameEn: 'OPC',
+              nameBn: 'ওপিসি',
+              sortOrder: 1,
+              isActive: true,
+              createdAt: '',
+              updatedAt: '',
+            },
+            {
+              id: 'cat-pcc',
+              nameEn: 'PCC',
+              nameBn: 'পিসিসি',
+              sortOrder: 2,
+              isActive: true,
+              createdAt: '',
+              updatedAt: '',
+            },
+          ],
+        }),
+    ],
+    [`GET ${B}/stock`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
+    [`GET ${B}/accounts/ledger`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
+    [`GET ${B}/orders`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
+    [`GET ${B}/deliveries`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
+    [
+      `GET ${B}/product-units`,
+      () =>
+        json(200, {
+          defaultUnitKey: 'bag',
+          items: [{ key: 'bag', nameEn: 'Bag', nameBn: 'বস্তা', decimals: 0 }],
+        }),
     ],
   ]);
 
@@ -99,5 +163,102 @@ describe('<DashboardView>', () => {
     expect(screen.getByText('Revenue Overview')).toBeInTheDocument();
     expect(screen.getByText('Top 5 Customers')).toBeInTheDocument();
     expect(screen.getByText('Sales Summary')).toBeInTheDocument();
+    expect(await screen.findByText('Commission Target')).toBeInTheDocument();
+    expect(screen.getByText('Target & Commission Progress')).toBeInTheDocument();
+    expect(screen.getByText('Stock Overview')).toBeInTheDocument();
+    expect(screen.getByText('Sales & Delivery Overview')).toBeInTheDocument();
+    expect(screen.getByText('Recent Transactions')).toBeInTheDocument();
+  });
+
+  it('hides owner-only panels (Commission Target card and Target & Commission Progress) without commission.view', async () => {
+    mockApi({
+      [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
+      ...dashboardRoutes(),
+    });
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
+      me: meWith(['report.view', 'sale.view.all', 'stock.view', 'ledger.view']),
+    });
+    await screen.findByText('Total Sales');
+    expect(screen.queryByText('Commission Target')).not.toBeInTheDocument();
+    expect(screen.queryByText('Target & Commission Progress')).not.toBeInTheDocument();
+  });
+
+  it('shows Stock Overview and Sales & Delivery Overview only with their permissions', async () => {
+    mockApi({
+      [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
+      ...dashboardRoutes(),
+    });
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
+      me: meWith(['report.view']),
+    });
+    await screen.findByText('Total Sales');
+    expect(screen.queryByText('Stock Overview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sales & Delivery Overview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent Transactions')).not.toBeInTheDocument();
+  });
+
+  it("computes Commission Target Progress from the scheme and this month's purchased bags", async () => {
+    const currentMonth = '2026-11';
+    mockApi({
+      [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
+      ...dashboardRoutes(),
+      [`GET ${B}/purchase-counters`]: () =>
+        json(200, {
+          year: 2026,
+          months: Array.from({ length: 12 }, (_, i) => ({
+            month: `2026-${String(i + 1).padStart(2, '0')}`,
+            quantity: `2026-${String(i + 1).padStart(2, '0')}` === currentMonth ? '4000' : '0',
+          })),
+        }),
+    });
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
+      me: meWith(OWNER_PERMISSIONS),
+    });
+    // targetQty 10000, achieved 4000 -> 40%
+    expect(await screen.findByText('40%')).toBeInTheDocument();
+  });
+
+  it('shows "Target not configured" when no commission scheme exists', async () => {
+    mockApi({
+      [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
+      ...dashboardRoutes(),
+      [`GET ${B}/commission-scheme`]: () => json(200, { scheme: null }),
+    });
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
+      me: meWith(OWNER_PERMISSIONS),
+    });
+    expect(await screen.findByText('Not configured')).toBeInTheDocument();
+    expect(screen.getByText('Target not configured')).toBeInTheDocument();
+  });
+
+  it('sums OPC/PCC stock per category into Stock Overview', async () => {
+    mockApi({
+      [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
+      ...dashboardRoutes(),
+      [`GET ${B}/stock`]: ({ url }) => {
+        const categoryId = new URL(url, 'http://x').searchParams.get('categoryId');
+        const row = (id: string, stock: string) => ({
+          id,
+          code: id,
+          nameEn: id,
+          nameBn: id,
+          unitKey: 'bag',
+          category: { id: categoryId, nameEn: '', nameBn: '' },
+          currentStock: stock,
+          isActive: true,
+        });
+        if (categoryId === 'cat-opc') {
+          return json(200, { items: [row('p1', '12500')], page: 1, pageSize: 10, total: 1 });
+        }
+        if (categoryId === 'cat-pcc') {
+          return json(200, { items: [row('p2', '8750')], page: 1, pageSize: 10, total: 1 });
+        }
+        return json(200, { items: [], page: 1, pageSize: 10, total: 0 });
+      },
+    });
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
+      me: meWith(OWNER_PERMISSIONS),
+    });
+    expect(await screen.findByText('21,250 Bag')).toBeInTheDocument(); // OPC 12,500 + PCC 8,750
   });
 });

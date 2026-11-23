@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { businessToday } from '@/core/i18n/format';
+import type { CommissionScheme } from '../commission/types';
 import { LIFETIME_FROM } from '../expenses/shared';
 
 function isoOf(y: number, m: number, d: number): string {
@@ -41,4 +42,49 @@ export function monthOverMonthChange(thisMonth: string, previousMonth: string): 
   const curr = Number(thisMonth);
   if (!Number.isFinite(prev) || !Number.isFinite(curr) || prev === 0) return null;
   return ((curr - prev) / Math.abs(prev)) * 100;
+}
+
+export interface CommissionProgress {
+  targetQty: number;
+  achievedQty: number;
+  achievementPct: number;
+  remainingQty: number;
+  estimatedCommission: number;
+}
+
+/**
+ * Purchase-based (not sales-based) progress against the commission scheme's bonus threshold
+ * (`targetQty`) — the backend has no sales-target concept. See DECISIONS.md "Commission Target
+ * Progress". Formula matches docs/API.md's commission-entry calculation exactly:
+ * `baseAmount = quantity × rateBase`; `bonusAmount = max(0, quantity − targetQty) × bonusRate`.
+ * Shared by the 8th KPI card and the Target & Commission Progress panel.
+ */
+export function commissionProgress(
+  scheme: CommissionScheme | null | undefined,
+  achievedQty: number,
+): CommissionProgress | null {
+  if (!scheme) return null;
+  const targetQty = Number(scheme.targetQty);
+  const rateBase = Number(scheme.rateBase);
+  const bonusRate = Number(scheme.bonusRate);
+  const achievementPct = targetQty > 0 ? Math.min(100, (achievedQty / targetQty) * 100) : 0;
+  const remainingQty = Math.max(targetQty - achievedQty, 0);
+  const baseAmount = achievedQty * rateBase;
+  const bonusAmount = Math.max(0, achievedQty - targetQty) * bonusRate;
+  return {
+    targetQty,
+    achievedQty,
+    achievementPct,
+    remainingQty,
+    estimatedCommission: baseAmount + bonusAmount,
+  };
+}
+
+/** Current month's purchased bags from `purchase-counters`' months array (`YYYY-MM` key). */
+export function achievedQtyForMonth(
+  months: { month: string; quantity: string }[] | undefined,
+  month: string,
+): number {
+  const row = months?.find((m) => m.month === month);
+  return row ? Number(row.quantity) : 0;
 }

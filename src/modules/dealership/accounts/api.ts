@@ -73,12 +73,18 @@ export function useAccountsSummaryRanges(
 
 const LEDGER_FILTER_KEYS = ['from', 'to', 'type'] as const;
 
-export function useAccountsLedger(slug: string, businessId: string, filters: LedgerFilters) {
+export function useAccountsLedger(
+  slug: string,
+  businessId: string,
+  filters: LedgerFilters,
+  enabled = true,
+) {
   const query = clean(filters, LEDGER_FILTER_KEYS);
   return useQuery({
     queryKey: dealershipKeys.list(businessId, 'accountsLedger', query),
     queryFn: ({ signal }) =>
       apiFetch<LedgerResponse>(`${base(slug)}/accounts/ledger`, { query, signal }),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
