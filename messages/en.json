@@ -1286,6 +1286,28 @@
         "total": "Total",
         "today": "Today's",
         "thisMonth": "This month's"
+      },
+      "kpi": {
+        "cashBalance": "Cash Balance",
+        "closingBalance": "Closing Balance",
+        "net": "Net",
+        "totalIncome": "Total Income",
+        "totalExpense": "Total Expense",
+        "totalDue": "Total Due",
+        "totalAdvance": "Total Advance",
+        "totalSales": "Total Sales",
+        "totalOrders": "Total Orders",
+        "totalDeliveries": "Total Deliveries",
+        "totalPurchase": "Total Purchase",
+        "totalCustomers": "Total Customers",
+        "totalStock": "Total Stock",
+        "totalCommission": "Total Commission",
+        "totalPartialExpenses": "Total Partial Expenses",
+        "thisMonthCollection": "This Month's Collection",
+        "thisMonthSales": "This Month's Sales",
+        "thisMonthPurchase": "This Month's Purchase",
+        "thisMonthCommission": "This Month's Commission",
+        "totalProduct": "Total Product"
       }
     }
   },
