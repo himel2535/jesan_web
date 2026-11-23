@@ -19,11 +19,16 @@ export interface SalesReportResponse extends Page<SalesReportRow> {
   totalAmount: string;
 }
 
+export const SALES_CUSTOMER_SORT = ['amount', 'quantity'] as const;
+export type SalesCustomerSort = (typeof SALES_CUSTOMER_SORT)[number];
+
 export interface SalesReportFilters {
   groupBy: SalesGroupBy;
   from?: string;
   to?: string;
   page: number;
+  /** Only read by the API for `groupBy: 'customer'` (default `'amount'`, unchanged otherwise). */
+  sort?: SalesCustomerSort;
 }
 
 export const COLLECTIONS_GROUP_BY = ['date', 'method'] as const;

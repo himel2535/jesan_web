@@ -3,90 +3,101 @@
 import { ReactNode } from 'react';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from './cn';
-import { Sparkline, SparklineProps } from './sparkline';
+
+export const KPI_VARIANTS = ['blue', 'green', 'purple', 'orange', 'pink', 'aqua'] as const;
+export type KPIVariant = (typeof KPI_VARIANTS)[number];
+
+const VARIANT_CLASSES: Record<KPIVariant, { card: string; icon: string }> = {
+  blue: {
+    card: 'bg-[var(--dash-blue-card-bg)] border-[var(--dash-blue-card-border)]',
+    icon: 'bg-[var(--dash-blue-icon-bg)] text-[var(--dash-icon-fg)]',
+  },
+  green: {
+    card: 'bg-[var(--dash-green-card-bg)] border-[var(--dash-green-card-border)]',
+    icon: 'bg-[var(--dash-green-icon-bg)] text-[var(--dash-icon-fg)]',
+  },
+  purple: {
+    card: 'bg-[var(--dash-purple-card-bg)] border-[var(--dash-purple-card-border)]',
+    icon: 'bg-[var(--dash-purple-icon-bg)] text-[var(--dash-icon-fg)]',
+  },
+  orange: {
+    card: 'bg-[var(--dash-orange-card-bg)] border-[var(--dash-orange-card-border)]',
+    icon: 'bg-[var(--dash-orange-icon-bg)] text-[var(--dash-icon-fg-on-orange)]',
+  },
+  pink: {
+    card: 'bg-[var(--dash-pink-card-bg)] border-[var(--dash-pink-card-border)]',
+    icon: 'bg-[var(--dash-pink-icon-bg)] text-[var(--dash-icon-fg)]',
+  },
+  aqua: {
+    card: 'bg-[var(--dash-aqua-card-bg)] border-[var(--dash-aqua-card-border)]',
+    icon: 'bg-[var(--dash-aqua-icon-bg)] text-[var(--dash-icon-fg)]',
+  },
+};
 
 export interface KPICardProps {
+  variant: KPIVariant;
   icon: ReactNode;
   label: string;
   value: ReactNode;
-  change?: {
-    value: number; // percentage
-    positive?: boolean;
-  };
-  sparkline?: SparklineProps;
+  /** Real (thisMonth vs previousMonth) % change, or omit entirely when not computable — never fabricated. */
+  change?: { value: number; label: string };
   loading?: boolean;
   className?: string;
-  iconColor?: string;
 }
 
 export function KPICard({
+  variant,
   icon,
   label,
   value,
   change,
-  sparkline,
   loading = false,
   className,
-  iconColor = 'bg-primary text-primary-fg',
 }: KPICardProps) {
+  const classes = VARIANT_CLASSES[variant];
+  const positive = (change?.value ?? 0) >= 0;
+
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 rounded-card border border-border bg-surface p-4',
+        'flex min-h-[112px] items-center gap-4 rounded-card border p-4',
+        classes.card,
         className,
       )}
     >
-      {/* Header: Icon and Trend */}
-      <div className="flex items-start justify-between gap-2">
-        <div
-          className={cn(
-            'inline-flex size-10 shrink-0 items-center justify-center rounded-lg',
-            iconColor,
-          )}
-        >
-          {icon}
-        </div>
+      <div
+        className={cn(
+          'inline-flex size-12 shrink-0 items-center justify-center rounded-full',
+          classes.icon,
+        )}
+      >
+        {icon}
+      </div>
 
-        {/* Trend Indicator */}
-        {change && (
-          <div className="flex items-center gap-1">
-            {change.positive ? (
-              <TrendingUp className="size-4 text-success" />
-            ) : (
-              <TrendingDown className="size-4 text-warning" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-[var(--dash-fg-muted)]">{label}</p>
+        {loading ? (
+          <div className="mt-1.5 h-6 w-24 animate-pulse rounded bg-[var(--dash-border)]" />
+        ) : (
+          <p className="truncate text-xl font-bold text-[var(--dash-fg)]">{value}</p>
+        )}
+        {change && !loading && (
+          <p
+            className={cn(
+              'mt-0.5 flex items-center gap-1 text-xs font-medium',
+              positive ? 'text-[var(--dash-success)]' : 'text-[var(--dash-danger)]',
             )}
-            <span
-              className={cn(
-                'text-xs font-semibold',
-                change.positive ? 'text-success' : 'text-warning',
-              )}
-            >
-              {change.positive ? '+' : ''}
-              {change.value.toFixed(1)}%
-            </span>
-          </div>
+          >
+            {positive ? (
+              <TrendingUp aria-hidden className="size-3.5" />
+            ) : (
+              <TrendingDown aria-hidden className="size-3.5" />
+            )}
+            {positive ? '+' : ''}
+            {change.value.toFixed(1)}% {change.label}
+          </p>
         )}
       </div>
-
-      {/* Label and Value */}
-      <div className="flex flex-col gap-1">
-        <p className="text-sm text-fg-muted">{label}</p>
-        <p
-          className={cn(
-            'text-lg font-bold',
-            loading && 'h-6 w-24 animate-pulse rounded bg-surface-muted',
-          )}
-        >
-          {!loading && value}
-        </p>
-      </div>
-
-      {/* Sparkline Chart */}
-      {sparkline && (
-        <div className="mt-auto">
-          <Sparkline {...sparkline} loading={loading} />
-        </div>
-      )}
     </div>
   );
 }
