@@ -23,16 +23,18 @@ const dashboardRoutes = () =>
     ],
     [
       `GET ${B}/reports/sales`,
-      () => json(200, { totalAmount: '36000', totalQuantity: '0', rows: [], page: 1, pageSize: 10, total: 0 }),
+      () =>
+        json(200, {
+          totalAmount: '36000',
+          totalQuantity: '0',
+          rows: [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+        }),
     ],
-    [
-      `GET ${B}/orders`,
-      () => json(200, { items: [], page: 1, pageSize: 10, total: 0 }),
-    ],
-    [
-      `GET ${B}/deliveries`,
-      () => json(200, { items: [], page: 1, pageSize: 10, total: 0 }),
-    ],
+    [`GET ${B}/orders`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
+    [`GET ${B}/deliveries`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
     [
       `GET ${B}/reports/collections`,
       () => json(200, { totalAmount: '0', rows: [], page: 1, pageSize: 10, total: 0 }),
@@ -41,14 +43,8 @@ const dashboardRoutes = () =>
       `GET ${B}/reports/expenses`,
       () => json(200, { totalAmount: '0', rows: [], page: 1, pageSize: 10, total: 0 }),
     ],
-    [
-      `GET ${B}/purchases/summary`,
-      () => json(200, { totalAmount: '0', totalQuantity: '0' }),
-    ],
-    [
-      `GET ${B}/stock`,
-      () => json(200, { items: [], page: 1, pageSize: 10, total: 0 }),
-    ],
+    [`GET ${B}/purchases/summary`, () => json(200, { totalAmount: '0', totalQuantity: '0' })],
+    [`GET ${B}/stock`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
     [
       `GET ${B}/commission-summary`,
       () => json(200, { totalCalculated: '0', totalReceived: '0', totalPending: '0' }),
