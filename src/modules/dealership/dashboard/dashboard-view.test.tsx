@@ -231,34 +231,62 @@ describe('<DashboardView>', () => {
     expect(screen.getByText('Target not configured')).toBeInTheDocument();
   });
 
-  it('sums OPC/PCC stock per category into Stock Overview', async () => {
+  it('shows every active product dynamically in Stock Overview, grouped by unit, never by a hardcoded OPC/PCC category name', async () => {
+    const row = (id: string, nameEn: string, stock: string, categoryNameEn: string) => ({
+      id,
+      code: id,
+      nameEn,
+      nameBn: nameEn,
+      unitKey: 'bag',
+      category: { id: `cat-${id}`, nameEn: categoryNameEn, nameBn: categoryNameEn },
+      currentStock: stock,
+      isActive: true,
+    });
     mockApi({
       [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
       ...dashboardRoutes(),
-      [`GET ${B}/stock`]: ({ url }) => {
-        const categoryId = new URL(url, 'http://x').searchParams.get('categoryId');
-        const row = (id: string, stock: string) => ({
-          id,
-          code: id,
-          nameEn: id,
-          nameBn: id,
-          unitKey: 'bag',
-          category: { id: categoryId, nameEn: '', nameBn: '' },
-          currentStock: stock,
-          isActive: true,
-        });
-        if (categoryId === 'cat-opc') {
-          return json(200, { items: [row('p1', '12500')], page: 1, pageSize: 10, total: 1 });
-        }
-        if (categoryId === 'cat-pcc') {
-          return json(200, { items: [row('p2', '8750')], page: 1, pageSize: 10, total: 1 });
-        }
-        return json(200, { items: [], page: 1, pageSize: 10, total: 0 });
-      },
+      [`GET ${B}/stock`]: () =>
+        json(200, {
+          items: [
+            // Real-world category names don't exactly equal "OPC"/"PCC" (e.g. "OPC / CEM-I") —
+            // the dashboard must still total these correctly without any category-name matching.
+            row('p1', 'OPC (Portland Cement) / CEM-I', '20005', 'OPC / CEM-I'),
+            row('p2', 'PCC CEM-II/A-M', '40', 'PCC'),
+            row('p3', 'PCC CEM-II/B-M', '0', 'PCC'),
+          ],
+          page: 1,
+          pageSize: 10,
+          total: 3,
+        }),
     });
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
       me: meWith(OWNER_PERMISSIONS),
     });
-    expect(await screen.findByText('21,250 Bag')).toBeInTheDocument(); // OPC 12,500 + PCC 8,750
+    expect(await screen.findByText('OPC (Portland Cement) / CEM-I')).toBeInTheDocument();
+    expect(screen.getByText('PCC CEM-II/A-M')).toBeInTheDocument();
+    expect(screen.getByText('PCC CEM-II/B-M')).toBeInTheDocument();
+    expect(screen.getByText('20,045 Bag')).toBeInTheDocument(); // 20,005 + 40 + 0, single unit group
+  });
+
+  it('shows an uncapped achievement percentage and an exceeded badge when purchases pass the commission target', async () => {
+    const currentMonth = '2026-11';
+    mockApi({
+      [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
+      ...dashboardRoutes(),
+      [`GET ${B}/purchase-counters`]: () =>
+        json(200, {
+          year: 2026,
+          months: Array.from({ length: 12 }, (_, i) => ({
+            month: `2026-${String(i + 1).padStart(2, '0')}`,
+            quantity: `2026-${String(i + 1).padStart(2, '0')}` === currentMonth ? '11000' : '0',
+          })),
+        }),
+    });
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
+      me: meWith(OWNER_PERMISSIONS),
+    });
+    // targetQty 10000, achieved 11000 -> 110%, never capped at 100
+    expect(await screen.findByText('110%')).toBeInTheDocument();
+    expect(screen.getByText('Target exceeded')).toBeInTheDocument();
   });
 });

@@ -19,6 +19,7 @@ import { useCommissionScheme, useCommissionSummary, usePurchaseCounters } from '
 import {
   achievedQtyForMonth,
   commissionProgress,
+  formatAchievementPct,
   useDashboardRanges,
   monthOverMonthChange,
 } from './shared';
@@ -39,7 +40,7 @@ interface CardSpec {
 
 function Grid({ cards }: { cards: CardSpec[] }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
         <KPICard
           key={card.id}
@@ -275,7 +276,7 @@ export function KPICardsSection({ slug, businessId }: { slug: string; businessId
                 ? ''
                 : !targetProgress
                   ? t('notConfigured')
-                  : `${targetProgress.achievementPct.toFixed(0)}%`,
+                  : `${formatAchievementPct(targetProgress.achievementPct)}%`,
             loading: commissionScheme.isPending || purchaseCounters.isPending,
           },
         ]),
@@ -336,7 +337,7 @@ export function KPICardsSection({ slug, businessId }: { slug: string; businessId
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {groupErrors.map(({ key, error, retry }) => (
         <LoadError key={key} error={error} onRetry={retry} />
       ))}

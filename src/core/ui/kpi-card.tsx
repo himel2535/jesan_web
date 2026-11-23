@@ -72,7 +72,7 @@ export function KPICard({
   return (
     <div
       className={cn(
-        'flex min-h-[112px] items-center gap-4 rounded-card border p-4',
+        'flex min-h-[88px] items-center gap-3 rounded-card border p-3',
         classes.card,
         className,
       )}

@@ -1323,11 +1323,11 @@
       },
       "stockOverview": {
         "title": "Stock Overview",
-        "opc": "OPC",
-        "pcc": "PCC",
         "totalStock": "Total Stock",
+        "subtotalFor": "Total ({unit})",
         "bags": "{count} {unit}",
-        "noCategories": "No OPC/PCC categories configured."
+        "viewAll": "View All",
+        "noProducts": "No active products configured."
       },
       "salesDelivery": {
         "title": "Sales & Delivery Overview",
@@ -1340,11 +1340,7 @@
         "title": "Recent Transactions",
         "viewAll": "View All",
         "type": "Type",
-        "reference": "Reference",
-        "party": "Party",
-        "date": "Date",
         "amount": "Amount",
-        "status": "Status",
         "saleType": "Sale",
         "empty": "No recent transactions."
       },
@@ -1355,6 +1351,7 @@
         "remaining": "Remaining",
         "qty": "{value} {unit}",
         "achievementPct": "{pct}% achieved",
+        "targetExceeded": "Target exceeded",
         "estimatedCommission": "Estimated Commission",
         "notConfigured": "Target not configured"
       }

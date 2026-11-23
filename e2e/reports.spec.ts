@@ -78,8 +78,8 @@ test('owner sees every KPI card and chart panel on the dashboard', async ({ brow
   // Overview, Recent Transactions.
   await expect(main.getByText('Target & Commission Progress')).toBeVisible();
   await expect(main.getByText('Stock Overview')).toBeVisible();
-  await expect(main.getByText('OPC')).toBeVisible();
-  await expect(main.getByText('PCC')).toBeVisible();
+  // Each active product shows by its own name now (no hardcoded OPC/PCC category labels).
+  await expect(main.getByText(/Sample (OPC|PCC) \d+/).first()).toBeVisible();
   await expect(main.getByText('Total Stock')).toBeVisible();
   await expect(main.getByText('Sales & Delivery Overview')).toBeVisible();
   await expect(main.getByText('Recent Transactions')).toBeVisible();

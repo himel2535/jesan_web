@@ -2,29 +2,46 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import {
+  Award,
+  FileText,
+  Receipt,
+  ShoppingCart,
+  TrendingDown,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCan } from '@/core/auth/can';
 import { ApiError } from '@/core/api/errors';
-import { useFormat } from '@/core/i18n/use-format';
 import { useAccountsLedger } from '../accounts/api';
 import type { LedgerEntryType } from '../accounts/types';
-import { Money, useNameOf } from '../master-data/shared/display';
+import { Money } from '../master-data/shared/display';
 import { LoadError } from '../master-data/shared/states';
 import { useOrders } from '../sales/api';
-import type { OrderDeliveryStatus } from '../sales/types';
 
 function isForbidden(error: unknown): boolean {
   return error instanceof ApiError && error.status === 403;
 }
 
+type TransactionType = LedgerEntryType | 'sale';
+
 interface RecentTransactionRow {
-  type: LedgerEntryType | 'sale';
+  type: TransactionType;
   reference: string;
-  party: string;
   date: string;
   amount: string | undefined;
-  status?: OrderDeliveryStatus;
 }
+
+const TYPE_STYLE: Record<TransactionType, { icon: LucideIcon; colorClass: string }> = {
+  sale: { icon: ShoppingCart, colorClass: 'text-[var(--dash-primary)]' },
+  collection: { icon: Wallet, colorClass: 'text-[var(--dash-success)]' },
+  commission_receipt: { icon: Award, colorClass: 'text-[var(--dash-success)]' },
+  expense: { icon: TrendingDown, colorClass: 'text-[var(--dash-danger)]' },
+  purchase: { icon: Receipt, colorClass: 'text-[var(--dash-fg)]' },
+  manual: { icon: FileText, colorClass: 'text-[var(--dash-fg-muted)]' },
+  supplier_payment: { icon: FileText, colorClass: 'text-[var(--dash-fg-muted)]' },
+};
 
 /**
  * Best-effort client merge of `accounts/ledger` (collections/purchases/expenses/…) and `orders`
@@ -35,9 +52,6 @@ interface RecentTransactionRow {
 export function RecentTransactions({ slug, businessId }: { slug: string; businessId: string }) {
   const t = useTranslations('dealership.dashboard.recentTransactions');
   const tLedgerType = useTranslations('dealership.accounts.ledger.types');
-  const tDeliveryStatus = useTranslations('dealership.sales.deliveryStatus');
-  const format = useFormat();
-  const nameOf = useNameOf();
   const canViewSales = useCan({ anyOf: ['sale.view.all', 'sale.view.own'] });
   const canViewLedger = useCan('ledger.view');
 
@@ -61,7 +75,6 @@ export function RecentTransactions({ slug, businessId }: { slug: string; busines
           .map((item) => ({
             type: item.type,
             reference: item.referenceId ?? item.id,
-            party: item.note ?? '—',
             date: item.entryDate,
             amount: item.amount,
           }));
@@ -73,20 +86,18 @@ export function RecentTransactions({ slug, businessId }: { slug: string; busines
           .map((item) => ({
             type: 'sale' as const,
             reference: item.code,
-            party: nameOf(item.customer),
             date: item.orderDate,
             amount: item.totalAmount,
-            status: item.deliveryStatus,
           }));
 
     return [...ledgerRows, ...orderRows].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  }, [ledger.data, ledgerForbidden, orders.data, ordersForbidden, nameOf]);
+  }, [ledger.data, ledgerForbidden, orders.data, ordersForbidden]);
 
   if (ledgerForbidden && ordersForbidden) return null;
 
   return (
-    <div className="flex h-full flex-col rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="flex flex-col rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3">
+      <div className="mb-2 flex items-center justify-between">
         <h2 className="text-base font-semibold text-[var(--dash-fg)]">{t('title')}</h2>
         <Link
           href={`/b/${encodeURIComponent(slug)}/sales`}
@@ -118,34 +129,30 @@ export function RecentTransactions({ slug, businessId }: { slug: string; busines
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--dash-border)] text-left text-xs text-[var(--dash-fg-muted)]">
-                <th className="pb-2 font-medium">{t('type')}</th>
-                <th className="pb-2 font-medium">{t('reference')}</th>
-                <th className="pb-2 font-medium">{t('party')}</th>
-                <th className="pb-2 font-medium">{t('date')}</th>
-                <th className="pb-2 text-right font-medium">{t('amount')}</th>
-                <th className="pb-2 text-right font-medium">{t('status')}</th>
+                <th className="pb-1.5 font-medium whitespace-nowrap">{t('type')}</th>
+                <th className="pb-1.5 text-right font-medium">{t('amount')}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => (
-                <tr
-                  key={`${row.type}-${row.reference}-${index}`}
-                  className="border-b border-[var(--dash-border)] last:border-0"
-                >
-                  <td className="py-2.5 text-[var(--dash-fg)]">
-                    {row.type === 'sale' ? t('saleType') : tLedgerType(row.type)}
-                  </td>
-                  <td className="py-2.5 font-medium text-[var(--dash-fg)]">{row.reference}</td>
-                  <td className="py-2.5 text-[var(--dash-fg-muted)]">{row.party}</td>
-                  <td className="py-2.5 text-[var(--dash-fg-muted)]">{format.date(row.date)}</td>
-                  <td className="py-2.5 text-right text-[var(--dash-fg)]">
-                    {row.amount !== undefined ? <Money value={row.amount} /> : '—'}
-                  </td>
-                  <td className="py-2.5 text-right text-[var(--dash-fg-muted)]">
-                    {row.status ? tDeliveryStatus(row.status) : '—'}
-                  </td>
-                </tr>
-              ))}
+              {rows.map((row, index) => {
+                const { icon: Icon, colorClass } = TYPE_STYLE[row.type];
+                return (
+                  <tr
+                    key={`${row.type}-${row.reference}-${index}`}
+                    className="border-b border-[var(--dash-border)] last:border-0"
+                  >
+                    <td className="py-1.5 whitespace-nowrap">
+                      <span className={`flex items-center gap-1.5 ${colorClass}`}>
+                        <Icon aria-hidden className="size-3.5 shrink-0" />
+                        {row.type === 'sale' ? t('saleType') : tLedgerType(row.type)}
+                      </span>
+                    </td>
+                    <td className="py-1.5 text-right text-[var(--dash-fg)]">
+                      {row.amount !== undefined ? <Money value={row.amount} /> : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

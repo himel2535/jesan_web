@@ -63,8 +63,8 @@ export function SalesDeliveryOverview({ slug, businessId }: { slug: string; busi
   ] as const;
 
   return (
-    <div className="flex h-full flex-col rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
-      <h2 className="mb-4 text-base font-semibold text-[var(--dash-fg)]">{t('title')}</h2>
+    <div className="flex flex-col rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3">
+      <h2 className="mb-2 text-base font-semibold text-[var(--dash-fg)]">{t('title')}</h2>
 
       {error && !isForbidden(error) ? (
         <LoadError
@@ -83,11 +83,17 @@ export function SalesDeliveryOverview({ slug, businessId }: { slug: string; busi
           ))}
         </div>
       ) : (
-        <dl className="flex flex-1 flex-col justify-between gap-2 text-sm">
+        <dl className="flex flex-col gap-2 text-sm">
           {stats.map((stat) => (
             <div key={stat.key} className="flex items-center justify-between">
               <dt className="text-[var(--dash-fg-muted)]">{t(stat.key)}</dt>
-              <dd className="font-medium text-[var(--dash-fg)] tabular-nums">
+              <dd
+                className={
+                  stat.key === 'todaysSoldBags'
+                    ? 'font-semibold text-[var(--dash-success)] tabular-nums'
+                    : 'font-medium text-[var(--dash-fg)] tabular-nums'
+                }
+              >
                 {stat.value !== undefined ? format.number(stat.value) : '—'}
               </dd>
             </div>

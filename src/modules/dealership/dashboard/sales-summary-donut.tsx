@@ -56,9 +56,19 @@ export function SalesSummaryDonut({ slug, businessId }: { slug: string; business
   const chartData = segments.map((s) => ({ ...s, value: Number(s.amount) }));
   const hasData = chartData.some((s) => s.value > 0);
 
+  const centerAmountText = format.money(segments[0]?.amount ?? '0');
+  // Fixed 160px donut with a 65% inner radius leaves ~65-70px of usable width inside the
+  // ring — long formatted amounts (e.g. "৳15,50,000.00") need a smaller font to stay inside it.
+  const centerAmountSizeClass =
+    centerAmountText.length > 13
+      ? 'text-[10px]'
+      : centerAmountText.length > 9
+        ? 'text-xs'
+        : 'text-sm';
+
   return (
-    <div className="flex h-full flex-col rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
-      <h2 className="mb-4 text-base font-semibold text-[var(--dash-fg)]">{t('title')}</h2>
+    <div className="flex flex-col rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3">
+      <h2 className="mb-2 text-base font-semibold text-[var(--dash-fg)]">{t('title')}</h2>
 
       {error && !isForbidden(error) ? (
         <LoadError
@@ -72,7 +82,7 @@ export function SalesSummaryDonut({ slug, businessId }: { slug: string; business
       ) : isPending ? (
         <div className="mx-auto h-40 w-40 animate-pulse rounded-full bg-[var(--dash-bg)]" />
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4">
+        <div className="flex flex-col items-center justify-center gap-2">
           <div className="relative size-40">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -97,9 +107,11 @@ export function SalesSummaryDonut({ slug, businessId }: { slug: string; business
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-base font-bold text-[var(--dash-fg)]">
-                {format.money(segments[0]?.amount ?? '0')}
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
+              <span
+                className={`${centerAmountSizeClass} truncate leading-tight font-bold text-[var(--dash-fg)]`}
+              >
+                {centerAmountText}
               </span>
               <span className="text-[10px] text-[var(--dash-fg-muted)]">{t('thisMonthSales')}</span>
             </div>

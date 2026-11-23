@@ -1323,11 +1323,11 @@
       },
       "stockOverview": {
         "title": "স্টক সারসংক্ষেপ",
-        "opc": "ওপিসি",
-        "pcc": "পিসিসি",
         "totalStock": "মোট স্টক",
+        "subtotalFor": "মোট ({unit})",
         "bags": "{count} {unit}",
-        "noCategories": "কোনো OPC/PCC শ্রেণি নির্ধারিত নেই।"
+        "viewAll": "সব দেখুন",
+        "noProducts": "কোনো সক্রিয় পণ্য নির্ধারিত নেই।"
       },
       "salesDelivery": {
         "title": "বিক্রয় ও ডেলিভারি সারসংক্ষেপ",
@@ -1340,11 +1340,7 @@
         "title": "সাম্প্রতিক লেনদেন",
         "viewAll": "সব দেখুন",
         "type": "ধরন",
-        "reference": "রেফারেন্স",
-        "party": "পক্ষ",
-        "date": "তারিখ",
         "amount": "পরিমাণ",
-        "status": "অবস্থা",
         "saleType": "বিক্রয়",
         "empty": "কোনো সাম্প্রতিক লেনদেন নেই।"
       },
@@ -1355,6 +1351,7 @@
         "remaining": "বাকি",
         "qty": "{value} {unit}",
         "achievementPct": "{pct}% অর্জিত",
+        "targetExceeded": "লক্ষ্যমাত্রা অতিক্রান্ত",
         "estimatedCommission": "আনুমানিক কমিশন",
         "notConfigured": "লক্ষ্যমাত্রা নির্ধারিত নেই"
       }
