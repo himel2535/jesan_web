@@ -1286,6 +1286,28 @@
         "total": "সর্বমোট",
         "today": "আজকের",
         "thisMonth": "এই মাসের"
+      },
+      "kpi": {
+        "cashBalance": "নগদ ব্যালেন্স",
+        "closingBalance": "শেষের ব্যালেন্স",
+        "net": "নেট",
+        "totalIncome": "মোট আয়",
+        "totalExpense": "মোট খরচ",
+        "totalDue": "মোট পাওনা",
+        "totalAdvance": "মোট অগ্রিম",
+        "totalSales": "মোট বিক্রয়",
+        "totalOrders": "মোট অর্ডার",
+        "totalDeliveries": "মোট ডেলিভারি",
+        "totalPurchase": "মোট ক্রয়",
+        "totalCustomers": "মোট ক্রেতা",
+        "totalStock": "মোট স্টক",
+        "totalCommission": "মোট কমিশন",
+        "totalPartialExpenses": "মোট আংশিক খরচ",
+        "thisMonthCollection": "এই মাসের আদায়",
+        "thisMonthSales": "এই মাসের বিক্রয়",
+        "thisMonthPurchase": "এই মাসের ক্রয়",
+        "thisMonthCommission": "এই মাসের কমিশন",
+        "totalProduct": "মোট পণ্য"
       }
     }
   },
