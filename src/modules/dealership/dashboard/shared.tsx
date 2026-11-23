@@ -67,7 +67,7 @@ export function commissionProgress(
   const targetQty = Number(scheme.targetQty);
   const rateBase = Number(scheme.rateBase);
   const bonusRate = Number(scheme.bonusRate);
-  const achievementPct = targetQty > 0 ? Math.min(100, (achievedQty / targetQty) * 100) : 0;
+  const achievementPct = targetQty > 0 ? (achievedQty / targetQty) * 100 : 0;
   const remainingQty = Math.max(targetQty - achievedQty, 0);
   const baseAmount = achievedQty * rateBase;
   const bonusAmount = Math.max(0, achievedQty - targetQty) * bonusRate;
@@ -87,4 +87,14 @@ export function achievedQtyForMonth(
 ): number {
   const row = months?.find((m) => m.month === month);
   return row ? Number(row.quantity) : 0;
+}
+
+/**
+ * Formats a real (never capped) achievement percentage for display: one decimal place when the
+ * true value is a nonzero fraction below 1% (so e.g. 0.275% reads as "0.3%" instead of a
+ * misleading "0%"), otherwise a whole number — including values over 100%, shown as-is (see
+ * DECISIONS.md "Commission Target Progress").
+ */
+export function formatAchievementPct(pct: number): string {
+  return pct > 0 && pct < 1 ? pct.toFixed(1) : pct.toFixed(0);
 }

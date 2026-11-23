@@ -19,10 +19,10 @@ import { RecentTransactions } from './recent-transactions';
  */
 export function DashboardView({ slug, businessId }: { slug: string; businessId: string }) {
   return (
-    <div className="dash-scope space-y-6">
+    <div className="dash-scope space-y-3">
       <KPICardsSection slug={slug} businessId={businessId} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 items-start gap-2 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <RevenueOverview slug={slug} businessId={businessId} />
         </div>
@@ -34,7 +34,7 @@ export function DashboardView({ slug, businessId }: { slug: string; businessId: 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <TargetCommissionPanel slug={slug} businessId={businessId} />
         <StockOverview slug={slug} businessId={businessId} />
         <SalesDeliveryOverview slug={slug} businessId={businessId} />
