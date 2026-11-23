@@ -202,3 +202,30 @@ export function useSupplier(slug: string, businessId: string, id: string) {
       apiFetch<Supplier>(`${base(slug)}/suppliers/${encodeURIComponent(id)}`, { signal }),
   });
 }
+
+// ---- Dashboard Count Helpers ----
+
+/** Dashboard KPI: total customer count. */
+export function useCustomerCount(slug: string, businessId: string) {
+  return useQuery({
+    queryKey: dealershipKeys.list(businessId, 'customersCount', {}),
+    queryFn: ({ signal }) =>
+      apiFetch<Page<Customer>>(`${base(slug)}/customers`, {
+        query: { page: 1 },
+        signal,
+      }).then((data) => ({ count: data.total })),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Dashboard KPI: total product count. */
+export function useProductCount(slug: string, businessId: string) {
+  return useQuery({
+    queryKey: dealershipKeys.list(businessId, 'productsCount', {}),
+    queryFn: ({ signal }) =>
+      apiFetch<Page<Product>>(`${base(slug)}/products`, { query: { page: 1 }, signal }).then(
+        (data) => ({ count: data.total }),
+      ),
+    staleTime: 5 * 60_000,
+  });
+}
