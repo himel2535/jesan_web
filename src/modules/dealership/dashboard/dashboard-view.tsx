@@ -6,8 +6,8 @@ import { TopCustomers } from './top-customers';
 import { SalesSummaryDonut } from './sales-summary-donut';
 
 /**
- * The dealership dashboard: 32 horizontal KPI cards (cash, accounts, sales, purchases,
- * collections, partial expenses, commission — proposal reference design), followed by one row
+ * The dealership dashboard: 7 primary KPI cards (Total Sales, Total Purchase, Total Collection,
+ * Customer Due, Cash & Bank, Commission, Net Profit — reference design), followed by one row
  * of Revenue Overview, Top 5 Customers, and a Sales Summary donut.
  * `.dash-scope` (src/core/theme/tokens.css) scopes this page's own color tokens so no
  * other page's colors change.

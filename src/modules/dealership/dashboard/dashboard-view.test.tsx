@@ -53,7 +53,7 @@ const dashboardRoutes = () =>
   ]);
 
 describe('<DashboardView>', () => {
-  it('shows KPI cards with cash metrics when cashbook.view is granted', async () => {
+  it('shows the Cash & Bank KPI card when cashbook.view is granted', async () => {
     mockApi({
       [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
       ...dashboardRoutes(),
@@ -62,14 +62,13 @@ describe('<DashboardView>', () => {
       <DashboardView slug="example-cement" businessId={BID} />,
       { me: meWith(['cashbook.view', 'report.view']) },
     );
-    expect(await screen.findByText('৳12,000.00')).toBeInTheDocument(); // cash balance from daily summary
-    expect(screen.getByText('৳18,500.00')).toBeInTheDocument(); // closing balance
-    expect(screen.getByText('Cash Balance')).toBeInTheDocument(); // KPI card label
+    expect(await screen.findByText('৳18,500.00')).toBeInTheDocument(); // closing balance
+    expect(screen.getByText('Cash & Bank')).toBeInTheDocument(); // KPI card label
 
     await expectNoA11yViolations(container);
   });
 
-  it('hides cash KPI cards when cashbook.view is not granted', async () => {
+  it('hides the Cash & Bank KPI card when cashbook.view is not granted', async () => {
     mockApi({
       [`GET ${B}/reports/daily-summary`]: () =>
         json(200, dailySummaryResponse({ cash: undefined })),
@@ -78,8 +77,8 @@ describe('<DashboardView>', () => {
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
       me: meWith(['report.view']),
     });
-    await screen.findByText("This Month's Sales"); // KPI card renders
-    expect(screen.queryByText('Cash Balance')).not.toBeInTheDocument();
+    await screen.findByText('Total Sales'); // KPI card renders
+    expect(screen.queryByText('Cash & Bank')).not.toBeInTheDocument();
   });
 
   it('shows KPI cards and chart panels for all accessible metrics', async () => {
@@ -91,8 +90,12 @@ describe('<DashboardView>', () => {
       me: meWith(OWNER_PERMISSIONS),
     });
     expect(await screen.findByText('Total Sales')).toBeInTheDocument();
-    expect(screen.getByText('Total Due')).toBeInTheDocument();
-    expect(screen.getByText('Total Advance')).toBeInTheDocument();
+    expect(screen.getByText('Total Purchase')).toBeInTheDocument();
+    expect(screen.getByText('Total Collection')).toBeInTheDocument();
+    expect(screen.getByText('Customer Due')).toBeInTheDocument();
+    expect(await screen.findByText('Cash & Bank')).toBeInTheDocument();
+    expect(screen.getByText('Commission')).toBeInTheDocument();
+    expect(screen.getByText('Net Profit')).toBeInTheDocument();
     expect(screen.getByText('Revenue Overview')).toBeInTheDocument();
     expect(screen.getByText('Top 5 Customers')).toBeInTheDocument();
     expect(screen.getByText('Sales Summary')).toBeInTheDocument();
