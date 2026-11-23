@@ -14,12 +14,13 @@ const meWith = (permissions: string[]): Me => ({
   businesses: [business({ permissions })],
 });
 
-/** Mock endpoints that the KPI dashboard section needs. */
+/** Mock endpoints every dashboard panel (KPI cards, Revenue Overview, Top 5, Sales Summary) needs. */
 const dashboardRoutes = () =>
   Object.fromEntries([
     [
       `GET ${B}/accounts/summary`,
-      () => json(200, { totalDue: '0', totalAdvance: '0', totalIn: '0', totalOut: '0', net: '0' }),
+      () =>
+        json(200, { totalDue: '500', totalAdvance: '9300', totalIn: '0', totalOut: '0', net: '0' }),
     ],
     [
       `GET ${B}/reports/sales`,
@@ -27,24 +28,24 @@ const dashboardRoutes = () =>
         json(200, {
           totalAmount: '36000',
           totalQuantity: '0',
-          rows: [],
+          items: [],
           page: 1,
           pageSize: 10,
           total: 0,
         }),
     ],
-    [`GET ${B}/orders`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
-    [`GET ${B}/deliveries`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
     [
       `GET ${B}/reports/collections`,
-      () => json(200, { totalAmount: '0', rows: [], page: 1, pageSize: 10, total: 0 }),
+      () => json(200, { totalAmount: '0', items: [], page: 1, pageSize: 10, total: 0 }),
     ],
     [
       `GET ${B}/reports/expenses`,
-      () => json(200, { totalAmount: '0', rows: [], page: 1, pageSize: 10, total: 0 }),
+      () => json(200, { totalAmount: '0', items: [], page: 1, pageSize: 10, total: 0 }),
     ],
-    [`GET ${B}/purchases/summary`, () => json(200, { totalAmount: '0', totalQuantity: '0' })],
-    [`GET ${B}/stock`, () => json(200, { items: [], page: 1, pageSize: 10, total: 0 })],
+    [
+      `GET ${B}/purchases/summary`,
+      () => json(200, { totalAmount: '0', totalQuantity: '0', count: 0 }),
+    ],
     [
       `GET ${B}/commission-summary`,
       () => json(200, { totalCalculated: '0', totalReceived: '0', totalPending: '0' }),
@@ -77,11 +78,11 @@ describe('<DashboardView>', () => {
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, {
       me: meWith(['report.view']),
     });
-    await screen.findByText('Total Sales'); // KPI card renders
+    await screen.findByText("This Month's Sales"); // KPI card renders
     expect(screen.queryByText('Cash Balance')).not.toBeInTheDocument();
   });
 
-  it('shows KPI cards for all accessible metrics', async () => {
+  it('shows KPI cards and chart panels for all accessible metrics', async () => {
     mockApi({
       [`GET ${B}/reports/daily-summary`]: () => json(200, dailySummaryResponse()),
       ...dashboardRoutes(),
@@ -90,7 +91,10 @@ describe('<DashboardView>', () => {
       me: meWith(OWNER_PERMISSIONS),
     });
     expect(await screen.findByText('Total Sales')).toBeInTheDocument();
-    expect(screen.getByText('Total Orders')).toBeInTheDocument();
-    expect(screen.getByText('Total Deliveries')).toBeInTheDocument();
+    expect(screen.getByText('Total Due')).toBeInTheDocument();
+    expect(screen.getByText('Total Advance')).toBeInTheDocument();
+    expect(screen.getByText('Revenue Overview')).toBeInTheDocument();
+    expect(screen.getByText('Top 5 Customers')).toBeInTheDocument();
+    expect(screen.getByText('Sales Summary')).toBeInTheDocument();
   });
 });

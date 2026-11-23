@@ -67,3 +67,127 @@
     --shadow-glass-value: 0 8px 32px rgb(0 0 0 / 0.45);
   }
 }
+
+/*
+ * Dashboard-only tokens (Akij Cement dashboard reference design). Scoped to `.dash-scope`
+ * (wrapping only the dashboard page), never `:root`, so no other page's colors change.
+ * Light values are the reference's exact hex. Dark values aren't in the reference (it's a
+ * light-mode design): each hue's dark variant reuses the app's existing dark accent shades
+ * where one already matches (blue/green = --focus/--success dark) and otherwise a parallel
+ * dark tint (see DECISIONS.md, "Dashboard KPI card colors"). Icon glyph is white on every
+ * badge except orange, whose #F59E0B is too light for white at 3:1 (non-text contrast);
+ * dark navy (--dash-fg) is used there instead — verified via the same formula as
+ * contrast.test.ts, not covered by that test since it only parses :root/[data-theme].
+ */
+.dash-scope {
+  --dash-bg: #f5f7ff;
+  --dash-surface: #ffffff;
+  --dash-fg: #101b46;
+  --dash-fg-muted: #53617f;
+  --dash-border: #e6eaf4;
+  --dash-primary: #2675f5;
+  --dash-success: #16a34a;
+  --dash-danger: #ef4444;
+  --dash-icon-fg: #ffffff;
+  --dash-icon-fg-on-orange: #101b46;
+
+  --dash-blue-card-bg: #f0f6ff;
+  --dash-blue-card-border: #c9dcff;
+  --dash-blue-icon-bg: #2675f5;
+
+  --dash-green-card-bg: #effbf4;
+  --dash-green-card-border: #c9f0d9;
+  --dash-green-icon-bg: #16a34a;
+
+  --dash-purple-card-bg: #f5f0ff;
+  --dash-purple-card-border: #ddd0ff;
+  --dash-purple-icon-bg: #8b5cf6;
+
+  --dash-orange-card-bg: #fff5ea;
+  --dash-orange-card-border: #ffe0c2;
+  --dash-orange-icon-bg: #f59e0b;
+
+  --dash-pink-card-bg: #fff0f3;
+  --dash-pink-card-border: #ffd4df;
+  --dash-pink-icon-bg: #f43f5e;
+
+  --dash-aqua-card-bg: #ecfbfa;
+  --dash-aqua-card-border: #bfefeb;
+  --dash-aqua-icon-bg: #0d9488;
+}
+
+[data-theme='dark'] .dash-scope {
+  --dash-bg: #0b1220;
+  --dash-surface: #121a2c;
+  --dash-fg: #e8ecf7;
+  --dash-fg-muted: #9aa7c7;
+  --dash-border: #26314a;
+  --dash-primary: #60a5fa;
+  --dash-success: #4ade80;
+  --dash-danger: #f87171;
+  --dash-icon-fg: #ffffff;
+  --dash-icon-fg-on-orange: #101b46;
+
+  --dash-blue-card-bg: #152238;
+  --dash-blue-card-border: #28406b;
+  --dash-blue-icon-bg: #2675f5;
+
+  --dash-green-card-bg: #122a1d;
+  --dash-green-card-border: #1f4a30;
+  --dash-green-icon-bg: #16a34a;
+
+  --dash-purple-card-bg: #241a3d;
+  --dash-purple-card-border: #3b2a63;
+  --dash-purple-icon-bg: #8b5cf6;
+
+  --dash-orange-card-bg: #2e2210;
+  --dash-orange-card-border: #4d3a16;
+  --dash-orange-icon-bg: #f59e0b;
+
+  --dash-pink-card-bg: #2e1620;
+  --dash-pink-card-border: #4d2435;
+  --dash-pink-icon-bg: #f43f5e;
+
+  --dash-aqua-card-bg: #0f2b29;
+  --dash-aqua-card-border: #1c4b47;
+  --dash-aqua-icon-bg: #0d9488;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] .dash-scope {
+    --dash-bg: #0b1220;
+    --dash-surface: #121a2c;
+    --dash-fg: #e8ecf7;
+    --dash-fg-muted: #9aa7c7;
+    --dash-border: #26314a;
+    --dash-primary: #60a5fa;
+    --dash-success: #4ade80;
+    --dash-danger: #f87171;
+    --dash-icon-fg: #ffffff;
+    --dash-icon-fg-on-orange: #101b46;
+
+    --dash-blue-card-bg: #152238;
+    --dash-blue-card-border: #28406b;
+    --dash-blue-icon-bg: #2675f5;
+
+    --dash-green-card-bg: #122a1d;
+    --dash-green-card-border: #1f4a30;
+    --dash-green-icon-bg: #16a34a;
+
+    --dash-purple-card-bg: #241a3d;
+    --dash-purple-card-border: #3b2a63;
+    --dash-purple-icon-bg: #8b5cf6;
+
+    --dash-orange-card-bg: #2e2210;
+    --dash-orange-card-border: #4d3a16;
+    --dash-orange-icon-bg: #f59e0b;
+
+    --dash-pink-card-bg: #2e1620;
+    --dash-pink-card-border: #4d2435;
+    --dash-pink-icon-bg: #f43f5e;
+
+    --dash-aqua-card-bg: #0f2b29;
+    --dash-aqua-card-border: #1c4b47;
+    --dash-aqua-icon-bg: #0d9488;
+  }
+}

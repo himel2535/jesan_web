@@ -100,7 +100,12 @@ export function useVoidPurchase(slug: string, businessId: string) {
   });
 }
 
-function purchaseTotalsQuery(slug: string, businessId: string, filters: PurchaseTotalsFilters) {
+/** Exported so a one-off range (e.g. the dashboard's "previous month" trend) can reuse it. */
+export function purchaseTotalsQuery(
+  slug: string,
+  businessId: string,
+  filters: PurchaseTotalsFilters,
+) {
   const query = { from: filters.from, to: filters.to };
   return {
     queryKey: dealershipKeys.list(businessId, 'purchasesSummary', query),

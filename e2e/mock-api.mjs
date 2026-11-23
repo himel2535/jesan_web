@@ -2146,8 +2146,15 @@ http
           quantity: qtyString(b.quantity),
           amount: fixed(b.amount),
         }));
+        const sortByQuantity = groupBy === 'customer' && f.sort === 'quantity';
         groups.sort((a, b) =>
-          groupBy === 'date' ? (a.key < b.key ? 1 : -1) : Number(b.amount) - Number(a.amount),
+          groupBy === 'date'
+            ? a.key < b.key
+              ? 1
+              : -1
+            : sortByQuantity
+              ? Number(b.quantity) - Number(a.quantity)
+              : Number(b.amount) - Number(a.amount),
         );
         const pg = pageOf(groups, page);
         return send(res, 200, {

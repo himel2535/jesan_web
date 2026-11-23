@@ -31,7 +31,7 @@ function clean<T extends { page: number }>(filters: T, keys: readonly (keyof T)[
   return out;
 }
 
-const SALES_FILTER_KEYS = ['groupBy', 'from', 'to'] as const;
+const SALES_FILTER_KEYS = ['groupBy', 'from', 'to', 'sort'] as const;
 
 /** Query options for a sales report window; shared by `useSalesReport` and KPI-card `useQueries` groups. */
 export function salesReportQuery(slug: string, businessId: string, filters: SalesReportFilters) {

@@ -1952,7 +1952,7 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 | Route | `groupBy` | উত্তরের মূল ঘর |
 |---|---|---|
-| `GET reports/sales?groupBy=&from=&to=&page=` | `date` (ডিফল্ট) \| `customer` \| `product` \| `category` | `items[].{key,label,quantity,amount}`, `totalQuantity`, `totalAmount` |
+| `GET reports/sales?groupBy=&from=&to=&page=&sort=` | `date` (ডিফল্ট) \| `customer` \| `product` \| `category` | `items[].{key,label,quantity,amount}`, `totalQuantity`, `totalAmount` |
 | `GET reports/collections?groupBy=&from=&to=&page=` | `date` (ডিফল্ট) \| `method` | `items[].{key,count,amount}`, `totalAmount` |
 | `GET reports/dues?page=` | — | `items[].{code,currentBalance,dueAmount,advanceAmount,aging}`, `totalDue`, `totalAdvance` |
 | `GET reports/stock?page=` | — | `items[].{code,currentStock,unitKey}` |
@@ -1961,6 +1961,8 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 | `GET reports/daily-summary?date=` | — | `orders`, `deliveries`, `collections`, `expenses` (সবই `{count,amount}`), `cash` |
 
 **বিক্রয় রিপোর্ট** (`sales`): active ডেলিভারির পরিমাণ ও মূল্য, তারিখ/গ্রাহক/পণ্য/ক্যাটাগরি ধরে। `product`/`category`-তে পাতাভাগ মেমরিতে (গ্রুপের সংখ্যা সবসময় পণ্য/ক্যাটাগরির সংখ্যার মধ্যে)।
+
+**`sort`** শুধু `groupBy=customer`-এর জন্য (অন্য `groupBy`-তে উপেক্ষিত): `amount` (ডিফল্ট, আগের মতোই — ডেলিভারির মোট, সব এককসহ) অথবা `quantity` — "কোন গ্রাহক সবচেয়ে বেশি বস্তা কিনেছে" জাতীয় তালিকার জন্য। `sort=quantity`-তে `items[].quantity`/`amount` শুধু ব্যবসার নিজের ডিফল্ট এককের (`GET product-units`-এর `defaultUnitKey`, Akij-এ `bag`) লাইন-আইটেম থেকে, যাতে ভিন্ন একক একসাথে যোগ না হয়; `totalQuantity`/`totalAmount`-ও তখন সেই ফিল্টার করা যোগফল (সব `groupBy`/`sort`-এই `status: active` বাদে বাতিল ডেলিভারি/লাইন কখনো গোনা হয় না)।
 
 **বাকির তালিকা** (`dues`): active গ্রাহক, যার ব্যালেন্স শূন্য নয়, নামের ক্রমে। `dueAmount` ও `advanceAmount` আলাদা (একটা সময় একটাই শূন্য-বহির্ভূত)। `aging` (`d0To7`, `d8To30`, `d30Plus`): আদায় কোনো ডেলিভারিতে বরাদ্দ হয় না, তাই FIFO হিসাব — শুরুর বাকি সবচেয়ে পুরনো ধরে, গ্রাহকের খাতা পুরনো থেকে নতুন মিলিয়ে; তিন bucket-এর যোগ সবসময় `dueAmount`।
 
