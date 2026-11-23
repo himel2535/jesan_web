@@ -24,18 +24,18 @@ export default async function BusinessDashboardPage({
     lookup.business.type === dealershipManifest.type &&
     can(lookup.business.permissions, 'report.view');
 
+  if (canSeeReports) {
+    return <DashboardView slug={slug} businessId={lookup.business.id} />;
+  }
+
   return (
     <>
       <PageHeader title={lookup.name} />
-      {canSeeReports ? (
-        <DashboardView slug={slug} businessId={lookup.business.id} />
-      ) : (
-        <EmptyState
-          icon={LayoutDashboard}
-          title={t('comingSoonTitle')}
-          description={t('dashboardDescription')}
-        />
-      )}
+      <EmptyState
+        icon={LayoutDashboard}
+        title={t('comingSoonTitle')}
+        description={t('dashboardDescription')}
+      />
     </>
   );
 }
