@@ -1,56 +1,30 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+import { ApiError } from '@/core/api/errors';
 import { useExpensesSummary } from '../../expenses/api';
 import { useExpenseSummaryRanges } from '../../expenses/shared';
-import { useDailySummary } from '../../reports/api';
-import { CardBlock } from '../cards/card-block';
-import { KPICard } from '../cards/kpi-card';
-import { CardBlockSkeleton } from '../cards/skeletons';
+import { ExpensesSummaryCards } from '../../expenses/summary-cards';
 
-interface ExpensesSectionProps {
-  slug: string;
-  businessId: string;
+function isForbidden(error: unknown) {
+  return error instanceof ApiError && error.status === 403;
 }
 
-export function ExpensesSection({ slug, businessId }: ExpensesSectionProps) {
+/**
+ * The Expenses page's own `ExpensesSummaryCards`, unchanged (`report.view`). Checks the same
+ * cached query here too so the section heading hides along with the cards on a 403.
+ */
+export function ExpensesSection({ slug, businessId }: { slug: string; businessId: string }) {
+  const t = useTranslations('dealership');
   const ranges = useExpenseSummaryRanges();
-  const { total, today, thisMonth, previousMonth } = useExpensesSummary(slug, businessId, ranges);
-  const dailySummary = useDailySummary(slug, businessId);
+  const { total } = useExpensesSummary(slug, businessId, ranges);
 
-  if (total.isLoading) {
-    return <CardBlockSkeleton title="Expenses" count={4} />;
-  }
+  if (isForbidden(total.error)) return null;
 
   return (
-    <CardBlock title="Expenses">
-      <KPICard
-        label="Total Expenses"
-        value={total.data?.sum}
-        isMoney
-        tone="negative"
-        isLoading={total.isLoading}
-      />
-      <KPICard
-        label="Today's Expenses"
-        value={dailySummary.data?.expenseAmount}
-        isMoney
-        tone="negative"
-        isLoading={dailySummary.isLoading}
-      />
-      <KPICard
-        label="This Month's Expenses"
-        value={thisMonth.data?.sum}
-        isMoney
-        tone="negative"
-        isLoading={thisMonth.isLoading}
-      />
-      <KPICard
-        label="Previous Month's Expenses"
-        value={previousMonth.data?.sum}
-        isMoney
-        tone="negative"
-        isLoading={previousMonth.isLoading}
-      />
-    </CardBlock>
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold text-fg">{t('nav.expenses')}</h2>
+      <ExpensesSummaryCards slug={slug} businessId={businessId} ranges={ranges} />
+    </section>
   );
 }

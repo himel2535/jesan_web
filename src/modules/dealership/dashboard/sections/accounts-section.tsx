@@ -1,205 +1,104 @@
 'use client';
 
-import { useCan } from '@/core/auth/useCan';
+import { useTranslations } from 'next-intl';
+import { ApiError } from '@/core/api/errors';
+import { isNegativeMoney } from '@/core/lib/money';
+import { cn } from '@/core/ui/cn';
 import { useAccountsSummaryRanges } from '../../accounts/api';
-import { useDashboardSummaryRanges } from '../shared';
-import { CardBlock } from '../cards/card-block';
-import { KPICard } from '../cards/kpi-card';
-import { CardBlockSkeleton } from '../cards/skeletons';
+import { useAccountsDashboardRanges } from '../../accounts/shared';
+import { Money } from '../../master-data/shared/display';
+import { LoadError } from '../../master-data/shared/states';
 
-interface AccountsSectionProps {
-  slug: string;
-  businessId: string;
+function isForbidden(error: unknown) {
+  return error instanceof ApiError && error.status === 403;
 }
 
-export function AccountsSection({ slug, businessId }: AccountsSectionProps) {
-  const ranges = useDashboardSummaryRanges();
-  const [allQuery, todayQuery, thisMonthQuery] = useAccountsSummaryRanges(slug, businessId, ranges);
-  const canViewProfit = useCan('profit.view');
+function Skeleton() {
+  return (
+    <div className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-3">
+      {Array.from({ length: 3 }, (_, i) => (
+        <div key={i} className="space-y-2">
+          <div className="h-4 w-20 animate-pulse rounded bg-surface-muted" />
+          <div className="h-6 w-28 animate-pulse rounded bg-surface-muted" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  if (allQuery.isLoading) {
-    return <CardBlockSkeleton title="Accounts" count={7} />;
-  }
+/**
+ * Three accounts KPI windows (`ledger.view`, same `accounts/summary` endpoint as the Accounts
+ * page). `totalDue`/`totalAdvance` are date-range independent, so shown once underneath rather
+ * than once per window.
+ */
+export function AccountsSection({ slug, businessId }: { slug: string; businessId: string }) {
+  const t = useTranslations('dealership');
+  const ranges = useAccountsDashboardRanges();
+  const { total, today, thisMonth } = useAccountsSummaryRanges(slug, businessId, ranges);
+  const queries = [total, today, thisMonth];
+  const firstError = queries.find((q) => q.error)?.error;
 
-  if (allQuery.isError || !allQuery.data) {
-    return null;
-  }
+  if (isForbidden(firstError)) return null;
 
   return (
-    <CardBlock title="Accounts" columns={7}>
-      {/* Row 1: Total values */}
-      <KPICard
-        label="Total In"
-        value={allQuery.data?.totalIn}
-        isMoney
-        tone="positive"
-        isLoading={allQuery.isLoading}
-      />
-      <KPICard
-        label="Total Out"
-        value={allQuery.data?.totalOut}
-        isMoney
-        tone="negative"
-        isLoading={allQuery.isLoading}
-      />
-      <KPICard
-        label="Net"
-        value={
-          canViewProfit && allQuery.data?.net
-            ? allQuery.data.net
-            : allQuery.data
-              ? String(parseFloat(allQuery.data.totalIn || '0') - parseFloat(allQuery.data.totalOut || '0'))
-              : undefined
-        }
-        isMoney
-        tone={
-          allQuery.data && parseFloat(allQuery.data.totalIn || '0') - parseFloat(allQuery.data.totalOut || '0') >= 0
-            ? 'positive'
-            : 'negative'
-        }
-        isLoading={allQuery.isLoading}
-      />
-      <KPICard
-        label="Total Due"
-        value={allQuery.data?.totalDue}
-        isMoney
-        isLoading={allQuery.isLoading}
-      />
-      <KPICard
-        label="Total Advance"
-        value={allQuery.data?.totalAdvance}
-        isMoney
-        isLoading={allQuery.isLoading}
-      />
-      <KPICard
-        label="Total Expense"
-        value={allQuery.data?.totalExpense}
-        isMoney
-        isLoading={allQuery.isLoading}
-      />
-      <KPICard
-        label="Total Income"
-        value={allQuery.data?.totalIncome}
-        isMoney
-        isLoading={allQuery.isLoading}
-      />
-
-      {/* Row 2: Today's values */}
-      <KPICard
-        label="Today's In"
-        value={todayQuery.data?.totalIn}
-        isMoney
-        tone="positive"
-        isLoading={todayQuery.isLoading}
-      />
-      <KPICard
-        label="Today's Out"
-        value={todayQuery.data?.totalOut}
-        isMoney
-        tone="negative"
-        isLoading={todayQuery.isLoading}
-      />
-      <KPICard
-        label="Today's Net"
-        value={
-          canViewProfit && todayQuery.data?.net
-            ? todayQuery.data.net
-            : todayQuery.data
-              ? String(parseFloat(todayQuery.data.totalIn || '0') - parseFloat(todayQuery.data.totalOut || '0'))
-              : undefined
-        }
-        isMoney
-        tone={
-          todayQuery.data && parseFloat(todayQuery.data.totalIn || '0') - parseFloat(todayQuery.data.totalOut || '0') >= 0
-            ? 'positive'
-            : 'negative'
-        }
-        isLoading={todayQuery.isLoading}
-      />
-      <KPICard
-        label="Today's Due"
-        value={todayQuery.data?.totalDue}
-        isMoney
-        isLoading={todayQuery.isLoading}
-      />
-      <KPICard
-        label="Today's Advance"
-        value={todayQuery.data?.totalAdvance}
-        isMoney
-        isLoading={todayQuery.isLoading}
-      />
-      <KPICard
-        label="Today's Expense"
-        value={todayQuery.data?.totalExpense}
-        isMoney
-        isLoading={todayQuery.isLoading}
-      />
-      <KPICard
-        label="Today's Income"
-        value={todayQuery.data?.totalIncome}
-        isMoney
-        isLoading={todayQuery.isLoading}
-      />
-
-      {/* Row 3: This Month's values */}
-      <KPICard
-        label="This Month's In"
-        value={thisMonthQuery.data?.totalIn}
-        isMoney
-        tone="positive"
-        isLoading={thisMonthQuery.isLoading}
-      />
-      <KPICard
-        label="This Month's Out"
-        value={thisMonthQuery.data?.totalOut}
-        isMoney
-        tone="negative"
-        isLoading={thisMonthQuery.isLoading}
-      />
-      <KPICard
-        label="This Month's Net"
-        value={
-          canViewProfit && thisMonthQuery.data?.net
-            ? thisMonthQuery.data.net
-            : thisMonthQuery.data
-              ? String(
-                  parseFloat(thisMonthQuery.data.totalIn || '0') - parseFloat(thisMonthQuery.data.totalOut || '0'),
-                )
-              : undefined
-        }
-        isMoney
-        tone={
-          thisMonthQuery.data &&
-          parseFloat(thisMonthQuery.data.totalIn || '0') - parseFloat(thisMonthQuery.data.totalOut || '0') >= 0
-            ? 'positive'
-            : 'negative'
-        }
-        isLoading={thisMonthQuery.isLoading}
-      />
-      <KPICard
-        label="This Month's Due"
-        value={thisMonthQuery.data?.totalDue}
-        isMoney
-        isLoading={thisMonthQuery.isLoading}
-      />
-      <KPICard
-        label="This Month's Advance"
-        value={thisMonthQuery.data?.totalAdvance}
-        isMoney
-        isLoading={thisMonthQuery.isLoading}
-      />
-      <KPICard
-        label="This Month's Expense"
-        value={thisMonthQuery.data?.totalExpense}
-        isMoney
-        isLoading={thisMonthQuery.isLoading}
-      />
-      <KPICard
-        label="This Month's Income"
-        value={thisMonthQuery.data?.totalIncome}
-        isMoney
-        isLoading={thisMonthQuery.isLoading}
-      />
-    </CardBlock>
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold text-fg">{t('nav.accounts')}</h2>
+      {queries.some((q) => q.isPending) ? (
+        <Skeleton />
+      ) : firstError ? (
+        <LoadError error={firstError} onRetry={() => queries.forEach((q) => void q.refetch())} />
+      ) : total.data && today.data && thisMonth.data ? (
+        <div className="space-y-3">
+          <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-3">
+            {[
+              { label: t('dashboard.periods.total'), data: total.data },
+              { label: t('dashboard.periods.today'), data: today.data },
+              { label: t('dashboard.periods.thisMonth'), data: thisMonth.data },
+            ].map(({ label, data }) => (
+              <div key={label} className="space-y-2">
+                <p className="text-sm font-medium text-fg">{label}</p>
+                <div>
+                  <dt className="text-sm text-fg-muted">{t('accounts.summary.totalIn')}</dt>
+                  <dd className="font-semibold text-success">
+                    <Money value={data.totalIn} />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-fg-muted">{t('accounts.summary.totalOut')}</dt>
+                  <dd className="font-semibold text-danger">
+                    <Money value={data.totalOut} />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-fg-muted">{t('accounts.summary.net')}</dt>
+                  <dd
+                    className={cn(
+                      'font-semibold',
+                      isNegativeMoney(data.net) ? 'text-danger' : 'text-success',
+                    )}
+                  >
+                    <Money value={data.net} />
+                  </dd>
+                </div>
+              </div>
+            ))}
+          </dl>
+          <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm text-fg-muted">{t('accounts.summary.totalDue')}</dt>
+              <dd className="font-semibold text-warning">
+                <Money value={total.data.totalDue} />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-fg-muted">{t('accounts.summary.totalAdvance')}</dt>
+              <dd className="font-semibold text-focus">
+                <Money value={total.data.totalAdvance} />
+              </dd>
+            </div>
+          </dl>
+        </div>
+      ) : null}
+    </section>
   );
 }

@@ -1,106 +1,67 @@
 'use client';
 
-import { useCan } from '@/core/auth/useCan';
-import {
-  useOrderCounts,
-  useDeliveryCounts,
-  useSalesSummaryAmounts,
-  usePendingDeliverySummary,
-} from '../../sales/api';
-import { useDailySummary } from '../../reports/api';
+import { useTranslations } from 'next-intl';
+import { ApiError } from '@/core/api/errors';
+import { useFormat } from '@/core/i18n/use-format';
+import { Money } from '../../master-data/shared/display';
+import { useOrders } from '../../sales/api';
+import { SalesSummaryCards, SalesSummaryCardsSkeleton } from '../../sales/summary-cards';
 import { useSalesSummaryRanges } from '../../sales/shared';
-import { CardBlock } from '../cards/card-block';
-import { KPICard } from '../cards/kpi-card';
-import { CardBlockSkeleton } from '../cards/skeletons';
+import type { DailySummaryResponse } from '../../reports/types';
 
-interface SalesSectionProps {
-  slug: string;
-  businessId: string;
+function isForbidden(error: unknown) {
+  return error instanceof ApiError && error.status === 403;
 }
 
-export function SalesSection({ slug, businessId }: SalesSectionProps) {
+/**
+ * Reuses the Sales page's own `SalesSummaryCards` (orders, deliveries, amounts across
+ * total/today/this-month) and adds two dashboard-only cards: today's delivery count (from the
+ * daily summary already fetched for the cash section) and open-order count (`sale.view.*`,
+ * `GET orders?status=open`, correct via `Page.total` regardless of page size). A pending-amount
+ * aggregate would need a new backend endpoint — noted in DECISIONS.md rather than guessed here.
+ */
+export function SalesSection({
+  slug,
+  businessId,
+  dailySummary,
+}: {
+  slug: string;
+  businessId: string;
+  dailySummary: DailySummaryResponse;
+}) {
+  const t = useTranslations('dealership');
+  const format = useFormat();
   const ranges = useSalesSummaryRanges();
-  const canViewAmounts = useCan('product.cost.view');
-
-  const orderCounts = useOrderCounts(slug, businessId, ranges);
-  const deliveryCounts = useDeliveryCounts(slug, businessId, ranges);
-  const salesAmounts = useSalesSummaryAmounts(slug, businessId, ranges);
-  const dailySummary = useDailySummary(slug, businessId);
-  const pending = usePendingDeliverySummary(slug, businessId);
-
-  if (orderCounts[0].isLoading) {
-    return <CardBlockSkeleton title="Sales" count={8} />;
-  }
+  const pendingOrders = useOrders(slug, businessId, { status: 'open', page: 1 });
 
   return (
-    <CardBlock title="Sales">
-      {/* Orders */}
-      <KPICard
-        label="Total Orders"
-        value={orderCounts[0].data?.total}
-        isLoading={orderCounts[0].isLoading}
-      />
-      <KPICard
-        label="This Month's Orders"
-        value={orderCounts[1].data?.total}
-        isLoading={orderCounts[1].isLoading}
-      />
-
-      {/* Deliveries */}
-      <KPICard
-        label="Total Deliveries"
-        value={deliveryCounts[0].data?.total}
-        isLoading={deliveryCounts[0].isLoading}
-      />
-      <KPICard
-        label="This Month's Deliveries"
-        value={deliveryCounts[1].data?.total}
-        isLoading={deliveryCounts[1].isLoading}
-      />
-      <KPICard
-        label="Today's Deliveries"
-        value={dailySummary.data?.deliveriesCount}
-        isLoading={dailySummary.isLoading}
-      />
-
-      {/* Sales Amounts (if permitted) */}
-      {canViewAmounts && (
-        <>
-          <KPICard
-            label="Total Sales Amount"
-            value={salesAmounts.total.data?.sum}
-            isMoney
-            isLoading={salesAmounts.total.isLoading}
-          />
-          <KPICard
-            label="This Month's Sales"
-            value={salesAmounts.thisMonth.data?.sum}
-            isMoney
-            isLoading={salesAmounts.thisMonth.isLoading}
-          />
-          <KPICard
-            label="Today's Sales"
-            value={dailySummary.data?.deliveredAmount}
-            isMoney
-            isLoading={dailySummary.isLoading}
-          />
-        </>
-      )}
-
-      {/* Pending Deliveries */}
-      <KPICard
-        label="Pending Deliveries"
-        value={pending.data?.count}
-        isLoading={pending.isLoading}
-      />
-      {canViewAmounts && (
-        <KPICard
-          label="Pending Amount"
-          value={pending.data?.amount}
-          isMoney
-          isLoading={pending.isLoading}
-        />
-      )}
-    </CardBlock>
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold text-fg">{t('nav.sales')}</h2>
+      <SalesSummaryCards slug={slug} businessId={businessId} ranges={ranges} />
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-4">
+        <div className="text-center">
+          <dt className="text-sm text-fg-muted">{t('sales.summary.todayDeliveries')}</dt>
+          <dd className="font-semibold">
+            {dailySummary.deliveries.count} &middot;{' '}
+            <Money value={dailySummary.deliveries.amount} />
+          </dd>
+        </div>
+        {isForbidden(pendingOrders.error) ? null : pendingOrders.isPending ? (
+          <div className="text-center">
+            <div className="mx-auto h-4 w-28 animate-pulse rounded bg-surface-muted" />
+            <div className="mx-auto mt-2 h-6 w-16 animate-pulse rounded bg-surface-muted" />
+          </div>
+        ) : pendingOrders.data ? (
+          <div className="text-center">
+            <dt className="text-sm text-fg-muted">{t('sales.summary.pendingOrders')}</dt>
+            <dd className="font-semibold">{format.number(pendingOrders.data.total)}</dd>
+          </div>
+        ) : null}
+      </dl>
+    </section>
   );
+}
+
+export function SalesSectionSkeleton() {
+  return <SalesSummaryCardsSkeleton />;
 }

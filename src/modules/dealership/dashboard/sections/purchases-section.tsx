@@ -1,62 +1,31 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+import { ApiError } from '@/core/api/errors';
 import { usePurchasesSummary } from '../../purchases/api';
 import { usePurchaseSummaryRanges } from '../../purchases/shared';
-import { CardBlock } from '../cards/card-block';
-import { KPICard } from '../cards/kpi-card';
-import { CardBlockSkeleton } from '../cards/skeletons';
+import { PurchasesSummaryCards } from '../../purchases/summary-cards';
 
-interface PurchasesSectionProps {
-  slug: string;
-  businessId: string;
+function isForbidden(error: unknown) {
+  return error instanceof ApiError && error.status === 403;
 }
 
-export function PurchasesSection({ slug, businessId }: PurchasesSectionProps) {
+/**
+ * The Purchases page's own `PurchasesSummaryCards`, unchanged (`purchase.view`). Checks the same
+ * cached query here too so the section heading hides along with the cards on a 403, instead of
+ * showing an empty-looking "Purchases" heading above nothing.
+ */
+export function PurchasesSection({ slug, businessId }: { slug: string; businessId: string }) {
+  const t = useTranslations('dealership');
   const ranges = usePurchaseSummaryRanges();
-  const { total, today, thisMonth, thisYear } = usePurchasesSummary(slug, businessId, ranges);
+  const { total } = usePurchasesSummary(slug, businessId, ranges);
 
-  if (total.isLoading) {
-    return <CardBlockSkeleton title="Purchases" count={6} />;
-  }
+  if (isForbidden(total.error)) return null;
 
   return (
-    <CardBlock title="Purchases">
-      {/* Total */}
-      <KPICard
-        label="Total Purchase Amount"
-        value={total.data?.cost}
-        isMoney
-        isLoading={total.isLoading}
-      />
-      <KPICard
-        label="Total Purchase Quantity"
-        value={total.data?.quantity}
-        isLoading={total.isLoading}
-      />
-
-      {/* Today */}
-      <KPICard
-        label="Today's Purchases"
-        value={today.data?.cost}
-        isMoney
-        isLoading={today.isLoading}
-      />
-
-      {/* This Month */}
-      <KPICard
-        label="This Month's Purchases"
-        value={thisMonth.data?.cost}
-        isMoney
-        isLoading={thisMonth.isLoading}
-      />
-
-      {/* This Year */}
-      <KPICard
-        label="This Year's Purchases"
-        value={thisYear.data?.cost}
-        isMoney
-        isLoading={thisYear.isLoading}
-      />
-    </CardBlock>
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold text-fg">{t('nav.purchases')}</h2>
+      <PurchasesSummaryCards slug={slug} businessId={businessId} ranges={ranges} />
+    </section>
   );
 }

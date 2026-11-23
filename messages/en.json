@@ -445,7 +445,8 @@
       "noLimit": "No limit",
       "advance": "Advance",
       "emptyTitle": "No customers yet",
-      "emptyDescription": "Customers you add will appear here."
+      "emptyDescription": "Customers you add will appear here.",
+      "totalCount": "Total customers"
     },
     "suppliers": {
       "title": "Supplier",
@@ -618,7 +619,8 @@
       "notFoundTitle": "Product not found",
       "notFoundDescription": "This product does not exist in this business.",
       "productStock": "Current stock",
-      "productHistory": "Stock history"
+      "productHistory": "Stock history",
+      "totalCount": "Total products"
     },
     "commission": {
       "title": "Commission",
@@ -982,7 +984,9 @@
         "totalOrders": "Total Orders",
         "thisMonthOrders": "This Month's Orders",
         "totalDeliveries": "Total Deliveries",
-        "thisMonthDeliveries": "This Month's Deliveries"
+        "thisMonthDeliveries": "This Month's Deliveries",
+        "todayDeliveries": "Today's Deliveries",
+        "pendingOrders": "Pending Orders"
       }
     },
     "expenses": {
@@ -1271,6 +1275,17 @@
           "closingBalance": "Closing balance",
           "net": "Net"
         }
+      }
+    },
+    "dashboard": {
+      "sections": {
+        "collections": "Collections",
+        "cash": "Cash"
+      },
+      "periods": {
+        "total": "Total",
+        "today": "Today's",
+        "thisMonth": "This month's"
       }
     }
   },

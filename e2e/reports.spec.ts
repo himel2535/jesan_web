@@ -46,15 +46,21 @@ test('owner sees the dues report with the three aging columns', async ({ browser
   await expect(advanceRow).toBeVisible();
 });
 
-test('owner sees the daily summary on the dashboard', async ({ browser }) => {
+test('owner sees every KPI section on the dashboard', async ({ browser }) => {
   const owner = await as(browser, 'owner', '/b/example-cement');
-  // Scoped to <main>: the sidebar nav also has "Collections"/"Expenses" links.
   const main = owner.getByRole('main');
-  await expect(main.getByText('Orders')).toBeVisible();
-  await expect(main.getByText('Deliveries')).toBeVisible();
-  await expect(main.getByText('Collections')).toBeVisible();
-  await expect(main.getByText('Expenses')).toBeVisible();
-  // Owner also has `cashbook.view`, so the cash cards show too.
+  // Cash: owner has `cashbook.view`, so the daily summary's cash figures show too.
   await expect(main.getByText('Opening balance')).toBeVisible();
   await expect(main.getByText('Closing balance')).toBeVisible();
+  // One heading per section the owner has permission for.
+  await expect(main.getByRole('heading', { name: 'Accounts' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Sales' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Purchases' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Collections' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Partial Expenses' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Customers' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Stock' })).toBeVisible();
+  // Owner-only.
+  await expect(main.getByRole('heading', { name: 'Commission' })).toBeVisible();
+  await expect(main.getByText("Today's Deliveries")).toBeVisible();
 });

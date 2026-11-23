@@ -445,7 +445,8 @@
       "noLimit": "সীমা নেই",
       "advance": "অগ্রিম",
       "emptyTitle": "এখনো কোনো গ্রাহক নেই",
-      "emptyDescription": "আপনি যে গ্রাহক যোগ করবেন তারা এখানে দেখাবে।"
+      "emptyDescription": "আপনি যে গ্রাহক যোগ করবেন তারা এখানে দেখাবে।",
+      "totalCount": "সর্বমোট গ্রাহক"
     },
     "suppliers": {
       "title": "সরবরাহকারী",
@@ -618,7 +619,8 @@
       "notFoundTitle": "পণ্য পাওয়া যায়নি",
       "notFoundDescription": "এই ব্যবসায় এমন কোনো পণ্য নেই।",
       "productStock": "বর্তমান স্টক",
-      "productHistory": "স্টক-ইতিহাস"
+      "productHistory": "স্টক-ইতিহাস",
+      "totalCount": "সর্বমোট পণ্য"
     },
     "commission": {
       "title": "কমিশন",
@@ -982,7 +984,9 @@
         "totalOrders": "সর্বমোট অর্ডার",
         "thisMonthOrders": "এই মাসের অর্ডার",
         "totalDeliveries": "সর্বমোট ডেলিভারি",
-        "thisMonthDeliveries": "এই মাসের ডেলিভারি"
+        "thisMonthDeliveries": "এই মাসের ডেলিভারি",
+        "todayDeliveries": "আজকের ডেলিভারি",
+        "pendingOrders": "বাকি অর্ডার"
       }
     },
     "expenses": {
@@ -1271,6 +1275,17 @@
           "closingBalance": "শেষের ব্যালেন্স",
           "net": "নিট"
         }
+      }
+    },
+    "dashboard": {
+      "sections": {
+        "collections": "আদায়",
+        "cash": "ক্যাশ"
+      },
+      "periods": {
+        "total": "সর্বমোট",
+        "today": "আজকের",
+        "thisMonth": "এই মাসের"
       }
     }
   },

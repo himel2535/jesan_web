@@ -1,49 +1,30 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+import { ApiError } from '@/core/api/errors';
+import { CollectionsSummaryCards } from '../../sales/collections/collection-summary-cards';
 import { useCollectionsSummaryAmounts } from '../../sales/api';
 import { useSalesSummaryRanges } from '../../sales/shared';
-import { useDailySummary } from '../../reports/api';
-import { CardBlock } from '../cards/card-block';
-import { KPICard } from '../cards/kpi-card';
-import { CardBlockSkeleton } from '../cards/skeletons';
 
-interface CollectionsSectionProps {
-  slug: string;
-  businessId: string;
+function isForbidden(error: unknown) {
+  return error instanceof ApiError && error.status === 403;
 }
 
-export function CollectionsSection({ slug, businessId }: CollectionsSectionProps) {
+/**
+ * The Collections page's own `CollectionsSummaryCards`, unchanged (`report.view`). Checks the
+ * same cached query here too so the section heading hides along with the cards on a 403.
+ */
+export function CollectionsSection({ slug, businessId }: { slug: string; businessId: string }) {
+  const t = useTranslations('dealership');
   const ranges = useSalesSummaryRanges();
-  const { total, today, thisMonth } = useCollectionsSummaryAmounts(slug, businessId, ranges);
-  const dailySummary = useDailySummary(slug, businessId);
+  const { total } = useCollectionsSummaryAmounts(slug, businessId, ranges);
 
-  if (total.isLoading) {
-    return <CardBlockSkeleton title="Collections" count={3} />;
-  }
+  if (isForbidden(total.error)) return null;
 
   return (
-    <CardBlock title="Collections">
-      <KPICard
-        label="Total Collection"
-        value={total.data?.sum}
-        isMoney
-        tone="positive"
-        isLoading={total.isLoading}
-      />
-      <KPICard
-        label="Today's Collection"
-        value={dailySummary.data?.collectedAmount}
-        isMoney
-        tone="positive"
-        isLoading={dailySummary.isLoading}
-      />
-      <KPICard
-        label="This Month's Collection"
-        value={thisMonth.data?.sum}
-        isMoney
-        tone="positive"
-        isLoading={thisMonth.isLoading}
-      />
-    </CardBlock>
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold text-fg">{t('dashboard.sections.collections')}</h2>
+      <CollectionsSummaryCards slug={slug} businessId={businessId} ranges={ranges} />
+    </section>
   );
 }

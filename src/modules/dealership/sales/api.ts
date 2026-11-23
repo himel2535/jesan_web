@@ -1,6 +1,5 @@
 'use client';
 
-import { formatISO } from 'date-fns';
 import {
   keepPreviousData,
   useMutation,
@@ -383,30 +382,6 @@ export function useCollectionsSummaryAmounts(
     ],
   });
   return { total, today, thisMonth };
-}
-
-// ---- Pending Deliveries Summary ----
-
-interface PendingDeliverySummary {
-  count: number;
-  amount: string;
-}
-
-export function usePendingDeliverySummary(slug: string, businessId: string) {
-  return useQuery({
-    queryKey: dealershipKeys.list(businessId, 'pendingDeliverySummary', {}),
-    queryFn: ({ signal }: { signal: AbortSignal }) =>
-      apiFetch<Page<DeliverySummary>>(`${base(slug)}/deliveries`, {
-        query: { status: 'pending', page: 1 },
-        signal,
-      }).then((data) => ({
-        count: data.total,
-        amount: (data.items ?? [])
-          .reduce((sum, item) => sum + parseFloat(item.total || '0'), 0)
-          .toFixed(2),
-      })),
-    staleTime: 60_000,
-  });
 }
 
 // ---- Customer ledger ----
