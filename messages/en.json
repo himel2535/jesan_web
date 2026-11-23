@@ -1295,7 +1295,9 @@
         "customerDue": "Customer Due",
         "cashAndBank": "Cash & Bank",
         "commission": "Commission",
-        "netProfit": "Net Profit"
+        "netProfit": "Net Profit",
+        "commissionTarget": "Commission Target",
+        "notConfigured": "Not configured"
       },
       "revenueOverview": {
         "title": "Revenue Overview",
@@ -1318,6 +1320,43 @@
         "thisMonthSales": "This Month Sales",
         "lastMonthSales": "Last Month Sales",
         "thisYearSales": "This Year Sales"
+      },
+      "stockOverview": {
+        "title": "Stock Overview",
+        "opc": "OPC",
+        "pcc": "PCC",
+        "totalStock": "Total Stock",
+        "bags": "{count} {unit}",
+        "noCategories": "No OPC/PCC categories configured."
+      },
+      "salesDelivery": {
+        "title": "Sales & Delivery Overview",
+        "pendingOrders": "Pending Orders",
+        "todaysDeliveries": "Today's Deliveries",
+        "completedDeliveries": "Completed Deliveries",
+        "todaysSoldBags": "Today's Sold Bags"
+      },
+      "recentTransactions": {
+        "title": "Recent Transactions",
+        "viewAll": "View All",
+        "type": "Type",
+        "reference": "Reference",
+        "party": "Party",
+        "date": "Date",
+        "amount": "Amount",
+        "status": "Status",
+        "saleType": "Sale",
+        "empty": "No recent transactions."
+      },
+      "targetProgress": {
+        "title": "Target & Commission Progress",
+        "target": "Target",
+        "achieved": "Achieved",
+        "remaining": "Remaining",
+        "qty": "{value} {unit}",
+        "achievementPct": "{pct}% achieved",
+        "estimatedCommission": "Estimated Commission",
+        "notConfigured": "Target not configured"
       }
     }
   },

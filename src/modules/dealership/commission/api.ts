@@ -12,6 +12,7 @@ import type {
   CommissionSummary,
   EntryInput,
   EntryPatch,
+  PurchaseCountersResponse,
   ReceiptInput,
   ReceiptPatch,
   SchemeInput,
@@ -21,6 +22,7 @@ import type {
 const base = (slug: string) => `/b/${encodeURIComponent(slug)}/commission-entries`;
 const schemeBase = (slug: string) => `/b/${encodeURIComponent(slug)}/commission-scheme`;
 const summaryBase = (slug: string) => `/b/${encodeURIComponent(slug)}/commission-summary`;
+const purchaseCountersBase = (slug: string) => `/b/${encodeURIComponent(slug)}/purchase-counters`;
 
 /** A scheme change doesn't touch past entries, but it changes what new ones would calculate to. */
 export const COMMISSION_REFRESH = ['commissionScheme', 'commissionSummary'] as const;
@@ -178,5 +180,27 @@ export function useCommissionSummary(slug: string, businessId: string, year: num
       apiFetch<CommissionSummary>(summaryBase(slug), { query: { year }, signal }),
     staleTime: 2 * 60_000,
     placeholderData: keepPreviousData,
+  });
+}
+
+// ---- Purchase counters (owner-only, used for Commission Target Progress) ----
+
+/** Total purchased bags per month (`commission.view`-gated), always 12 months for `year`. */
+export function usePurchaseCounters(
+  slug: string,
+  businessId: string,
+  year: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: dealershipKeys.list(businessId, 'purchaseCounters', { year }),
+    queryFn: ({ signal }) =>
+      apiFetch<PurchaseCountersResponse>(purchaseCountersBase(slug), {
+        query: { year },
+        signal,
+      }),
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    enabled,
   });
 }

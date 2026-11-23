@@ -1295,7 +1295,9 @@
         "customerDue": "গ্রাহকের পাওনা",
         "cashAndBank": "নগদ ও ব্যাংক",
         "commission": "কমিশন",
-        "netProfit": "নিট মুনাফা"
+        "netProfit": "নিট মুনাফা",
+        "commissionTarget": "কমিশন লক্ষ্যমাত্রা",
+        "notConfigured": "নির্ধারিত নেই"
       },
       "revenueOverview": {
         "title": "আয়ের সারসংক্ষেপ",
@@ -1318,6 +1320,43 @@
         "thisMonthSales": "এই মাসের বিক্রয়",
         "lastMonthSales": "গত মাসের বিক্রয়",
         "thisYearSales": "এই বছরের বিক্রয়"
+      },
+      "stockOverview": {
+        "title": "স্টক সারসংক্ষেপ",
+        "opc": "ওপিসি",
+        "pcc": "পিসিসি",
+        "totalStock": "মোট স্টক",
+        "bags": "{count} {unit}",
+        "noCategories": "কোনো OPC/PCC শ্রেণি নির্ধারিত নেই।"
+      },
+      "salesDelivery": {
+        "title": "বিক্রয় ও ডেলিভারি সারসংক্ষেপ",
+        "pendingOrders": "অপেক্ষমাণ অর্ডার",
+        "todaysDeliveries": "আজকের ডেলিভারি",
+        "completedDeliveries": "সম্পন্ন ডেলিভারি",
+        "todaysSoldBags": "আজ বিক্রিত বস্তা"
+      },
+      "recentTransactions": {
+        "title": "সাম্প্রতিক লেনদেন",
+        "viewAll": "সব দেখুন",
+        "type": "ধরন",
+        "reference": "রেফারেন্স",
+        "party": "পক্ষ",
+        "date": "তারিখ",
+        "amount": "পরিমাণ",
+        "status": "অবস্থা",
+        "saleType": "বিক্রয়",
+        "empty": "কোনো সাম্প্রতিক লেনদেন নেই।"
+      },
+      "targetProgress": {
+        "title": "লক্ষ্যমাত্রা ও কমিশন অগ্রগতি",
+        "target": "লক্ষ্যমাত্রা",
+        "achieved": "অর্জিত",
+        "remaining": "বাকি",
+        "qty": "{value} {unit}",
+        "achievementPct": "{pct}% অর্জিত",
+        "estimatedCommission": "আনুমানিক কমিশন",
+        "notConfigured": "লক্ষ্যমাত্রা নির্ধারিত নেই"
       }
     }
   },

@@ -49,6 +49,12 @@ export interface SuggestionResponse {
   quantity: string;
 }
 
+/** `GET purchase-counters?year=`: total purchased bags per month (all products, active only). */
+export interface PurchaseCountersResponse {
+  year: number;
+  months: { month: string; quantity: string }[];
+}
+
 export interface SchemeInput {
   rateBase: string;
   targetQty: string;

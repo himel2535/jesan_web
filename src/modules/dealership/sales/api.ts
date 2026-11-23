@@ -89,7 +89,7 @@ function clean<T extends { page: number }>(filters: T, keys: readonly (keyof T)[
 
 const ORDER_FILTER_KEYS = ['status', 'customerId', 'from', 'to'] as const;
 
-function ordersQuery(slug: string, businessId: string, filters: OrderFilters) {
+export function ordersQuery(slug: string, businessId: string, filters: OrderFilters) {
   const query = clean(filters, ORDER_FILTER_KEYS);
   return {
     queryKey: dealershipKeys.list(businessId, 'orders', query),
@@ -153,7 +153,7 @@ export function useVoidOrder(slug: string, businessId: string) {
 
 const DELIVERY_FILTER_KEYS = ['orderId', 'customerId', 'status', 'from', 'to'] as const;
 
-function deliveriesQuery(slug: string, businessId: string, filters: DeliveryFilters) {
+export function deliveriesQuery(slug: string, businessId: string, filters: DeliveryFilters) {
   const query = clean(filters, DELIVERY_FILTER_KEYS);
   return {
     queryKey: dealershipKeys.list(businessId, 'deliveries', query),

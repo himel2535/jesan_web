@@ -4,7 +4,15 @@ import { ReactNode } from 'react';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from './cn';
 
-export const KPI_VARIANTS = ['blue', 'green', 'purple', 'orange', 'pink', 'aqua'] as const;
+export const KPI_VARIANTS = [
+  'blue',
+  'green',
+  'purple',
+  'orange',
+  'pink',
+  'aqua',
+  'indigo',
+] as const;
 export type KPIVariant = (typeof KPI_VARIANTS)[number];
 
 const VARIANT_CLASSES: Record<KPIVariant, { card: string; icon: string }> = {
@@ -31,6 +39,10 @@ const VARIANT_CLASSES: Record<KPIVariant, { card: string; icon: string }> = {
   aqua: {
     card: 'bg-[var(--dash-aqua-card-bg)] border-[var(--dash-aqua-card-border)]',
     icon: 'bg-[var(--dash-aqua-icon-bg)] text-[var(--dash-icon-fg)]',
+  },
+  indigo: {
+    card: 'bg-[var(--dash-indigo-card-bg)] border-[var(--dash-indigo-card-border)]',
+    icon: 'bg-[var(--dash-indigo-icon-bg)] text-[var(--dash-icon-fg)]',
   },
 };
 

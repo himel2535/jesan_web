@@ -114,6 +114,10 @@
   --dash-aqua-card-bg: #ecfbfa;
   --dash-aqua-card-border: #bfefeb;
   --dash-aqua-icon-bg: #0d9488;
+
+  --dash-indigo-card-bg: #eef0ff;
+  --dash-indigo-card-border: #d1d6ff;
+  --dash-indigo-icon-bg: #4f46e5;
 }
 
 [data-theme='dark'] .dash-scope {
@@ -151,6 +155,10 @@
   --dash-aqua-card-bg: #0f2b29;
   --dash-aqua-card-border: #1c4b47;
   --dash-aqua-icon-bg: #0d9488;
+
+  --dash-indigo-card-bg: #1c1f3d;
+  --dash-indigo-card-border: #2f3566;
+  --dash-indigo-icon-bg: #4f46e5;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -189,5 +197,9 @@
     --dash-aqua-card-bg: #0f2b29;
     --dash-aqua-card-border: #1c4b47;
     --dash-aqua-icon-bg: #0d9488;
+
+    --dash-indigo-card-bg: #1c1f3d;
+    --dash-indigo-card-border: #2f3566;
+    --dash-indigo-icon-bg: #4f46e5;
   }
 }
