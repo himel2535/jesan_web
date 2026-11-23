@@ -46,21 +46,24 @@ test('owner sees the dues report with the three aging columns', async ({ browser
   await expect(advanceRow).toBeVisible();
 });
 
-test('owner sees every KPI section on the dashboard', async ({ browser }) => {
+test('owner sees every KPI card on the dashboard', async ({ browser }) => {
   const owner = await as(browser, 'owner', '/b/example-cement');
   const main = owner.getByRole('main');
   // Cash: owner has `cashbook.view`, so the daily summary's cash figures show too.
-  await expect(main.getByText('Opening balance')).toBeVisible();
-  await expect(main.getByText('Closing balance')).toBeVisible();
-  // One heading per section the owner has permission for.
-  await expect(main.getByRole('heading', { name: 'Accounts' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Sales' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Purchases' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Collections' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Partial Expenses' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Customers' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Stock' })).toBeVisible();
+  await expect(main.getByText('Cash Balance')).toBeVisible();
+  await expect(main.getByText('Closing Balance')).toBeVisible();
+  // One KPI card per metric the owner has permission for.
+  await expect(main.getByText('Total Due')).toBeVisible();
+  await expect(main.getByText('Total Advance')).toBeVisible();
+  await expect(main.getByText('Total Sales')).toBeVisible();
+  await expect(main.getByText('Total Orders')).toBeVisible();
+  await expect(main.getByText('Total Deliveries')).toBeVisible();
+  await expect(main.getByText('Total Purchase')).toBeVisible();
+  await expect(main.getByText('Total Stock')).toBeVisible();
+  await expect(main.getByText('Total Product')).toBeVisible();
+  await expect(main.getByText("This Month's Sales")).toBeVisible();
+  await expect(main.getByText("This Month's Purchase")).toBeVisible();
   // Owner-only.
-  await expect(main.getByRole('heading', { name: 'Commission' })).toBeVisible();
-  await expect(main.getByText("Today's Deliveries")).toBeVisible();
+  await expect(main.getByText('Total Commission')).toBeVisible();
+  await expect(main.getByText("This Month's Commission")).toBeVisible();
 });
