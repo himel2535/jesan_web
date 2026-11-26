@@ -20,6 +20,7 @@ API বদলালে এই ফাইলও একই PR-এ হালনা�
 12. [সংশোধনের অনুরোধ ও অনুমোদন](#১২-সংশোধনের-অনুরোধ-ও-অনুমোদন)
 13. [খরচ, ক্যাশ বই ও মূল রিপোর্ট](#১৩-খরচ-ক্যাশ-বই-ও-মূল-রিপোর্ট)
 14. [হিসাব (Accounts)](#১৪-হিসাব-accounts)
+14-ক. [ড্যাশবোর্ড: নগদ অবস্থান ও মাসিক সারসংক্ষেপ](#১৪-ক-ড্যাশবোর্ড-নগদ-অবস্থান-ও-মাসিক-সারসংক্ষেপ)
 15. [ত্রুটির রূপ ও কোড](#১৫-ত্রুটির-রূপ-ও-কোড)
 16. [রোল ও অনুমতি](#১৬-রোল-ও-অনুমতি)
 
@@ -233,6 +234,9 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | GET | `/b/:businessSlug/accounts/ledger?from=&to=&type=&page=` | হ্যাঁ | `ledger.view` | 200 |
 | POST | `/b/:businessSlug/accounts/entries` | হ্যাঁ | `ledger.entry.create` | 201 (একই `Idempotency-Key`: 200) |
 | POST | `/b/:businessSlug/accounts/payments` | হ্যাঁ | `payment.create` | 201 (একই `Idempotency-Key`: 200) |
+| GET | `/b/:businessSlug/dashboard/cashbook?from=&to=` | হ্যাঁ | `cashbook.view` | 200 |
+| GET | `/b/:businessSlug/dashboard/monthly-series?year=` | হ্যাঁ | `report.view` (কেনার টাকায় `product.cost.view`) | 200 |
+| GET | `/b/:businessSlug/dashboard/commission-series?year=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
 
 `/b/:businessSlug/...` পথে আগে যাচাই হয় ইউজার ওই ব্যবসায় ঢুকতে পারেন কি না, তারপর অনুমতি। অজানা ব্যবসা আর ঢোকার অনুমতি নেই, দুটোই একই 403।
 
@@ -2088,6 +2092,68 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 | 400 | `ENTRY_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`, `entryDate`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | 400 | `PAYMENT_DATE_*` (`_INVALID` / `_IN_FUTURE` / `_TOO_OLD`, `paymentDate`) | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | 400 | `FROM_INVALID` / `TO_INVALID` (`from` / `to`) | তারিখ আসল নয়, বা `to` < `from` |
+
+---
+
+## ১৪-ক. ড্যাশবোর্ড: নগদ অবস্থান ও মাসিক সারসংক্ষেপ
+
+ড্যাশবোর্ডের জন্য শুধু-পড়া সমষ্টি। প্রতিটা সংখ্যা সক্রিয় (`active`) সারির যোগফল; বাতিল সারি কখনো গোনা হয় না। তারিখ ব্যবসার সময়-অঞ্চলে (Asia/Dhaka)। নতুন কোনো নিয়ম বা হিসাবের পদ্ধতি এখানে নেই: মূল বই (`accounts/ledger`) আর বিদ্যমান মডিউলের সারি থেকে সরাসরি গোনা।
+
+### `GET dashboard/cashbook?from=&to=` (`cashbook.view`)
+
+নগদ, ব্যাংক ও পদ্ধতিহীন সারির আলাদা অবস্থান। `from`/`to` না দিলে চলতি মাস।
+
+- **নগদ** = ব্যবসার `cashMethodKeys` (ডিফল্ট `cash`)। **ব্যাংক** = বাকি সব পদ্ধতি (bkash, nagad, bank, cheque…)।
+- **পদ্ধতিহীন** (`method` নেই, যেমন কমিশন রসিদ) আলাদা; নগদ বা ব্যাংকে যোগ হয় না।
+- `opening` = `from`-এর আগের সব active সারির নিট (in − out); `closing` = `opening + in − out`।
+- `collectionsIn` = শুধু আদায় (`collection`) থেকে আসা টাকা; `in` = সব টাকা ঢোকা (আদায়, কমিশন রসিদ, হাতে দেওয়া entry)।
+- `availableCashAndBank` = `cash.closing + bank.closing`; পদ্ধতিহীন এতে নেই।
+
+```json
+{
+  "from": "2026-11-01", "to": "2026-11-26",
+  "cash": { "opening": "12000.00", "collectionsIn": "3000.00", "in": "3000.00", "out": "1200.00", "closing": "13800.00" },
+  "bank": { "opening": "5000.00", "collectionsIn": "500.00", "in": "500.00", "out": "150.00", "closing": "5350.00" },
+  "unassigned": { "opening": "300.00", "collectionsIn": "0.00", "in": "250.00", "out": "0.00", "closing": "550.00" },
+  "availableCashAndBank": "19150.00"
+}
+```
+
+### `GET dashboard/monthly-series?year=` (`report.view`)
+
+একটা বছরের ১২ মাস: আদায়, বিক্রয় (সক্রিয় ডেলিভারির মূল্য), বিক্রয়ের বস্তা, কেনার বস্তা। ভবিষ্যৎ মাসও ০ হিসেবে আসে (কোনো আলাদা ধরন নেই)। `year` না দিলে চলতি বছর (ব্যবসার সময়-অঞ্চল); ২০০০–২১০০ বাইরে 400।
+
+- `purchaseAmount` (কেনার মোট টাকা) শুধু `product.cost.view` থাকলে উত্তরে আসে; না থাকলে ঘরটাই থাকে না।
+
+```json
+{
+  "year": 2026,
+  "months": [
+    { "month": "2026-01", "collection": "0.00", "sales": "0.00", "salesQuantity": "0.000", "purchaseQuantity": "0.000", "purchaseAmount": "0.00" },
+    { "month": "2026-11", "collection": "325750.00", "sales": "485200.00", "salesQuantity": "1250.000", "purchaseQuantity": "980.000", "purchaseAmount": "310000.00" }
+  ]
+}
+```
+
+### `GET dashboard/commission-series?year=` (`commission.view`, owner-only)
+
+কমিশনের মাসওয়ারি হিসাব, দুটো আলাদা অর্থে:
+
+- `calculated` = কমিশন এন্ট্রির `calculatedAmount`, এন্ট্রির `fromDate`-এর মাসে ধরা (অর্জিত হিসাব)।
+- `received` = কমিশন রসিদের `amount`, `receivedDate`-এর মাসে ধরা (আদায়কৃত)।
+
+`yearCalculated`/`yearReceived` = বছরের মোট (উপরের মাসের যোগফল)। `lifetimeCalculated`/`lifetimeReceived` = সব সময়ের মোট, আর `receivable` = `lifetimeCalculated − lifetimeReceived` (বাকি কমিশন, Akij-এর কাছে পাওনা)। `receivable` ঋণাত্মক হতে পারে, যদি রসিদ এন্ট্রির চেয়ে বেশি আসে।
+
+```json
+{
+  "year": 2026,
+  "months": [ { "month": "2026-11", "calculated": "389500.00", "received": "350000.00" } ],
+  "yearCalculated": "2500000.00", "yearReceived": "2100000.00",
+  "lifetimeCalculated": "2650000.00", "lifetimeReceived": "2100000.00", "receivable": "550000.00"
+}
+```
+
+এই তিনটা endpoint-এ কোনো লেখা নেই, কোনো Idempotency-Key নেই। ত্রুটি: `from`/`to` ভুল বা অজানা তারিখ 400 (`FROM_INVALID` / `TO_INVALID`), `year` সীমার বাইরে 400 `VALIDATION_FAILED` (`year`), অনুমতি নেই 403 `ACCESS_DENIED`।
 
 ---
 
