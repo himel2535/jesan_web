@@ -1395,6 +1395,147 @@ http
           return send(res, 200, r);
         }
       }
+      // ---- Dashboard aggregates (docs/API.md §14-ক): same rows as the other mock routes ----
+      const dashMonthRange = (f) => {
+        const monthStart = today().slice(0, 7) + '-01';
+        return { from: f.from ?? monthStart, to: f.to ?? today() };
+      };
+      const dashMoney = (items) => sumMoneyStr(items);
+      const dashPurchaseAmount = (p) =>
+        dashMoney(p.items.map((i) => lineTotal(i.quantity, i.unitPrice)));
+      const dashPurchaseQty = (p) => p.items.reduce((a, i) => a + Number(i.quantity), 0);
+      const dashDeliveryAmount = (d) =>
+        dashMoney(d.items.map((i) => lineTotal(i.quantity, i.unitPrice)));
+      const dashDeliveryQty = (d) => d.items.reduce((a, i) => a + Number(i.quantity), 0);
+      if (rest === 'dashboard/cashbook' && req.method === 'GET') {
+        if (!need('cashbook.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const { from, to } = dashMonthRange(f);
+        const rows = [
+          ...collections
+            .filter((c) => c.status === 'active')
+            .map((c) => ({
+              type: 'collection',
+              method: c.method,
+              dir: 'in',
+              amount: c.amount,
+              date: c.collectionDate,
+            })),
+          ...expenses
+            .filter((e) => e.status === 'active')
+            .map((e) => ({
+              type: 'expense',
+              method: e.method,
+              dir: 'out',
+              amount: e.amount,
+              date: e.expenseDate,
+            })),
+          ...purchases
+            .filter((p) => p.status === 'active')
+            .map((p) => ({
+              type: 'purchase',
+              method: 'cash',
+              dir: 'out',
+              amount: dashPurchaseAmount(p),
+              date: p.purchaseDate,
+            })),
+        ];
+        const cashMethods = new Set(['cash']);
+        const bucket = () => ({ opening: 0, collectionsIn: 0, in: 0, out: 0 });
+        const buckets = { cash: bucket(), bank: bucket() };
+        for (const row of rows) {
+          const b = buckets[cashMethods.has(row.method) ? 'cash' : 'bank'];
+          const amt = Number(row.amount);
+          if (row.date < from) {
+            b.opening += row.dir === 'in' ? amt : -amt;
+          } else if (row.date <= to) {
+            if (row.dir === 'in') {
+              b.in += amt;
+              if (row.type === 'collection') b.collectionsIn += amt;
+            } else {
+              b.out += amt;
+            }
+          }
+        }
+        const view = (b) => ({
+          opening: b.opening.toFixed(2),
+          collectionsIn: b.collectionsIn.toFixed(2),
+          in: b.in.toFixed(2),
+          out: b.out.toFixed(2),
+          closing: (b.opening + b.in - b.out).toFixed(2),
+        });
+        const cash = view(buckets.cash);
+        const bank = view(buckets.bank);
+        const zero = view(bucket());
+        return send(res, 200, {
+          from,
+          to,
+          cash,
+          bank,
+          unassigned: zero,
+          availableCashAndBank: (Number(cash.closing) + Number(bank.closing)).toFixed(2),
+        });
+      }
+      if (rest === 'dashboard/monthly-series' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const year = Number(url.searchParams.get('year') ?? new Date().getFullYear());
+        const showCost = perms.includes('product.cost.view');
+        const months = Array.from({ length: 12 }, (_, i) => {
+          const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+          const inMonth = (date) => String(date).startsWith(month);
+          const collection = collections
+            .filter((c) => c.status === 'active' && inMonth(c.collectionDate))
+            .reduce((a, c) => a + Number(c.amount), 0);
+          const dl = deliveries.filter((d) => d.status === 'active' && inMonth(d.deliveryDate));
+          const pu = purchases.filter((p) => p.status === 'active' && inMonth(p.purchaseDate));
+          const row = {
+            month,
+            collection: collection.toFixed(2),
+            sales: dl.reduce((a, d) => a + Number(dashDeliveryAmount(d)), 0).toFixed(2),
+            salesQuantity: dl.reduce((a, d) => a + dashDeliveryQty(d), 0).toFixed(3),
+            purchaseQuantity: pu.reduce((a, p) => a + dashPurchaseQty(p), 0).toFixed(3),
+          };
+          if (showCost) {
+            row.purchaseAmount = pu
+              .reduce((a, p) => a + Number(dashPurchaseAmount(p)), 0)
+              .toFixed(2);
+          }
+          return row;
+        });
+        return send(res, 200, { year, months });
+      }
+      if (rest === 'dashboard/commission-series' && req.method === 'GET') {
+        if (!need('commission.view')) return;
+        const year = Number(url.searchParams.get('year') ?? new Date().getFullYear());
+        const months = Array.from({ length: 12 }, (_, i) => {
+          const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+          const calculated = commissionEntries
+            .filter((e) => String(e.fromDate).startsWith(month))
+            .reduce((a, e) => a + Number(e.calculatedAmount), 0);
+          const received = commissionEntries
+            .flatMap((e) => e.receipts)
+            .filter((r) => String(r.receivedDate).startsWith(month))
+            .reduce((a, r) => a + Number(r.amount), 0);
+          return { month, calculated: calculated.toFixed(2), received: received.toFixed(2) };
+        });
+        const lifetimeCalculated = commissionEntries.reduce(
+          (a, e) => a + Number(e.calculatedAmount),
+          0,
+        );
+        const lifetimeReceived = commissionEntries
+          .flatMap((e) => e.receipts)
+          .reduce((a, r) => a + Number(r.amount), 0);
+        const sumOf = (key) => months.reduce((a, m) => a + Number(m[key]), 0).toFixed(2);
+        return send(res, 200, {
+          year,
+          months,
+          yearCalculated: sumOf('calculated'),
+          yearReceived: sumOf('received'),
+          lifetimeCalculated: lifetimeCalculated.toFixed(2),
+          lifetimeReceived: lifetimeReceived.toFixed(2),
+          receivable: (lifetimeCalculated - lifetimeReceived).toFixed(2),
+        });
+      }
       if (rest === 'commission-summary' && req.method === 'GET') {
         if (!need('commission.view')) return;
         const year = String(url.searchParams.get('year') ?? new Date().getFullYear());

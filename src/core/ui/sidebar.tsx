@@ -44,7 +44,8 @@ export function Sidebar({ title, items, collapsed, onToggle }: SidebarProps) {
           )}
         </button>
       </div>
-      <nav aria-label={t('nav.label')}>
+      {/* The menu scrolls inside itself on short screens; the page never has to. */}
+      <nav aria-label={t('nav.label')} className="min-h-0 flex-1 overflow-y-auto">
         <NavLinks items={items} collapsed={collapsed} />
       </nav>
     </aside>

@@ -1,44 +1,101 @@
 'use client';
 
-import { KPICardsSection } from './kpi-cards-section';
-import { RevenueOverview } from './revenue-overview';
-import { TopCustomers } from './top-customers';
-import { SalesSummaryDonut } from './sales-summary-donut';
-import { TargetCommissionPanel } from './target-commission-panel';
-import { StockOverview } from './stock-overview';
-import { SalesDeliveryOverview } from './sales-delivery-overview';
-import { RecentTransactions } from './recent-transactions';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Bell } from 'lucide-react';
+import { useCan } from '@/core/auth/can';
+import { useSession } from '@/core/auth/session-context';
+import { usePendingCount } from '@/core/approvals/api';
+import { businessToday } from '@/core/i18n/format';
+import { useFormat } from '@/core/i18n/use-format';
+import { CashbookPanel } from './cashbook-panel';
+import { CommissionPanel } from './commission-panel';
+import { DailyKpiSection, MonthlyKpiSection } from './kpi-sections';
+import { FinancialSummary } from './financial-summary';
+import { MonthlyDailySummary } from './monthly-daily-summary';
+import { SalesCollectionChart } from './sales-collection-chart';
+import { monthPeriods } from './periods';
 
 /**
- * The dealership dashboard: 8 primary KPI cards (reference design), a Revenue Overview / Top 5
- * Customers / Sales Summary donut row, and an operational row (Target & Commission Progress,
- * Stock Overview, Sales & Delivery Overview, Recent Transactions).
- * `.dash-scope` (src/core/theme/tokens.css) scopes this page's own color tokens so no other
- * page's colors change — it's a pure CSS-variable scope, not a visual container, so the page
- * sits on the app's normal background (see DECISIONS.md "Dashboard v4").
+ * The business dashboard, laid out as in the reference: header, This Month and Today KPI rows,
+ * then the charts and the financial panels. On laptop-and-up screens it fills the viewport
+ * (`100dvh` minus the topbar and page padding) and each row takes its share through `min-h-0`,
+ * so nothing scrolls. Every number comes from the backend; this file only arranges them.
  */
 export function DashboardView({ slug, businessId }: { slug: string; businessId: string }) {
-  return (
-    <div className="dash-scope space-y-3">
-      <KPICardsSection slug={slug} businessId={businessId} />
+  const t = useTranslations('dealership.dashboard');
+  const format = useFormat();
+  const session = useSession();
+  const today = businessToday();
+  const canCommission = useCan('commission.view');
+  const canCashbook = useCan('cashbook.view');
+  const canCost = useCan('product.cost.view');
+  const pending = usePendingCount(slug);
+  const monthLabel = format.date(monthPeriods(today, 'thisMonth').current.from, {
+    month: 'long',
+    year: 'numeric',
+  });
+  const pendingCount = pending.data ?? 0;
 
-      <div className="grid grid-cols-1 items-start gap-2 lg:grid-cols-4">
-        <div className="lg:col-span-2">
-          <RevenueOverview slug={slug} businessId={businessId} />
+  return (
+    <div className="dash-scope flex flex-col gap-[5px] lg:grid lg:h-[calc(100dvh-7rem)] lg:min-h-0 lg:grid-rows-[auto_auto_auto_minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <header className="flex min-w-0 items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-bold text-[var(--dash-fg)]">
+            {t('welcome', { name: session.user.name })}
+          </h1>
+          <p className="max-h-[760px]:hidden truncate text-xs text-[var(--dash-fg-muted)]">
+            {t('subtitle', { month: monthLabel })}
+          </p>
         </div>
-        <div className="lg:col-span-1">
-          <TopCustomers slug={slug} businessId={businessId} />
+        <Link
+          href={`/b/${encodeURIComponent(slug)}/approvals`}
+          aria-label={t('notifications', { count: pendingCount })}
+          className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-fg)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
+        >
+          <Bell aria-hidden className="size-5" />
+          {pendingCount > 0 && (
+            <span
+              aria-hidden
+              className="absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-[var(--dash-danger)] px-1 text-center text-[10px] leading-5 font-semibold text-white"
+            >
+              {format.number(pendingCount)}
+            </span>
+          )}
+        </Link>
+      </header>
+
+      <MonthlyKpiSection slug={slug} businessId={businessId} today={today} />
+      <DailyKpiSection slug={slug} businessId={businessId} today={today} />
+
+      <div className="grid min-h-0 gap-[5px] lg:grid-cols-12 lg:overflow-hidden">
+        <div className="min-h-[240px] min-w-0 lg:col-span-6 lg:min-h-0">
+          <SalesCollectionChart slug={slug} businessId={businessId} today={today} />
         </div>
-        <div className="lg:col-span-1">
-          <SalesSummaryDonut slug={slug} businessId={businessId} />
-        </div>
+        {canCommission && (
+          <div className="min-h-[240px] min-w-0 lg:col-span-4 lg:min-h-0">
+            <CommissionPanel slug={slug} businessId={businessId} today={today} />
+          </div>
+        )}
+        {canCashbook && (
+          <div className="min-h-[240px] min-w-0 lg:col-span-2 lg:min-h-0">
+            <CashbookPanel
+              slug={slug}
+              businessId={businessId}
+              range={monthPeriods(today, 'thisMonth').current}
+            />
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <TargetCommissionPanel slug={slug} businessId={businessId} />
-        <StockOverview slug={slug} businessId={businessId} />
-        <SalesDeliveryOverview slug={slug} businessId={businessId} />
-        <RecentTransactions slug={slug} businessId={businessId} />
+      <div className="grid min-h-0 min-w-0 gap-[5px] lg:grid-cols-2 lg:overflow-hidden">
+        <FinancialSummary slug={slug} businessId={businessId} today={today} />
+        <MonthlyDailySummary
+          slug={slug}
+          businessId={businessId}
+          today={today}
+          canSeePurchaseCost={canCost}
+        />
       </div>
     </div>
   );

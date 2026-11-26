@@ -85,27 +85,41 @@
   --dash-fg: #101b46;
   --dash-fg-muted: #53617f;
   --dash-border: #e6eaf4;
-  --dash-primary: #2675f5;
-  --dash-success: #16a34a;
-  --dash-danger: #ef4444;
+  --dash-primary: #1e5fd6;
+  --dash-primary-fill: #1e5fd6;
+  --dash-success: #047857;
+  --dash-danger: #b91c1c;
   --dash-icon-fg: #ffffff;
   --dash-icon-fg-on-orange: #101b46;
 
-  --dash-blue-card-bg: #f0f6ff;
-  --dash-blue-card-border: #c9dcff;
-  --dash-blue-icon-bg: #2675f5;
+  /* KPI families, per the dashboard brief: soft card, soft icon disc, accent glyph. */
+  --dash-shadow: 0 2px 8px rgba(15, 23, 42, 0.045);
 
-  --dash-green-card-bg: #effbf4;
-  --dash-green-card-border: #c9f0d9;
-  --dash-green-icon-bg: #16a34a;
+  --dash-blue-card-bg: #eaf2ff;
+  --dash-blue-card-border: #d3e3fb;
+  --dash-blue-icon-bg: #d5e5ff;
+  --dash-blue-accent: #2563eb;
 
-  --dash-purple-card-bg: #f5f0ff;
-  --dash-purple-card-border: #ddd0ff;
-  --dash-purple-icon-bg: #8b5cf6;
+  --dash-green-card-bg: #eaf7f1;
+  --dash-green-card-border: #cbebdb;
+  --dash-green-icon-bg: #cff0e0;
+  --dash-green-accent: #059669;
 
-  --dash-orange-card-bg: #fff5ea;
-  --dash-orange-card-border: #ffe0c2;
-  --dash-orange-icon-bg: #f59e0b;
+  --dash-purple-card-bg: #f2eeff;
+  --dash-purple-card-border: #e0d7fa;
+  --dash-purple-icon-bg: #e2d9ff;
+  --dash-purple-accent: #7c3aed;
+
+  --dash-orange-card-bg: #fff2e9;
+  --dash-orange-card-border: #fadcc6;
+  --dash-orange-icon-bg: #ffe0cc;
+  /* Deeper than the brief's #EA580C: that reads 2.85:1 on the icon disc (non-text needs 3:1). */
+  --dash-orange-accent: #c2410c;
+
+  /* Chart series (brief): collection, sales, purchase. */
+  --dash-chart-collection: #3b82f6;
+  --dash-chart-sales: #10b981;
+  --dash-chart-purchase: #8b5cf6;
 
   --dash-pink-card-bg: #fff0f3;
   --dash-pink-card-border: #ffd4df;
@@ -201,5 +215,40 @@
     --dash-indigo-card-bg: #1c1f3d;
     --dash-indigo-card-border: #2f3566;
     --dash-indigo-icon-bg: #4f46e5;
+  }
+}
+
+/* Dark variants of the KPI accents and shadow (light values live in .dash-scope above). */
+[data-theme='dark'] .dash-scope {
+  --dash-shadow: none;
+  --dash-primary-fill: #2563eb;
+  --dash-chart-collection: #60a5fa;
+  --dash-chart-sales: #34d399;
+  --dash-chart-purchase: #a78bfa;
+  --dash-blue-icon-bg: #1d3350;
+  --dash-green-icon-bg: #173a2a;
+  --dash-purple-icon-bg: #2e2350;
+  --dash-orange-icon-bg: #4a2e18;
+  --dash-blue-accent: #60a5fa;
+  --dash-green-accent: #4ade80;
+  --dash-purple-accent: #a78bfa;
+  --dash-orange-accent: #fb923c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .dash-scope {
+    --dash-shadow: none;
+    --dash-primary-fill: #2563eb;
+    --dash-chart-collection: #60a5fa;
+    --dash-chart-sales: #34d399;
+    --dash-chart-purchase: #a78bfa;
+    --dash-blue-icon-bg: #1d3350;
+    --dash-green-icon-bg: #173a2a;
+    --dash-purple-icon-bg: #2e2350;
+    --dash-orange-icon-bg: #4a2e18;
+    --dash-blue-accent: #60a5fa;
+    --dash-green-accent: #4ade80;
+    --dash-purple-accent: #a78bfa;
+    --dash-orange-accent: #fb923c;
   }
 }

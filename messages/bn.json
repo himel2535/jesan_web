@@ -1278,82 +1278,106 @@
       }
     },
     "dashboard": {
-      "sections": {
-        "collections": "আদায়",
-        "cash": "ক্যাশ"
+      "welcome": "স্বাগতম, {name}",
+      "subtitle": "{month}-এর ব্যবসার সারসংক্ষেপ",
+      "notifications": "বিজ্ঞপ্তি ({count}টি অনুমোদন বাকি)",
+      "monthly": {
+        "title": "এই মাস",
+        "filter": "মাসের সময়কাল"
       },
-      "periods": {
-        "total": "সর্বমোট",
-        "today": "আজকের",
-        "thisMonth": "এই মাসের"
+      "daily": {
+        "title": "আজ"
       },
-      "kpi": {
-        "vsLastMonth": "গত মাসের তুলনায়",
-        "totalSales": "মোট বিক্রয়",
-        "totalPurchase": "মোট ক্রয়",
-        "totalCollection": "মোট আদায়",
-        "customerDue": "গ্রাহকের পাওনা",
-        "cashAndBank": "নগদ ও ব্যাংক",
-        "commission": "কমিশন",
-        "netProfit": "নিট মুনাফা",
-        "commissionTarget": "কমিশন লক্ষ্যমাত্রা",
-        "notConfigured": "নির্ধারিত নেই"
+      "metric": {
+        "collection": "মোট আদায়",
+        "sales": "মোট বিক্রয়",
+        "salesQuantity": "বিক্রয়ের পরিমাণ",
+        "purchaseQuantity": "কেনার পরিমাণ",
+        "todayCollection": "আজকের আদায়",
+        "todaySales": "আজকের বিক্রয়",
+        "todaySalesQuantity": "আজকের বিক্রয়ের পরিমাণ",
+        "todayPurchaseQuantity": "আজকের কেনার পরিমাণ"
       },
-      "revenueOverview": {
-        "title": "আয়ের সারসংক্ষেপ",
-        "salesRevenue": "বিক্রয় আয়",
+      "period": {
+        "thisMonth": "এই মাস",
+        "previousMonth": "গত মাস",
+        "lifetime": "সব সময়",
+        "today": "আজ",
+        "yesterday": "গতকাল",
+        "custom": "নির্দিষ্ট তারিখ"
+      },
+      "periodFor": "{title}-এর সময়কাল",
+      "customDate": "নির্দিষ্ট তারিখ",
+      "openLabel": "{title}: পাতা খুলুন",
+      "loadError": "লোড করা যায়নি",
+      "compare": {
+        "sameDaysLastMonth": "গত মাসের তুলনায়",
+        "monthBefore": "তার আগের মাসের তুলনায়",
+        "dayBefore": "তার আগের দিনের তুলনায়",
+        "yesterday": "গতকালের তুলনায়",
+        "previousDay": "আগের দিনের তুলনায়"
+      },
+      "chart": {
+        "salesCollectionTitle": "বিক্রয় ও আদায়ের সারসংক্ষেপ",
+        "range": "চার্টের সময়কাল",
+        "last12": "গত ১২ মাস",
+        "thisYear": "এই বছর",
         "collection": "আদায়",
-        "filterThisMonth": "এই মাস",
-        "filterLastMonth": "গত মাস",
-        "filterThisYear": "এই বছর"
+        "sales": "বিক্রয়",
+        "purchase": "কেনা"
       },
-      "topCustomers": {
-        "title": "শীর্ষ ৫ গ্রাহক",
-        "rank": "#",
-        "customer": "গ্রাহক",
-        "totalBags": "মোট বস্তা",
-        "totalSales": "মোট বিক্রয়",
-        "empty": "এই সময়ে কোনো বিক্রয় নেই।"
+      "commission": {
+        "title": "কমিশন সারসংক্ষেপ",
+        "currentMonthReceived": "পাওয়া কমিশন: এই মাস",
+        "previousMonthReceived": "পাওয়া কমিশন: গত মাস",
+        "yearReceived": "পাওয়া কমিশন: এই বছর",
+        "yearCalculated": "এই বছরে হিসাব হয়েছে: {amount}",
+        "receivable": "পাওনা কমিশন",
+        "receivableNote": "হিসাব হওয়া কমিশন − পাওয়া, সব সময়",
+        "vsPreviousMonth": "গত মাসের তুলনায়",
+        "basisNote": "পাওয়া হলো Akij-এর আসলে দেওয়া টাকা। হিসাব হওয়া কমিশন শুধু বছরের মোটে দেখানো হয়।",
+        "thisYearLegend": "এই বছর",
+        "lastYearLegend": "গত বছর"
       },
-      "salesSummary": {
-        "title": "বিক্রয় সারসংক্ষেপ",
-        "thisMonthSales": "এই মাসের বিক্রয়",
-        "lastMonthSales": "গত মাসের বিক্রয়",
-        "thisYearSales": "এই বছরের বিক্রয়"
+      "cashbook": {
+        "title": "নগদ অবস্থান",
+        "cashInHand": "হাতে নগদ",
+        "bankBalance": "ব্যাংক ব্যালেন্স",
+        "totalCashBank": "মোট নগদ + ব্যাংক",
+        "actualCashCollection": "প্রকৃত নগদ আদায়",
+        "actualBankCollection": "প্রকৃত ব্যাংক আদায়",
+        "totalCashPayments": "মোট নগদ পরিশোধ",
+        "totalBankPayments": "মোট ব্যাংক পরিশোধ",
+        "unassignedNote": "পদ্ধতি লেখা হয়নি এমন {amount} (যেমন কমিশন) নগদ বা ব্যাংকে গোনা হয়নি।"
       },
-      "stockOverview": {
-        "title": "স্টক সারসংক্ষেপ",
-        "totalStock": "মোট স্টক",
-        "subtotalFor": "মোট ({unit})",
-        "bags": "{count} {unit}",
-        "viewAll": "সব দেখুন",
-        "noProducts": "কোনো সক্রিয় পণ্য নির্ধারিত নেই।"
-      },
-      "salesDelivery": {
-        "title": "বিক্রয় ও ডেলিভারি সারসংক্ষেপ",
-        "pendingOrders": "অপেক্ষমাণ অর্ডার",
-        "todaysDeliveries": "আজকের ডেলিভারি",
-        "completedDeliveries": "সম্পন্ন ডেলিভারি",
-        "todaysSoldBags": "আজ বিক্রিত বস্তা"
-      },
-      "recentTransactions": {
-        "title": "সাম্প্রতিক লেনদেন",
-        "viewAll": "সব দেখুন",
-        "type": "ধরন",
-        "amount": "পরিমাণ",
-        "saleType": "বিক্রয়",
-        "empty": "কোনো সাম্প্রতিক লেনদেন নেই।"
-      },
-      "targetProgress": {
-        "title": "লক্ষ্যমাত্রা ও কমিশন অগ্রগতি",
-        "target": "লক্ষ্যমাত্রা",
-        "achieved": "অর্জিত",
-        "remaining": "বাকি",
-        "qty": "{value} {unit}",
-        "achievementPct": "{pct}% অর্জিত",
-        "targetExceeded": "লক্ষ্যমাত্রা অতিক্রান্ত",
-        "estimatedCommission": "আনুমানিক কমিশন",
-        "notConfigured": "লক্ষ্যমাত্রা নির্ধারিত নেই"
+      "summary": {
+        "title": "আর্থিক সারসংক্ষেপ",
+        "filter": "সারসংক্ষেপের সময়কাল",
+        "profitGroup": "লাভ",
+        "balanceGroup": "স্থিতি (লাভে কখনো যোগ হয় না)",
+        "salesRevenue": "মোট বিক্রয় রাজস্ব",
+        "commissionReceived": "সরবরাহকারী কমিশন পাওয়া",
+        "expenses": "খরচ (সব ধরন)",
+        "cogs": "বিক্রিত পণ্যের খরচ (COGS)",
+        "grossProfit": "মোট লাভ",
+        "collection": "আদায় (নগদ প্রাপ্তি)",
+        "customerDue": "গ্রাহকের মোট বাকি",
+        "commissionReceivable": "পাওনা কমিশন",
+        "supplierPayable": "সরবরাহকারীর দেনা",
+        "expensePayable": "খরচের দেনা",
+        "notTracked": "সিস্টেমে ট্র্যাক হয় না",
+        "asOfToday": "আজ পর্যন্ত",
+        "awaitingApproval": "হিসাবের পদ্ধতি অনুমোদনের অপেক্ষায়",
+        "netProfit": "মোট নিট লাভ",
+        "netProfitPending": "অনুমোদনের অপেক্ষায়",
+        "netProfitNote": "নিট লাভ = বিক্রয় রাজস্ব − COGS − খরচ + পাওয়া কমিশন। হিসাবের পদ্ধতি অনুমোদনের পর দেখানো হবে।",
+        "monthlyDailyTitle": "মাসিক / দৈনিক সারসংক্ষেপ",
+        "runningMonth": "চলতি মাস",
+        "runningMonthFilter": "চলতি মাসের সময়কাল",
+        "today": "আজ",
+        "todayFilter": "আজের সময়কাল",
+        "sales": "বিক্রয়",
+        "purchase": "কেনা"
       }
     }
   },
