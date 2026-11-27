@@ -38,7 +38,7 @@ const kpiWindow = {
 };
 
 const routes = ({ withProfit = true }: { withProfit?: boolean } = {}) => ({
-  [`GET ${B}/dashboard/kpis`]: () => json(200, { current: kpiWindow, previous: kpiWindow }),
+  [`GET ${B}/dashboard/kpis`]: () => json(200, { current: kpiWindow }),
   [`GET ${B}/reports/sales`]: () =>
     json(200, {
       totalAmount: '485200.00',
@@ -205,11 +205,26 @@ describe('<DashboardView>', () => {
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
     await screen.findByRole('link', { name: 'Total Collection: open page' });
     const paths = calls.map((call) => call.path);
-    // This Month row and Today row: one request each, carrying both windows.
+    // This Month row and Today row: one request each, for the selected window only.
     expect(paths.filter((p) => p === `${B}/dashboard/kpis`)).toHaveLength(2);
+    // Nothing is compared with last month or yesterday, so nothing is asked for.
+    expect(calls.some((call) => call.url.includes('prevFrom') || call.url.includes('prevTo'))).toBe(
+      false,
+    );
     expect(paths).not.toContain(`${B}/reports/sales`);
     expect(paths).not.toContain(`${B}/reports/collections`);
     expect(paths).not.toContain(`${B}/purchases/summary`);
+  });
+
+  it('shows no comparison line on any KPI card', async () => {
+    mockApi(routes());
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    await screen.findByRole('link', { name: 'Total Collection: open page' });
+    for (const name of ['Total Collection', 'Total Sales', "Today's Sales"]) {
+      const card = cardFor(name);
+      expect(within(card).queryByText(/vs Last Month|vs Yesterday/)).toBeNull();
+      expect(card.textContent).not.toMatch(/[▲▼]/);
+    }
   });
 
   it('hides the bags-bought cards when the answer has no purchase quantity', async () => {
@@ -217,7 +232,7 @@ describe('<DashboardView>', () => {
       ...routes(),
       [`GET ${B}/dashboard/kpis`]: () => {
         const { purchaseQuantity: _omitted, ...withoutPurchase } = kpiWindow;
-        return json(200, { current: withoutPurchase, previous: withoutPurchase });
+        return json(200, { current: withoutPurchase });
       },
     });
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
@@ -251,16 +266,20 @@ describe('<DashboardView>', () => {
     const user = userEvent.setup();
     const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
     const panel = heading.closest('section') as HTMLElement;
-    await user.selectOptions(
-      within(panel).getByLabelText('Choose month for Financial Summary'),
-      '2',
+    await user.click(
+      within(panel).getByRole('combobox', { name: 'Choose month for Financial Summary' }),
     );
+    await user.click(await screen.findByRole('option', { name: 'Feb' }));
     expect(within(panel).getByRole('button', { name: 'All Time' })).toBeInTheDocument();
+    expect(
+      within(panel).getByRole('combobox', { name: 'Choose month for Financial Summary' }),
+    ).toHaveTextContent('Feb');
     const daily = (await screen.findByRole('heading', { name: 'Monthly / Daily Summary' })).closest(
       'section',
     ) as HTMLElement;
-    await user.selectOptions(within(daily).getByRole('combobox'), 'today');
-    expect(within(daily).getByRole('combobox')).toHaveValue('today');
+    await user.click(within(daily).getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'Today' }));
+    expect(within(daily).getByRole('combobox')).toHaveTextContent('Today');
     expect(
       within(
         screen
@@ -287,8 +306,10 @@ describe('<DashboardView>', () => {
     expect(row.contains(year)).toBe(true);
     expect(row.contains(allTimeButton)).toBe(true);
 
-    await user.selectOptions(year, '2025');
-    await user.selectOptions(month, '2');
+    await user.click(year);
+    await user.click(await screen.findByRole('option', { name: '25' }));
+    await user.click(month);
+    await user.click(await screen.findByRole('option', { name: 'Feb' }));
     expect(collection.querySelector('a')).toHaveAttribute(
       'href',
       `${B}/collections?from=2025-02-01&to=2025-02-28`,

@@ -19,8 +19,7 @@ export const PREFETCH_BUDGET_MS = 1000;
  * is skipped, the same query then runs (and reports its error) in the browser.
  *
  * The queries are the browser's own (same factories, same keys, same default windows: this month
- * against the same days last month, and today against yesterday), only fetched with the server's
- * getter.
+ * and today), only fetched with the server's getter.
  */
 export async function prefetchDashboard(
   queryClient: QueryClient,
@@ -59,8 +58,8 @@ export async function prefetchDashboard(
     });
 
   const requests = [
-    dashboardKpisQuery(slug, businessId, month, get),
-    dashboardKpisQuery(slug, businessId, day, get),
+    dashboardKpisQuery(slug, businessId, month.current, get),
+    dashboardKpisQuery(slug, businessId, day.current, get),
     dashboardFinanceSummaryQuery(slug, businessId, month.current, get),
     dashboardFinanceSummaryQuery(slug, businessId, month.previous ?? month.current, get),
     dashboardFinanceSummaryQuery(slug, businessId, day.current, get),

@@ -1462,9 +1462,7 @@ http
           return out;
         };
         const current = windowOf(dashMonthRange(f));
-        const previous =
-          f.prevFrom && f.prevTo ? windowOf({ from: f.prevFrom, to: f.prevTo }) : null;
-        return send(res, 200, { current, previous });
+        return send(res, 200, { current });
       }
       if (rest === 'dashboard/monthly-series' && req.method === 'GET') {
         if (!need('report.view')) return;

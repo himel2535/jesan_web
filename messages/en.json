@@ -1238,8 +1238,7 @@
       "openLabel": "{title}: open page",
       "loadError": "Could not load",
       "compare": {
-        "vsLastMonth": "vs Last Month",
-        "vsYesterday": "vs Yesterday"
+        "vsLastMonth": "vs Last Month"
       },
       "chart": {
         "salesCollectionTitle": "Sales & Collection Overview",

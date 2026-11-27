@@ -112,28 +112,18 @@ export function useDashboardFinanceSummary(
   return useQuery(dashboardFinanceSummaryQuery(slug, businessId, range));
 }
 
-/** A KPI card's window and, unless it is "All Time", the window it is compared with. */
-export interface KpiWindows {
-  current: DashboardRange;
-  previous: DashboardRange | null;
-}
-
 /**
- * The four KPI figures (collection, sales, bags sold, bags bought) for a window and its
- * comparison window in one call. Cards that share both windows share this query, so a whole
- * row of cards costs one request.
+ * The four KPI figures (collection, sales, bags sold, bags bought) for one window in one call.
+ * Cards that share the window share this query, so a whole row of cards costs one request.
+ * There is no comparison window: the cards show the figure for what is selected, nothing else.
  */
 export function dashboardKpisQuery(
   slug: string,
   businessId: string,
-  windows: KpiWindows,
+  range: DashboardRange,
   get: ApiGetter = apiFetch,
 ) {
-  const query = {
-    from: windows.current.from,
-    to: windows.current.to,
-    ...(windows.previous ? { prevFrom: windows.previous.from, prevTo: windows.previous.to } : {}),
-  };
+  const query = { from: range.from, to: range.to };
   return {
     queryKey: dealershipKeys.list(businessId, 'dashboardKpis', query),
     queryFn: ({ signal }: { signal: AbortSignal }) =>
@@ -143,6 +133,6 @@ export function dashboardKpisQuery(
   };
 }
 
-export function useDashboardKpis(slug: string, businessId: string, windows: KpiWindows) {
-  return useQuery(dashboardKpisQuery(slug, businessId, windows));
+export function useDashboardKpis(slug: string, businessId: string, range: DashboardRange) {
+  return useQuery(dashboardKpisQuery(slug, businessId, range));
 }

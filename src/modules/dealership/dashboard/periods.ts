@@ -101,14 +101,14 @@ export function monthYearPeriods(today: string, selection: MonthYearSelection): 
   return { current, previous: previousMonthRange(from) };
 }
 
-/** Daily card windows for a selection. `customDate` is used only with `custom`. */
+/** Daily card window for a selection. `customDate` is used only with `custom`. Nothing is compared. */
 export function dayPeriods(
   today: string,
   selection: DaySelection,
   customDate?: string,
-): PeriodPair {
+): { current: DayRange } {
   if (selection === 'lifetime') {
-    return { current: { from: LIFETIME_FROM, to: today }, previous: null };
+    return { current: { from: LIFETIME_FROM, to: today } };
   }
   const day =
     selection === 'today'
@@ -116,10 +116,7 @@ export function dayPeriods(
       : selection === 'yesterday'
         ? shiftDays(today, -1)
         : (customDate ?? today);
-  return {
-    current: { from: day, to: day },
-    previous: { from: shiftDays(day, -1), to: shiftDays(day, -1) },
-  };
+  return { current: { from: day, to: day } };
 }
 
 /** Relative growth in percent, or `null` when the base is zero or a value is missing. */

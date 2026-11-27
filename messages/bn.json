@@ -1238,8 +1238,7 @@
       "openLabel": "{title}: পাতা খুলুন",
       "loadError": "লোড করা যায়নি",
       "compare": {
-        "vsLastMonth": "গত মাসের তুলনায়",
-        "vsYesterday": "গতকালের তুলনায়"
+        "vsLastMonth": "গত মাসের তুলনায়"
       },
       "chart": {
         "salesCollectionTitle": "বিক্রয় ও আদায়ের সারসংক্ষেপ",

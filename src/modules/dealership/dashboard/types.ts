@@ -92,6 +92,4 @@ export interface KpiWindow {
 
 export interface KpisResponse {
   current: KpiWindow;
-  /** `null` when no comparison window was asked for (All Time). */
-  previous: KpiWindow | null;
 }
