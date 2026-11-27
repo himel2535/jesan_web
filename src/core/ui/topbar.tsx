@@ -4,10 +4,12 @@ import { Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { Theme } from '@/core/theme/config';
 import { BusinessSwitcher } from './business-switcher';
+import { NotificationBell } from './notification-bell';
+import { TopbarDate } from './topbar-date';
 import { UserMenu } from './user-menu';
 
 /**
- * Top bar: menu button (phones), business switcher and the user menu (language, theme, password,
+ * Top bar: menu button (phones), business switcher, current month, the pending-approvals bell and the user menu (language, theme, password,
  * sign out). No blur here: blur is limited to cards, the sidebar and modals (DECISIONS.md).
  */
 export function Topbar({ theme, onOpenMenu }: { theme: Theme; onOpenMenu: () => void }) {
@@ -25,6 +27,8 @@ export function Topbar({ theme, onOpenMenu }: { theme: Theme; onOpenMenu: () => 
       </button>
       <BusinessSwitcher />
       <div className="ml-auto flex items-center gap-2">
+        <TopbarDate />
+        <NotificationBell />
         <UserMenu theme={theme} />
       </div>
     </header>
