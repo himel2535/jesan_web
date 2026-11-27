@@ -1233,6 +1233,8 @@
         "today": "আজ",
         "yesterday": "গতকাল"
       },
+      "selectMonth": "{title}-এর মাস বাছুন",
+      "selectYear": "{title}-এর বছর বাছুন",
       "periodFor": "{title}-এর সময়কাল",
       "openLabel": "{title}: পাতা খুলুন",
       "loadError": "লোড করা যায়নি",

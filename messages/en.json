@@ -1233,6 +1233,8 @@
         "today": "Today",
         "yesterday": "Yesterday"
       },
+      "selectMonth": "Choose month for {title}",
+      "selectYear": "Choose year for {title}",
       "periodFor": "Period for {title}",
       "openLabel": "{title}: open page",
       "loadError": "Could not load",
