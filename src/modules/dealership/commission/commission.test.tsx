@@ -50,6 +50,13 @@ const summary = (o: Partial<CommissionSummary> = {}): CommissionSummary => ({
   ...o,
 });
 
+const series = (months: { month: string; received: string }[] = []) => ({
+  year: 2026,
+  months,
+  yearReceived: '2100000.00',
+  lifetimeReceived: '2100000.00',
+});
+
 const form = (e: CommissionEntry | null = null, onSaved = vi.fn(), onClose = vi.fn()) => (
   <EntryForm entry={e} slug="example-cement" businessId={BID} onClose={onClose} onSaved={onSaved} />
 );
@@ -60,6 +67,7 @@ describe('<CommissionView>', () => {
     const { calls } = mockApi({
       [`GET ${B}/commission-entries`]: () => json(200, page([entry()])),
       [`GET ${B}/commission-summary`]: () => json(200, summary()),
+      [`GET ${B}/dashboard/commission-series`]: () => json(200, series()),
     });
     const { container } = renderInBusiness(
       <CommissionView slug="example-cement" businessId={BID} />,
@@ -76,10 +84,53 @@ describe('<CommissionView>', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('shows a yearly and a monthly card; the month dropdown reads that month from the series', async () => {
+    nav.search = 'year=2025&month=3';
+    const { calls } = mockApi({
+      [`GET ${B}/commission-entries`]: () => json(200, page([entry()])),
+      [`GET ${B}/commission-summary`]: () => json(200, summary({ year: 2025 })),
+      [`GET ${B}/dashboard/commission-series`]: () =>
+        json(200, series([{ month: '2025-03', received: '350000.00' }])),
+    });
+    const { container } = renderInBusiness(
+      <CommissionView slug="example-cement" businessId={BID} />,
+      { me: ownerMe },
+    );
+    expect(await screen.findByText('Total Yearly Commission')).toBeInTheDocument();
+    expect(screen.getByText('Total Monthly Commission')).toBeInTheDocument();
+    expect(await screen.findByText('৳3,50,000.00')).toBeInTheDocument();
+    expect(screen.getByLabelText('Choose year')).toHaveValue('2025');
+    expect(screen.getByLabelText('Choose month')).toHaveValue('3');
+    expect(calls.find((c) => c.path === `${B}/dashboard/commission-series`)!.url).toContain(
+      'year=2025',
+    );
+    await expectNoA11yViolations(container);
+  });
+
+  it('a month with no entries shows zero; choosing a month or year updates the URL', async () => {
+    nav.search = 'year=2025&month=3';
+    mockApi({
+      [`GET ${B}/commission-entries`]: () => json(200, page([entry()])),
+      [`GET ${B}/commission-summary`]: () => json(200, summary({ year: 2025 })),
+      [`GET ${B}/dashboard/commission-series`]: () => json(200, series()),
+    });
+    renderInBusiness(<CommissionView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    expect(await screen.findByText('৳0.00')).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Choose month'), '5');
+    expect(nav.replace).toHaveBeenLastCalledWith('/b/example-cement/commission?year=2025&month=5', {
+      scroll: false,
+    });
+    await userEvent.selectOptions(screen.getByLabelText('Choose year'), '2024');
+    expect(nav.replace).toHaveBeenLastCalledWith('/b/example-cement/commission?year=2024&month=3', {
+      scroll: false,
+    });
+  });
+
   it('no entries yet: empty state', async () => {
     mockApi({
       [`GET ${B}/commission-entries`]: () => json(200, page([])),
       [`GET ${B}/commission-summary`]: () => json(200, summary({ totalReceived: '0.00' })),
+      [`GET ${B}/dashboard/commission-series`]: () => json(200, series()),
     });
     renderInBusiness(<CommissionView slug="example-cement" businessId={BID} />, { me: ownerMe });
     expect(await screen.findByText('No commission recorded yet')).toBeInTheDocument();
@@ -89,6 +140,7 @@ describe('<CommissionView>', () => {
     mockApi({
       [`GET ${B}/commission-entries`]: () => json(200, page([entry()])),
       [`GET ${B}/commission-summary`]: () => json(200, summary()),
+      [`GET ${B}/dashboard/commission-series`]: () => json(200, series()),
     });
     renderInBusiness(<CommissionView slug="example-cement" businessId={BID} />, {
       me: {

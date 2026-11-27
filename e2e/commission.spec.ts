@@ -40,6 +40,14 @@ test('owner records commission received with a reason and sees the year total', 
   await expect(owner.getByText('Monthly target bonus')).toBeVisible();
   await expect(owner.getByText('৳25,000.00').first()).toBeVisible();
   await expect(owner.getByText('1 entry')).toBeVisible();
+  await expect(owner.getByText('Total Yearly Commission')).toBeVisible();
+
+  // The monthly card follows its own month dropdown: January holds the entry, December nothing.
+  await expect(owner.getByLabel('Choose month')).toHaveValue('12');
+  await owner.getByLabel('Choose month').selectOption('1');
+  await expect(
+    owner.locator('article', { hasText: 'Total Monthly Commission' }).getByText('৳25,000.00'),
+  ).toBeVisible();
 
   // Correct it: only the amount changes.
   await owner

@@ -621,11 +621,11 @@
       "title": "কমিশন",
       "description": "{business}-এর পাওয়া কমিশন ও তার কারণ।",
       "summary": {
-        "title": "বছরের সারাংশ",
-        "totalReceived": "মোট প্রাপ্ত",
-        "entries": "{count}টি এন্ট্রি",
-        "previousYear": "আগের বছর",
-        "nextYear": "পরের বছর"
+        "yearlyTitle": "বার্ষিক মোট কমিশন",
+        "monthlyTitle": "মাসিক মোট কমিশন",
+        "selectYear": "বছর বেছে নিন",
+        "selectMonth": "মাস বেছে নিন",
+        "entries": "{count}টি এন্ট্রি"
       },
       "entry": {
         "new": "কমিশন যোগ করুন",
