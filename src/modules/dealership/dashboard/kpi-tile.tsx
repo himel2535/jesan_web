@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ChevronRight, TrendingDown, TrendingUp } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/core/ui/cn';
 
 export type TileHue = 'blue' | 'green' | 'purple' | 'orange';
@@ -27,32 +27,20 @@ const HUE: Record<TileHue, { card: string; icon: string }> = {
 };
 
 export interface Growth {
-  /** Real percent change, or `null` when it cannot be computed (zero base). */
+  /** The real change, or null when there is nothing to compare against. */
   percent: number | null;
-  /** The comparison label, e.g. "vs last month". */
+  /** What it is compared with, e.g. "vs Last Month". */
   label: string;
 }
 
-export interface KpiTileProps {
-  hue: TileHue;
-  icon: ReactNode;
-  title: string;
-  /** Accessible name of the navigation link, e.g. "Total Collection — open Collections". */
-  linkLabel: string;
-  href: string;
-  value: ReactNode;
-  growth: Growth | null;
-  /** The period control. It sits above the navigation overlay, so using it never navigates. */
-  selector: ReactNode;
-  loading?: boolean;
-  /** Shown instead of the value when the data could not be loaded. */
-  errorText?: string;
-}
-
 /**
- * One KPI card. The whole card navigates to its parent page through an overlay link; the
- * period control is layered above that link (`z-10`), so changing the period can never follow
- * the link. There is no nested interactive element: the link wraps nothing but its own overlay.
+ * One KPI card from the reference: icon, title and a chevron on top, the figure
+ * large beneath it, the change under that, and the period pills along the
+ * bottom.
+ *
+ * The whole card navigates through an overlay link. The pills sit above that
+ * overlay and stop the click themselves, so changing a period never follows the
+ * link, and no interactive element is nested inside another.
  */
 export function KpiTile({
   hue,
@@ -62,16 +50,27 @@ export function KpiTile({
   href,
   value,
   growth,
-  selector,
+  pills,
   loading = false,
   errorText,
-}: KpiTileProps) {
+}: {
+  hue: TileHue;
+  icon: ReactNode;
+  title: string;
+  linkLabel: string;
+  href: string;
+  value: ReactNode;
+  growth: Growth | null;
+  pills: ReactNode;
+  loading?: boolean;
+  errorText?: string;
+}) {
   const up = growth?.percent !== null && growth?.percent !== undefined && growth.percent >= 0;
   return (
     <article
       className={cn(
-        'relative flex min-h-[96px] min-w-0 flex-col gap-1 rounded-card border p-2.5',
-        'transition-shadow hover:shadow-[var(--dash-shadow)] xl:p-3',
+        'relative flex min-w-0 flex-col gap-0.5 rounded-card border p-2 xl:p-2.5',
+        'transition-shadow hover:shadow-[var(--dash-shadow)]',
         HUE[hue].card,
       )}
     >
@@ -81,59 +80,57 @@ export function KpiTile({
         aria-label={linkLabel}
         className="absolute inset-0 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
       />
+
       <div className="pointer-events-none flex items-center gap-2">
         <span
           aria-hidden
           className={cn(
-            'inline-flex size-7 shrink-0 items-center justify-center rounded-full',
+            'inline-flex size-8 shrink-0 items-center justify-center rounded-xl',
             HUE[hue].icon,
           )}
         >
           {icon}
         </span>
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--dash-fg-muted)]">
+        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--dash-fg)]">
           {title}
         </p>
         <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--dash-fg-muted)]" />
       </div>
 
-      <div className="flex min-w-0 items-end justify-between gap-2">
-        <div className="pointer-events-none min-w-0 flex-1">
-          {loading ? (
-            <div className="h-6 w-24 animate-pulse rounded bg-[var(--dash-border)]" />
-          ) : errorText ? (
-            <p className="truncate text-sm text-[var(--dash-danger)]">{errorText}</p>
-          ) : (
-            <p className="truncate text-lg font-bold text-[var(--dash-fg)] tabular-nums xl:text-xl">
-              {value}
-            </p>
-          )}
-          {growth && !loading && !errorText && (
-            <p
-              className={cn(
-                'flex min-w-0 items-center gap-1 text-xs font-medium',
-                growth.percent === null
-                  ? 'text-[var(--dash-fg-muted)]'
-                  : up
-                    ? 'text-[var(--dash-success)]'
-                    : 'text-[var(--dash-danger)]',
-              )}
-            >
-              {growth.percent !== null &&
-                (up ? (
-                  <TrendingUp aria-hidden className="size-3.5 shrink-0" />
-                ) : (
-                  <TrendingDown aria-hidden className="size-3.5 shrink-0" />
-                ))}
-              <span className="truncate">
-                {growth.percent === null ? '—' : `${up ? '+' : ''}${growth.percent.toFixed(1)}%`}{' '}
-                <span className="text-[var(--dash-fg-muted)]">{growth.label}</span>
-              </span>
-            </p>
-          )}
-        </div>
-        <div className="relative z-10 w-[min(11.5rem,56%)] shrink-0">{selector}</div>
+      <div className="pointer-events-none min-w-0">
+        {loading ? (
+          <div className="h-7 w-28 animate-pulse rounded bg-[var(--dash-border)]" />
+        ) : errorText ? (
+          <p className="truncate text-sm text-[var(--dash-danger)]">{errorText}</p>
+        ) : (
+          <p className="truncate text-xl leading-tight font-bold text-[var(--dash-fg)] tabular-nums">
+            {value}
+          </p>
+        )}
       </div>
+
+      <div className="pointer-events-none min-h-4 text-[11px]">
+        {growth && !loading && !errorText && (
+          <p
+            className={cn(
+              'flex min-w-0 items-center gap-1 font-semibold',
+              growth.percent === null
+                ? 'text-[var(--dash-fg-muted)]'
+                : up
+                  ? 'text-[var(--dash-success)]'
+                  : 'text-[var(--dash-danger)]',
+            )}
+          >
+            {growth.percent !== null && <span aria-hidden>{up ? '▲' : '▼'}</span>}
+            <span className="truncate">
+              {growth.percent === null ? '—' : `${up ? '+' : ''}${growth.percent.toFixed(1)}%`}{' '}
+              <span className="font-normal text-[var(--dash-fg-muted)]">{growth.label}</span>
+            </span>
+          </p>
+        )}
+      </div>
+
+      <div className="relative z-10 mt-auto pt-0.5">{pills}</div>
     </article>
   );
 }

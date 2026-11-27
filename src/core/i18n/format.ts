@@ -41,6 +41,19 @@ export function formatMoney(value: NumericInput, locale: Locale): string {
   return `${isNegative(value) ? '-' : ''}${TAKA}${digits}`;
 }
 
+/**
+ * A headline amount with no paisa: ৳ 3,25,750. For dashboard figures, where
+ * two decimal places on every tile is noise. Everything that has to balance to
+ * the paisa keeps using `formatMoney`.
+ */
+export function formatMoneyRounded(value: NumericInput, locale: Locale): string {
+  const digits = formatNumber(absolute(value), locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  return `${isNegative(value) ? '-' : ''}${TAKA} ${digits}`;
+}
+
 /** Quantities (bags, kg, …): up to `maxFractionDigits` decimals, none shown when whole. */
 export function formatQuantity(value: NumericInput, locale: Locale, maxFractionDigits = 3): string {
   return formatNumber(value, locale, { maximumFractionDigits: maxFractionDigits });

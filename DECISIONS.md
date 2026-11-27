@@ -676,3 +676,19 @@
 - **পরীক্ষা**: স্থানীয় PostgreSQL 16 (CI-তে 18) দিয়ে backend e2e; Chromium দিয়ে Playwright e2e সব পাস।
 - **নতুন backend endpoint (শুধু পড়া, স্কিমা অপরিবর্তিত)**: `GET dashboard/cashbook`, `GET dashboard/monthly-series`, `GET dashboard/commission-series`। বিদ্যমান অনুমতি ব্যবহার; কেনার টাকা `product.cost.view`-তে, কমিশন owner-only।
 - **বাকি (অনুমোদনের পর)**: COGS/weighted average, খোলা মজুদের মূল্যায়ন (কোনো আসল রেকর্ড বদলানো হয়নি), purchase-related খরচের চিহ্ন, supplier/expense payable (সিস্টেমে নেই, "ট্র্যাক হয় না")।
+
+## ২০২৬-১১-২৭ — ড্যাশবোর্ড রেফারেন্স ছবির সাথে মেলানো, আসল নিট লাভ
+
+মালিক আগের রাউন্ড (rev 2) প্রত্যাখ্যান করেছিলেন: ডিজাইন রেফারেন্সের মতো নয়, Financial Summary অনেক জটিল, Net Profit অসম্পূর্ণ, KPI কার্ডের পিরিয়ড ড্রপডাউন এত বড় যে মান-ই দেখা যায় না। backend-এ moving weighted average cost engine বানানোর পর এবার ড্যাশবোর্ড পুরোপুরি পুনর্নির্মাণ।
+
+- **KPI কার্ডের period selector**: dropdown-এর বদলে ছোট তিনটা pill (This Month / Last Month / All Time, বা Today / Yesterday / All Time) — রেফারেন্সের মতো ~২৬px উঁচু দেখায়, কিন্তু `before:-inset-y-2` দিয়ে ছদ্মাবরণ হিট-এরিয়া ৪০px রাখা হয়েছে (CLAUDE.md-এর বাটন-উচ্চতার নিয়ম মানতে)। প্রতিটা কার্ডের নিজের pill, সেকশন-ব্যাপী কোনো বাল্ক কন্ট্রোল নেই — সেটাই আগের রাউন্ডে কার্ডের মান ছোট করে দিচ্ছিল।
+- **একই সাদা প্যানেলে This Month ও Today দুই সারি** — রেফারেন্সের লেআউট।
+- **Key Information** (নতুন প্যানেল): মোট কমিশন (এই বছর), মাসিক কমিশন (এই মাস), মোট বাকি — কমিশন owner-only (`commission.view`), সেটা না থাকলে শুধু বাকি দেখায়।
+- **Cash Flow Snapshot** (নতুন, `cashbook-panel.tsx`-এর জায়গায়): হাতে নগদ (ক্যাশ+ব্যাংক) আর গ্রাহকের বাকি — দুটোই আলাদা, কখনো যোগ করা হয় না।
+- **Financial Summary পুনর্লিখন**: এখন ঠিক চারটা সারি যোগফলে যায় — Total Sales (+), Purchase Cost of Sales (−, নতুন backend endpoint-এর `cogs`), Partial Expense (−), Commission (+) — আর ডান পাশে সবুজ Net Profit কার্ড, backend-এর হিসাব করা আসল সংখ্যা (আর কোনো "অনুমোদনের অপেক্ষায়" নেই)। Collection ও Due নিচে আলাদা বিভাজকের পর, কোনো +/− চিহ্ন ছাড়া, যাতে ভুলেও সূত্রের অংশ মনে না হয়। `uncostedQuantityDelivered` শূন্যের বেশি হলে লাভের পাশে সতর্কতা।
+- **Monthly / Daily Summary**: চলতি মাস আর আজ, দুটোই সবসময় দেখানো থাকে; pill শুধু কোনটা উপরে দেখাবে তা বাছে (রেফারেন্সের মতোই দুটোই থাকে)।
+- **`formatMoneyRounded`**: হেডলাইন অঙ্কের জন্য নতুন ফরম্যাটার (দশমিক ছাড়া, যেমন ৳ ৩,২৫,৭৫০) — রেফারেন্স ছবির মতো। `formatMoney` (দুই দশমিক, হিসাবের জন্য) অন্য সব পাতায় অপরিবর্তিত।
+- **নতুন টোকেন**: `--dash-danger-soft`, `--dash-warning` (হালকা ও গাঢ় দুই থিমে), `dash-contrast.test.ts`-এ নতুন জোড়া যাচাই।
+- **সরানো হয়েছে**: `cashbook-panel.tsx`, `period-select.tsx` (dropdown), `period-sources.ts`, `summary-rows.tsx` — নতুন ডিজাইনে আর লাগে না।
+- **ছোট বিচ্যুতি, কারণসহ**: রেফারেন্সের "pcs"-এর বদলে আসল একক (Bag/বস্তা) — CLAUDE.md হার্ডকোড এককের নাম নিষেধ করে। কমিশন চার্টের লেজেন্ড "This Year"/"Last Year", রেফারেন্সের "This Month"/"Last Month" নয় — বারো মাসের অক্ষে সেটা ভুল হতো। ড্যাশবোর্ডের হেডারে আলাদা ইউজার-চিপ নেই — টপবারেই একবার ইউজার দেখানো আছে, দুইবার দেখানো ভুল হতো।
+- **যাচাই**: `format:check`, `lint`, `type-check`, `test` (৪৮২টা, নতুন ৪টা cost/profit-সংক্রান্ত সহ), `build`, `test:e2e` (৩২টা) — সব সবুজ। প্রোডাকশন বিল্ডে ১০২৪×৭৬৮ থেকে ১৯২০×১০৮০ পর্যন্ত কোনো page scroll বা অনুভূমিক scroll নেই; ট্যাবলেট ও মোবাইলে শুধু উল্লম্ব scroll।

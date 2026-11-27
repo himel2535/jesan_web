@@ -1476,6 +1476,56 @@ http
           availableCashAndBank: (Number(cash.closing) + Number(bank.closing)).toFixed(2),
         });
       }
+      if (rest === 'dashboard/finance-summary' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const { from, to } = dashMonthRange(f);
+        const inRange = (date) => date >= from && date <= to;
+        const salesTotal = deliveries
+          .filter((d) => d.status === 'active' && inRange(d.deliveryDate))
+          .reduce((a, d) => a + Number(dashDeliveryAmount(d)), 0);
+        const collectionTotal = collections
+          .filter((c) => c.status === 'active' && inRange(c.collectionDate))
+          .reduce((a, c) => a + Number(c.amount), 0);
+        const expenseTotal = expenses
+          .filter((e) => e.status === 'active' && inRange(e.expenseDate))
+          .reduce((a, e) => a + Number(e.amount), 0);
+        const purchaseTotal = purchases
+          .filter((p) => p.status === 'active' && inRange(p.purchaseDate))
+          .reduce((a, p) => a + Number(dashPurchaseAmount(p)), 0);
+        const commissionTotal = commissionEntries
+          .flatMap((e) => e.receipts)
+          .filter((r) => inRange(r.receivedDate))
+          .reduce((a, r) => a + Number(r.amount), 0);
+        const due = customers
+          .filter((c) => c.isActive !== false && Number(c.currentBalance ?? 0) > 0)
+          .reduce((a, c) => a + Number(c.currentBalance ?? 0), 0);
+        // Half the delivered value stands in for cost here; the real figure is
+        // the weighted average snapshot on each delivery line.
+        const cogs = salesTotal * 0.5;
+        const body = {
+          from,
+          to,
+          sales: fixed(salesTotal),
+          collection: fixed(collectionTotal),
+          customerDue: fixed(due),
+          expenses: fixed(expenseTotal),
+          commissionReceived: fixed(commissionTotal),
+        };
+        if (perms.includes('profit.view')) {
+          body.totalPurchase = fixed(purchaseTotal);
+          body.currentStockQuantity = qtyString(
+            products.reduce((a, p) => a + Number(stockOf.get(p.id) ?? 0), 0),
+          );
+          body.currentStockValue = fixed(cogs);
+          body.cogs = fixed(cogs);
+          body.netProfit = fixed(salesTotal - cogs - expenseTotal + commissionTotal);
+          body.uncostedQuantityDelivered = '0.000';
+          body.uncostedQuantityOnHand = '0.000';
+          body.uncostedDeliveryLines = 0;
+        }
+        return send(res, 200, body);
+      }
       if (rest === 'dashboard/monthly-series' && req.method === 'GET') {
         if (!need('report.view')) return;
         const year = Number(url.searchParams.get('year') ?? new Date().getFullYear());

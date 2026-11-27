@@ -49,3 +49,25 @@ export interface CommissionSeriesResponse {
   lifetimeReceived: string;
   receivable: string;
 }
+
+/** `GET dashboard/finance-summary`. Cost and profit fields need `profit.view`. */
+export interface FinanceSummaryResponse {
+  from: string;
+  to: string;
+  sales: string;
+  collection: string;
+  customerDue: string;
+  expenses: string;
+  commissionReceived: string;
+  /** Absent without `profit.view`. */
+  totalPurchase?: string;
+  currentStockQuantity?: string;
+  currentStockValue?: string;
+  /** Sold Products Purchase Cost. */
+  cogs?: string;
+  netProfit?: string;
+  /** Above zero, COGS is understated by an unknown amount. */
+  uncostedQuantityDelivered?: string;
+  uncostedQuantityOnHand?: string;
+  uncostedDeliveryLines?: number;
+}

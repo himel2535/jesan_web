@@ -1,7 +1,12 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/core/api/client';
 import { dealershipKeys } from '../master-data/api';
-import type { CashbookResponse, CommissionSeriesResponse, MonthlySeriesResponse } from './types';
+import type {
+  CashbookResponse,
+  CommissionSeriesResponse,
+  FinanceSummaryResponse,
+  MonthlySeriesResponse,
+} from './types';
 
 const base = (slug: string) => `/b/${encodeURIComponent(slug)}/dashboard`;
 
@@ -62,4 +67,30 @@ export function useDashboardCommissionSeries(
   enabled = true,
 ) {
   return useQuery({ ...dashboardCommissionSeriesQuery(slug, businessId, year), enabled });
+}
+
+/** The whole Financial Summary for one window, in a single call (`report.view`). */
+export function dashboardFinanceSummaryQuery(
+  slug: string,
+  businessId: string,
+  range: DashboardRange,
+) {
+  return {
+    queryKey: dealershipKeys.list(businessId, 'dashboardFinance', { ...range }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      apiFetch<FinanceSummaryResponse>(`${base(slug)}/finance-summary`, {
+        query: { ...range },
+        signal,
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  };
+}
+
+export function useDashboardFinanceSummary(
+  slug: string,
+  businessId: string,
+  range: DashboardRange,
+) {
+  return useQuery(dashboardFinanceSummaryQuery(slug, businessId, range));
 }
