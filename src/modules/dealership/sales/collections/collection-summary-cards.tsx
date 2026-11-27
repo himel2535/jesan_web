@@ -1,10 +1,12 @@
 'use client';
 
+import { Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/core/api/errors';
 import { useCollectionsSummaryAmounts } from '../api';
 import { Money } from '../../master-data/shared/display';
 import { LoadError } from '../../master-data/shared/states';
+import { SummaryTile, SummaryTileGrid } from '../../dashboard/summary-tile';
 import type { SalesSummaryRanges } from '../shared';
 
 function isForbidden(error: unknown) {
@@ -13,23 +15,21 @@ function isForbidden(error: unknown) {
 
 export function CollectionsSummaryCardsSkeleton() {
   return (
-    <div className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-3">
+    <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }, (_, i) => (
-        <div key={i} className="space-y-2">
-          <div className="h-4 w-28 animate-pulse rounded bg-surface-muted" />
-          <div className="h-6 w-24 animate-pulse rounded bg-surface-muted" />
-        </div>
+        <SummaryTile
+          key={i}
+          hue="blue"
+          icon={<Wallet aria-hidden className="size-3.5" />}
+          label=""
+          value={null}
+          loading
+        />
       ))}
-    </div>
+    </SummaryTileGrid>
   );
 }
 
-/**
- * Three KPI cards (`report.view`). The Collections page itself only needs `collection.view`, so a
- * user without `report.view` gets a 403 on all three queries here — that's a UI-visibility gap,
- * not an error, so the cards simply don't render (same convention as `ExpensesSummaryCards`). Any
- * OTHER failure (network, 500, …) is a real error and must stay visible with a retry.
- */
 export function CollectionsSummaryCards({
   slug,
   businessId,
@@ -61,25 +61,25 @@ export function CollectionsSummaryCards({
   }
 
   return (
-    <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-3">
-      <div>
-        <dt className="text-sm text-fg-muted">{t('total')}</dt>
-        <dd className="font-semibold">
-          <Money value={total.data.totalAmount} />
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('today')}</dt>
-        <dd className="font-semibold">
-          <Money value={today.data.totalAmount} />
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('thisMonth')}</dt>
-        <dd className="font-semibold">
-          <Money value={thisMonth.data.totalAmount} />
-        </dd>
-      </div>
-    </dl>
+    <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-3">
+      <SummaryTile
+        hue="blue"
+        icon={<Wallet aria-hidden className="size-3.5" />}
+        label={t('total')}
+        value={<Money value={total.data.totalAmount} />}
+      />
+      <SummaryTile
+        hue="green"
+        icon={<Wallet aria-hidden className="size-3.5" />}
+        label={t('today')}
+        value={<Money value={today.data.totalAmount} />}
+      />
+      <SummaryTile
+        hue="purple"
+        icon={<Wallet aria-hidden className="size-3.5" />}
+        label={t('thisMonth')}
+        value={<Money value={thisMonth.data.totalAmount} />}
+      />
+    </SummaryTileGrid>
   );
 }

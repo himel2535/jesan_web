@@ -1,69 +1,66 @@
 'use client';
 
+import { ArrowDownLeft, ArrowUpRight, Scale, AlertTriangle, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { isNegativeMoney } from '@/core/lib/money';
-import { cn } from '@/core/ui/cn';
 import { Money } from '../master-data/shared/display';
+import { SummaryTile, SummaryTileGrid } from '../dashboard/summary-tile';
 import type { AccountsSummary } from './types';
 
 export function SummaryCardsSkeleton() {
   return (
-    <div className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
+    <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className="space-y-2">
-          <div className="h-4 w-20 animate-pulse rounded bg-surface-muted" />
-          <div className="h-6 w-28 animate-pulse rounded bg-surface-muted" />
-        </div>
+        <SummaryTile
+          key={i}
+          hue="blue"
+          icon={<Scale aria-hidden className="size-3.5" />}
+          label=""
+          value={null}
+          loading
+        />
       ))}
-    </div>
+    </SummaryTileGrid>
   );
 }
 
 export function SummaryCards({ summary }: { summary: AccountsSummary }) {
   const t = useTranslations('dealership.accounts.summary');
   return (
-    <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
-      <div>
-        <dt className="text-sm text-fg-muted">{t('totalIn')}</dt>
-        <dd className="font-semibold text-success">
-          <Money value={summary.totalIn} />
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('totalOut')}</dt>
-        <dd className="font-semibold text-danger">
-          <Money value={summary.totalOut} />
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('net')}</dt>
-        <dd
-          className={cn(
-            'text-lg font-bold',
-            isNegativeMoney(summary.net) ? 'text-danger' : 'text-success',
-          )}
-        >
-          <Money value={summary.net} />
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('totalDue')}</dt>
-        <dd>
-          <span className="font-semibold text-warning">
-            <Money value={summary.totalDue} />
-          </span>
-          <p className="mt-1 text-xs text-fg-muted">{t('totalDueNote')}</p>
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('totalAdvance')}</dt>
-        <dd>
-          <span className="font-semibold text-focus">
-            <Money value={summary.totalAdvance} />
-          </span>
-          <p className="mt-1 text-xs text-fg-muted">{t('totalAdvanceNote')}</p>
-        </dd>
-      </div>
-    </dl>
+    <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <SummaryTile
+        hue="green"
+        icon={<ArrowDownLeft aria-hidden className="size-3.5" />}
+        label={t('totalIn')}
+        value={<Money value={summary.totalIn} />}
+      />
+      <SummaryTile
+        hue="orange"
+        icon={<ArrowUpRight aria-hidden className="size-3.5" />}
+        label={t('totalOut')}
+        value={<Money value={summary.totalOut} />}
+      />
+      <SummaryTile
+        hue={isNegativeMoney(summary.net) ? 'orange' : 'blue'}
+        icon={<Scale aria-hidden className="size-3.5" />}
+        label={t('net')}
+        value={<Money value={summary.net} />}
+        highlighted
+      />
+      <SummaryTile
+        hue="orange"
+        icon={<AlertTriangle aria-hidden className="size-3.5" />}
+        label={t('totalDue')}
+        value={<Money value={summary.totalDue} />}
+        note={t('totalDueNote')}
+      />
+      <SummaryTile
+        hue="purple"
+        icon={<Sparkles aria-hidden className="size-3.5" />}
+        label={t('totalAdvance')}
+        value={<Money value={summary.totalAdvance} />}
+        note={t('totalAdvanceNote')}
+      />
+    </SummaryTileGrid>
   );
 }

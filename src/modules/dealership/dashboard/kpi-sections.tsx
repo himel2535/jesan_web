@@ -195,7 +195,7 @@ function Row({
         <Icon aria-hidden className="size-4 text-[var(--dash-primary)]" />
         {heading}
       </h2>
-      <div className="grid min-w-0 grid-cols-2 gap-[5px] xl:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-1 gap-[5px] sm:grid-cols-2 xl:grid-cols-4">
         {METRICS.map((metric) => (
           <MetricCard
             key={metric}

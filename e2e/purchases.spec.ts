@@ -122,7 +122,9 @@ test('purchases page shows the five KPI cards, with the product filter on the fi
     "This month's purchases",
     "This year's purchases",
   ]) {
-    await expect(owner.getByRole('term').filter({ hasText: label })).toBeVisible();
+    await expect(
+      owner.locator('[class*="rounded-card"]').filter({ hasText: label }).first(),
+    ).toBeVisible();
   }
 
   const statusBox = await owner.getByLabel('Status', { exact: true }).boundingBox();

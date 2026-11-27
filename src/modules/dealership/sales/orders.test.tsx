@@ -118,15 +118,15 @@ describe('<OrdersList>', () => {
     });
     renderInBusiness(<OrdersList slug="example-cement" businessId={BID} />, { me: managerP });
     await screen.findByRole('rowheader', { name: 'ORD-0001' });
-    expect(screen.getByText("Today's Sales").nextElementSibling).toHaveTextContent('৳1,20,000.00');
-    expect(screen.getByText("This Month's Sales").nextElementSibling).toHaveTextContent(
-      '৳1,20,000.00',
-    );
-    expect(screen.getByText('Total Sales').nextElementSibling).toHaveTextContent('৳1,20,000.00');
-    expect(screen.getByText('Total Orders').nextElementSibling).toHaveTextContent('1');
-    expect(screen.getByText("This Month's Orders").nextElementSibling).toHaveTextContent('1');
-    expect(screen.getByText('Total Deliveries').nextElementSibling).toHaveTextContent('0');
-    expect(screen.getByText("This Month's Deliveries").nextElementSibling).toHaveTextContent('0');
+    const tile = (label: string) =>
+      within(screen.getByText(label).closest('[class*="rounded-card"]')!);
+    expect(tile("Today's Sales").getByText('৳1,20,000.00')).toBeInTheDocument();
+    expect(tile("This Month's Sales").getByText('৳1,20,000.00')).toBeInTheDocument();
+    expect(tile('Total Sales').getByText('৳1,20,000.00')).toBeInTheDocument();
+    expect(tile('Total Orders').getByText('1')).toBeInTheDocument();
+    expect(tile("This Month's Orders").getByText('1')).toBeInTheDocument();
+    expect(tile('Total Deliveries').getByText('0')).toBeInTheDocument();
+    expect(tile("This Month's Deliveries").getByText('0')).toBeInTheDocument();
   });
 
   it('salesman: order-count cards only; sales-amount and delivery-count cards hide on their own 403', async () => {
@@ -140,7 +140,9 @@ describe('<OrdersList>', () => {
       me: meWith(['sale.view.own', 'sale.create', 'customer.view']),
     });
     await screen.findByRole('rowheader', { name: 'ORD-0001' });
-    expect(screen.getByText('Total Orders').nextElementSibling).toHaveTextContent('1');
+    const tile = (label: string) =>
+      within(screen.getByText(label).closest('[class*="rounded-card"]')!);
+    expect(tile('Total Orders').getByText('1')).toBeInTheDocument();
     expect(screen.queryByText("Today's Sales")).not.toBeInTheDocument();
     expect(screen.queryByText('Total Sales')).not.toBeInTheDocument();
     expect(screen.queryByText('Total Deliveries')).not.toBeInTheDocument();

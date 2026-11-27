@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, BookOpen, Scale, Wallet } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
@@ -12,6 +12,7 @@ import { PAGE_SIZE, parsePageParam } from '@/core/ui/pagination-logic';
 import { inputClass } from '@/core/ui/text-field';
 import { Money } from '../master-data/shared/display';
 import { LoadError } from '../master-data/shared/states';
+import { SummaryTile, SummaryTileGrid } from '../dashboard/summary-tile';
 import { useCashBook } from '../expenses/api';
 import {
   LIFETIME_FROM,
@@ -54,32 +55,33 @@ export function CashBookView({ slug, businessId }: { slug: string; businessId: s
 
   return (
     <div className="space-y-4">
-      <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <dt className="text-sm text-fg-muted">{t('openingBalance')}</dt>
-          <dd className="font-semibold">
-            <Money value={data.openingBalance} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-fg-muted">{t('totalIn')}</dt>
-          <dd className="font-semibold">
-            <Money value={data.totals.in} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-fg-muted">{t('totalOut')}</dt>
-          <dd className="font-semibold">
-            <Money value={data.totals.out} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-fg-muted">{t('closingBalance')}</dt>
-          <dd className="text-lg font-bold">
-            <Money value={data.closingBalance} />
-          </dd>
-        </div>
-      </dl>
+      <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryTile
+          hue="blue"
+          icon={<Wallet aria-hidden className="size-3.5" />}
+          label={t('openingBalance')}
+          value={<Money value={data.openingBalance} />}
+        />
+        <SummaryTile
+          hue="green"
+          icon={<ArrowDownLeft aria-hidden className="size-3.5" />}
+          label={t('totalIn')}
+          value={<Money value={data.totals.in} />}
+        />
+        <SummaryTile
+          hue="orange"
+          icon={<ArrowUpRight aria-hidden className="size-3.5" />}
+          label={t('totalOut')}
+          value={<Money value={data.totals.out} />}
+        />
+        <SummaryTile
+          hue="purple"
+          icon={<Scale aria-hidden className="size-3.5" />}
+          label={t('closingBalance')}
+          value={<Money value={data.closingBalance} />}
+          highlighted
+        />
+      </SummaryTileGrid>
 
       <div className="flex flex-wrap items-end gap-3">
         <div>

@@ -1,9 +1,11 @@
 'use client';
 
+import { Receipt } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/core/api/errors';
 import { Money } from '../master-data/shared/display';
 import { LoadError } from '../master-data/shared/states';
+import { SummaryTile, SummaryTileGrid } from '../dashboard/summary-tile';
 import { useExpensesSummary } from './api';
 import type { ExpenseSummaryRanges } from './shared';
 
@@ -13,25 +15,21 @@ function isForbidden(error: unknown) {
 
 export function ExpensesSummaryCardsSkeleton() {
   return (
-    <div className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-4">
       {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} className="space-y-2">
-          <div className="h-4 w-28 animate-pulse rounded bg-surface-muted" />
-          <div className="h-6 w-24 animate-pulse rounded bg-surface-muted" />
-        </div>
+        <SummaryTile
+          key={i}
+          hue="blue"
+          icon={<Receipt aria-hidden className="size-3.5" />}
+          label=""
+          value={null}
+          loading
+        />
       ))}
-    </div>
+    </SummaryTileGrid>
   );
 }
 
-/**
- * Four KPI cards (`report.view`). The Expenses page itself only needs `expense.view`, so a user
- * without `report.view` gets a 403 on all four queries here — that's a UI-visibility gap, not an
- * error, so the cards simply don't render (same convention as the dashboard's cash stats, which
- * disappear instead of showing an error when their own extra permission is missing). Any OTHER
- * failure (network, 500, …) is a real error and must stay visible with a retry, not disappear
- * silently — that would hide a genuine bug behind "the cards just aren't there".
- */
 export function ExpensesSummaryCards({
   slug,
   businessId,
@@ -63,31 +61,31 @@ export function ExpensesSummaryCards({
   }
 
   return (
-    <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div>
-        <dt className="text-sm text-fg-muted">{t('total')}</dt>
-        <dd className="font-semibold">
-          <Money value={total.data.totalAmount} />
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('today')}</dt>
-        <dd className="font-semibold">
-          <Money value={today.data.totalAmount} />
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('thisMonth')}</dt>
-        <dd className="font-semibold">
-          <Money value={thisMonth.data.totalAmount} />
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('previousMonth')}</dt>
-        <dd className="font-semibold">
-          <Money value={previousMonth.data.totalAmount} />
-        </dd>
-      </div>
-    </dl>
+    <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-4">
+      <SummaryTile
+        hue="blue"
+        icon={<Receipt aria-hidden className="size-3.5" />}
+        label={t('total')}
+        value={<Money value={total.data.totalAmount} />}
+      />
+      <SummaryTile
+        hue="green"
+        icon={<Receipt aria-hidden className="size-3.5" />}
+        label={t('today')}
+        value={<Money value={today.data.totalAmount} />}
+      />
+      <SummaryTile
+        hue="purple"
+        icon={<Receipt aria-hidden className="size-3.5" />}
+        label={t('thisMonth')}
+        value={<Money value={thisMonth.data.totalAmount} />}
+      />
+      <SummaryTile
+        hue="orange"
+        icon={<Receipt aria-hidden className="size-3.5" />}
+        label={t('previousMonth')}
+        value={<Money value={previousMonth.data.totalAmount} />}
+      />
+    </SummaryTileGrid>
   );
 }
