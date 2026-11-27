@@ -16,12 +16,14 @@ export function MonthYearSelect({
   year,
   month,
   tone = 'card',
+  fill = false,
   onChange,
 }: {
   title: string;
   year: number;
   month: number;
   tone?: PillTone;
+  fill?: boolean;
   onChange: (year: number, month: number) => void;
 }) {
   const t = useTranslations('dealership.dashboard');
@@ -36,6 +38,7 @@ export function MonthYearSelect({
         label={t('selectMonth', { title })}
         value={month}
         tone={tone}
+        fill={fill}
         options={Array.from({ length: 12 }, (_, i) => i + 1).map((m) => ({
           value: m,
           label: format.date(`${monthKey(year, m)}-01T00:00:00+06:00`, { month: 'short' }),
@@ -49,6 +52,7 @@ export function MonthYearSelect({
         label={t('selectYear', { title })}
         value={year}
         tone={tone}
+        fill={fill}
         options={Array.from({ length: 4 }, (_, i) => thisYear - 3 + i).map((y) => ({
           value: y,
           label: format.number(y % 100, { minimumIntegerDigits: 2, useGrouping: false }),

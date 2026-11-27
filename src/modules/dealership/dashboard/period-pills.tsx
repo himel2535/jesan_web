@@ -49,6 +49,7 @@ export function PeriodPills<T extends string>({
   onChange,
   hue = 'blue',
   tone = 'card',
+  fill = false,
 }: {
   label: string;
   value: T;
@@ -56,9 +57,15 @@ export function PeriodPills<T extends string>({
   onChange: (value: T) => void;
   hue?: PillHue;
   tone?: PillTone;
+  /** From `sm` up, stretch to share the row with its neighbours (KPI card filter rows). */
+  fill?: boolean;
 }) {
   return (
-    <div role="group" aria-label={label} className="flex min-w-0 flex-wrap gap-1">
+    <div
+      role="group"
+      aria-label={label}
+      className={cn('flex min-w-0 flex-wrap gap-1', fill && 'sm:flex-1 sm:flex-nowrap')}
+    >
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -72,7 +79,8 @@ export function PeriodPills<T extends string>({
               onChange(option.value);
             }}
             className={cn(
-              'relative isolate rounded-full px-2 py-1 text-[11px] font-medium whitespace-nowrap',
+              'relative isolate rounded-md px-2 py-1 text-[11px] font-medium whitespace-nowrap',
+              fill && 'sm:flex-1',
               'before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""]',
               'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)]',
               pillClass(selected, hue, tone),

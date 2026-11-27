@@ -138,10 +138,11 @@ function MetricCard({
       errorText={current.error && !isForbidden(current.error) ? t('loadError') : undefined}
       pills={
         scope === 'month' ? (
-          <MonthFilter title={title} filter={month} hue={hue} />
+          <MonthFilter title={title} filter={month} hue={hue} fill />
         ) : (
-          <div className="flex flex-nowrap items-center justify-end gap-0.5 sm:gap-1">
+          <div className="flex flex-nowrap items-center justify-end gap-0.5 sm:w-full sm:gap-1">
             <PillSelect
+              fill
               label={t('periodFor', { title })}
               value={lastDay}
               options={[
@@ -154,6 +155,7 @@ function MetricCard({
               }}
             />
             <PeriodPills
+              fill
               label={t('periodFor', { title })}
               value={day === 'lifetime' ? 'lifetime' : ''}
               hue={hue}

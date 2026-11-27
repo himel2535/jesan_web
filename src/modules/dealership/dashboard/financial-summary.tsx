@@ -1,10 +1,8 @@
 'use client';
 
-import { Fragment } from 'react';
 import { useTranslations } from 'next-intl';
 import { LayoutGrid, TrendingUp } from 'lucide-react';
 import { useFormat } from '@/core/i18n/use-format';
-import { sameMoney } from '@/core/lib/money';
 import { cn } from '@/core/ui/cn';
 import { useDashboardFinanceSummary } from './api';
 import { changePercent, monthYearPeriods } from './periods';
@@ -56,28 +54,6 @@ export function FinancialSummary({
       ? null
       : changePercent(Number(data.netProfit), Number(previous.data.netProfit));
   const up = (growth ?? 0) >= 0;
-  const uncosted = Number(data?.uncostedQuantityDelivered ?? '0') > 0;
-  const uncostedLines = data?.uncostedDeliveryLines ?? 0;
-  // Cost of sales is only as good as the costs behind it. Say so beside the figure instead of
-  // letting a bare ৳0 (or a short total) read as a verified result. Nothing is calculated here:
-  // every number comes from the API.
-  const cogsIncomplete = uncosted || uncostedLines > 0 || data?.costComplete === false;
-  const cogsUnverified =
-    !cogsIncomplete &&
-    data?.cogs !== undefined &&
-    data.sales !== undefined &&
-    sameMoney(data.cogs, '0') &&
-    !sameMoney(data.sales, '0');
-  const cogsNote = cogsIncomplete
-    ? uncosted
-      ? t('summary.cogsUncosted', {
-          bags: format.quantity(data?.uncostedQuantityDelivered ?? '0'),
-          lines: uncostedLines,
-        })
-      : t('summary.cogsLinesUncosted', { lines: uncostedLines })
-    : cogsUnverified
-      ? t('summary.cogsUnverified')
-      : null;
 
   const profitRows = [
     { key: 'sales', label: t('summary.totalSales'), value: data?.sales, sign: '+' as const },
@@ -120,27 +96,20 @@ export function FinancialSummary({
       <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,185px)]">
         <ul className="flex min-w-0 flex-col gap-1">
           {profitRows.map((row) => (
-            <Fragment key={row.key}>
-              <li className="flex min-w-0 items-baseline justify-between gap-2 text-sm">
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span aria-hidden className={cn('size-2 shrink-0 rounded-full', DOT[row.key])} />
-                  <span className="truncate text-[var(--dash-fg-muted)]">{row.label}</span>
-                </span>
-                <span
-                  className={cn(
-                    'shrink-0 font-semibold tabular-nums',
-                    row.sign === '+' ? 'text-[var(--dash-success)]' : 'text-[var(--dash-danger)]',
-                  )}
-                >
-                  {row.sign} {format.moneyRounded(row.value ?? '0')}
-                </span>
-              </li>
-              {row.key === 'cogs' && cogsNote && (
-                <li role="note" className="text-[11px] text-[var(--dash-warning)]">
-                  {cogsNote}
-                </li>
-              )}
-            </Fragment>
+            <li key={row.key} className="flex min-w-0 items-baseline justify-between gap-2 text-sm">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span aria-hidden className={cn('size-2 shrink-0 rounded-full', DOT[row.key])} />
+                <span className="truncate text-[var(--dash-fg-muted)]">{row.label}</span>
+              </span>
+              <span
+                className={cn(
+                  'shrink-0 font-semibold tabular-nums',
+                  row.sign === '+' ? 'text-[var(--dash-success)]' : 'text-[var(--dash-danger)]',
+                )}
+              >
+                {row.sign} {format.moneyRounded(row.value ?? '0')}
+              </span>
+            </li>
           ))}
           <li className="mt-1 border-t border-[var(--dash-border)] pt-1">
             <ul className="flex flex-col gap-1">
@@ -189,11 +158,6 @@ export function FinancialSummary({
                 <span className="font-normal text-[var(--dash-fg-muted)]">
                   {t('compare.vsLastMonth')}
                 </span>
-              </p>
-            )}
-            {uncosted && (
-              <p className="text-[11px] text-[var(--dash-warning)]">
-                {t('summary.uncostedWarning', { bags: data.uncostedQuantityDelivered ?? '0' })}
               </p>
             )}
           </div>
