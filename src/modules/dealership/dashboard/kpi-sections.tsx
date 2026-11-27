@@ -195,13 +195,11 @@ function MetricCard({
       errorText={current.error && !isForbidden(current.error) ? t('loadError') : undefined}
       pills={
         scope === 'month' ? (
-          <div className="flex flex-wrap items-center justify-end gap-1">
+          <div className="flex flex-nowrap items-center justify-end gap-0.5 sm:gap-1">
             <MonthYearSelect
               title={title}
-              hue={hue}
               year={lastMonth.year}
               month={lastMonth.month}
-              active={month.kind === 'month'}
               onChange={(year, m) => {
                 setLastMonth({ year, month: m });
                 setMonth({ kind: 'month', year, month: m });

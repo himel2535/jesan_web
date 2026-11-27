@@ -6,7 +6,6 @@ import { useFormat } from '@/core/i18n/use-format';
 import { businessToday } from '@/core/i18n/format';
 import { cn } from '@/core/ui/cn';
 import { monthKey } from './periods';
-import { SELECTED, type PillHue } from './period-pills';
 
 /**
  * A pill-shaped dropdown, sized and coloured like a `PeriodPills` button. The label wrapper carries
@@ -15,15 +14,11 @@ import { SELECTED, type PillHue } from './period-pills';
 function PillSelect({
   label,
   value,
-  active,
-  hue,
   onChange,
   children,
 }: {
   label: string;
   value: number;
-  active: boolean;
-  hue: PillHue;
   onChange: (value: number) => void;
   children: React.ReactNode;
 }) {
@@ -36,16 +31,15 @@ function PillSelect({
           onChange(Number(event.target.value));
         }}
         className={cn(
-          'cursor-pointer appearance-none rounded-full py-1 pr-5 pl-2 text-[11px] font-medium whitespace-nowrap',
+          'cursor-pointer appearance-none rounded-full py-1 pr-3.5 pl-1.5 text-[11px] font-medium whitespace-nowrap',
           'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)]',
-          active
-            ? `${SELECTED[hue]} shadow-sm`
-            : 'bg-[var(--dash-surface)]/70 text-[var(--dash-fg-muted)] hover:bg-[var(--dash-surface)]',
+          // Exactly the look of an unselected PeriodPills button (the "All Time" pill).
+          'bg-[var(--dash-surface)]/70 text-[var(--dash-fg-muted)] hover:bg-[var(--dash-surface)]',
         )}
       >
         {children}
       </select>
-      <ChevronDown aria-hidden className="pointer-events-none absolute right-1.5 size-3" />
+      <ChevronDown aria-hidden className="pointer-events-none absolute right-0.5 size-3" />
     </label>
   );
 }
@@ -53,23 +47,19 @@ function PillSelect({
 const OPTION = 'bg-[var(--dash-surface)] text-[var(--dash-fg)]';
 
 /**
- * Month and year dropdowns for a KPI card, shown as small pills beside "All Time". They take the
- * card's accent while a month is chosen and the muted pill look while "All Time" is on. Future
- * months of the current year are disabled.
+ * Month and year dropdowns for a KPI card, shown as small pills beside "All Time" and looking
+ * exactly like it. The year reads as two digits (26). Future months of the current year are
+ * disabled.
  */
 export function MonthYearSelect({
   title,
-  hue,
   year,
   month,
-  active,
   onChange,
 }: {
   title: string;
-  hue: PillHue;
   year: number;
   month: number;
-  active: boolean;
   onChange: (year: number, month: number) => void;
 }) {
   const t = useTranslations('dealership.dashboard');
@@ -84,8 +74,6 @@ export function MonthYearSelect({
       <PillSelect
         label={t('selectMonth', { title })}
         value={month}
-        active={active}
-        hue={hue}
         onChange={(m) => {
           onChange(year, m);
         }}
@@ -104,15 +92,13 @@ export function MonthYearSelect({
       <PillSelect
         label={t('selectYear', { title })}
         value={year}
-        active={active}
-        hue={hue}
         onChange={(y) => {
           onChange(y, y === thisYear ? Math.min(month, thisMonth) : month);
         }}
       >
         {years.map((y) => (
           <option key={y} value={y} className={OPTION}>
-            {format.number(y, { useGrouping: false })}
+            {format.number(y % 100, { minimumIntegerDigits: 2, useGrouping: false })}
           </option>
         ))}
       </PillSelect>
