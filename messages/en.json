@@ -621,11 +621,11 @@
       "title": "Commission",
       "description": "Commission received for {business}, and why.",
       "summary": {
-        "title": "Year summary",
-        "totalReceived": "Total received",
-        "entries": "{count, plural, one {# entry} other {# entries}}",
-        "previousYear": "Previous year",
-        "nextYear": "Next year"
+        "yearlyTitle": "Total Yearly Commission",
+        "monthlyTitle": "Total Monthly Commission",
+        "selectYear": "Choose year",
+        "selectMonth": "Choose month",
+        "entries": "{count, plural, one {# entry} other {# entries}}"
       },
       "entry": {
         "new": "Add commission",

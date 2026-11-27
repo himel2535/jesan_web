@@ -7,7 +7,7 @@ import { cn } from '@/core/ui/cn';
 
 export type TileHue = 'blue' | 'green' | 'purple' | 'orange';
 
-const HUE: Record<TileHue, { card: string; icon: string }> = {
+export const HUE: Record<TileHue, { card: string; icon: string }> = {
   blue: {
     card: 'bg-[var(--dash-blue-card-bg)] border-[var(--dash-blue-card-border)]',
     icon: 'bg-[var(--dash-blue-icon-bg)] text-[var(--dash-blue-accent)]',

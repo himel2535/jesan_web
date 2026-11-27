@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Pencil, Percent, Plus } from 'lucide-react';
+import { Coins, Pencil, Percent, PiggyBank, Plus } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -15,36 +15,136 @@ import { PAGE_SIZE, parsePageParam } from '@/core/ui/pagination-logic';
 import { useIsDesktop } from '@/core/ui/use-media-query';
 import { Money } from '../master-data/shared/display';
 import { ListSkeleton, LoadError, Notice } from '../master-data/shared/states';
+import { useDashboardCommissionSeries } from '../dashboard/api';
 import { useCommissionEntries, useCommissionSummary } from './api';
 import { EntryForm } from './entry-form';
+import { CommissionKpiCard } from './kpi-card';
 import type { CommissionEntry } from './types';
 
-const THIS_YEAR = Number(businessToday().slice(0, 4));
+const TODAY = businessToday();
+const THIS_YEAR = Number(TODAY.slice(0, 4));
+const THIS_MONTH = Number(TODAY.slice(5, 7));
+const MIN_YEAR = THIS_YEAR - 3;
+const MAX_YEAR = THIS_YEAR + 3;
+const YEARS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => MIN_YEAR + i);
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
-function useYearParam() {
+const monthKey = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`;
+
+/** `?year=` and `?month=` (1-12, within that year); the defaults are this year and this month. */
+function usePeriodParams() {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const raw = Number(params.get('year'));
+  const rawYear = Number(params.get('year'));
   const year =
-    Number.isInteger(raw) && raw >= THIS_YEAR - 3 && raw <= THIS_YEAR + 3 ? raw : THIS_YEAR;
-  const setYear = (next: number) => {
+    Number.isInteger(rawYear) && rawYear >= MIN_YEAR && rawYear <= MAX_YEAR ? rawYear : THIS_YEAR;
+  const rawMonth = Number(params.get('month'));
+  const month =
+    Number.isInteger(rawMonth) && rawMonth >= 1 && rawMonth <= 12
+      ? rawMonth
+      : year === THIS_YEAR
+        ? THIS_MONTH
+        : 12;
+
+  const update = (nextYear: number, nextMonth: number) => {
     const search = new URLSearchParams(params.toString());
-    if (next === THIS_YEAR) search.delete('year');
-    else search.set('year', String(next));
+    if (nextYear === THIS_YEAR) search.delete('year');
+    else search.set('year', String(nextYear));
+    const defaultMonth = nextYear === THIS_YEAR ? THIS_MONTH : 12;
+    if (nextMonth === defaultMonth) search.delete('month');
+    else search.set('month', String(nextMonth));
     search.delete('page');
     const qs = search.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
-  return { year, setYear };
+  return {
+    year,
+    month,
+    setYear: (next: number) => update(next, month),
+    setMonth: (next: number) => update(year, next),
+  };
 }
 
-/** Year total + paginated list of commission received (`commission.view`, owner-only). */
-export function CommissionView({ slug, businessId }: { slug: string; businessId: string }) {
-  const t = useTranslations('dealership.commission');
-  const canManage = useCan('commission.manage');
-  const { year, setYear } = useYearParam();
+/** Year and month KPI cards, each with its own dropdown (`commission.view`, owner-only). */
+function CommissionKpis({
+  slug,
+  businessId,
+  year,
+  month,
+  setYear,
+  setMonth,
+}: {
+  slug: string;
+  businessId: string;
+  year: number;
+  month: number;
+  setYear: (year: number) => void;
+  setMonth: (month: number) => void;
+}) {
+  const t = useTranslations('dealership.commission.summary');
+  const format = useFormat();
   const summary = useCommissionSummary(slug, businessId, year);
+  const series = useDashboardCommissionSeries(slug, businessId, year);
+  const monthly = series.data?.months.find((row) => row.month === monthKey(year, month));
+  const monthName = (m: number) =>
+    format.date(`${monthKey(year, m)}-01T00:00:00+06:00`, { month: 'long' });
+
+  return (
+    <div className="dash-scope grid gap-3 sm:grid-cols-2">
+      <CommissionKpiCard
+        hue="green"
+        icon={<PiggyBank aria-hidden className="size-4" />}
+        title={t('yearlyTitle')}
+        selectId="commission-year"
+        selectLabel={t('selectYear')}
+        selectValue={String(year)}
+        options={YEARS.map((y) => ({
+          value: String(y),
+          label: format.number(y, { useGrouping: false }),
+        }))}
+        onSelect={(value) => setYear(Number(value))}
+        loading={summary.isPending}
+        busy={summary.isFetching}
+        error={
+          summary.isError ? (
+            <LoadError error={summary.error} onRetry={() => void summary.refetch()} />
+          ) : null
+        }
+        value={summary.data ? <Money value={summary.data.totalReceived} /> : null}
+        note={summary.data ? t('entries', { count: summary.data.entryCount }) : null}
+      />
+      <CommissionKpiCard
+        hue="blue"
+        icon={<Coins aria-hidden className="size-4" />}
+        title={t('monthlyTitle')}
+        selectId="commission-month"
+        selectLabel={t('selectMonth')}
+        selectValue={String(month)}
+        options={MONTHS.map((m) => ({
+          value: String(m),
+          label: monthName(m),
+          disabled: year === THIS_YEAR && m > THIS_MONTH,
+        }))}
+        onSelect={(value) => setMonth(Number(value))}
+        loading={series.isPending}
+        busy={series.isFetching}
+        error={
+          series.isError ? (
+            <LoadError error={series.error} onRetry={() => void series.refetch()} />
+          ) : null
+        }
+        value={<Money value={monthly?.received ?? '0.00'} />}
+        note={`${monthName(month)} ${format.number(year, { useGrouping: false })}`}
+      />
+    </div>
+  );
+}
+
+/** Year and month totals + paginated list of commission received (`commission.view`, owner-only). */
+export function CommissionView({ slug, businessId }: { slug: string; businessId: string }) {
+  const canManage = useCan('commission.manage');
+  const period = usePeriodParams();
   const [dialog, setDialog] = useState<{ entry: CommissionEntry | null } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -52,51 +152,7 @@ export function CommissionView({ slug, businessId }: { slug: string; businessId:
     <div className="space-y-6">
       <Notice>{notice}</Notice>
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold">{t('summary.title')}</h2>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              aria-label={t('summary.previousYear')}
-              disabled={year <= THIS_YEAR - 3}
-              onClick={() => setYear(year - 1)}
-            >
-              <ChevronLeft aria-hidden className="size-4" />
-            </Button>
-            <span className="min-w-14 text-center font-semibold tabular-nums">{year}</span>
-            <Button
-              variant="ghost"
-              aria-label={t('summary.nextYear')}
-              disabled={year >= THIS_YEAR + 3}
-              onClick={() => setYear(year + 1)}
-            >
-              <ChevronRight aria-hidden className="size-4" />
-            </Button>
-          </div>
-        </div>
-        {summary.isPending ? (
-          <div className="h-24 animate-pulse rounded-card bg-border sm:max-w-xs" />
-        ) : summary.isError ? (
-          <LoadError error={summary.error} onRetry={() => void summary.refetch()} />
-        ) : (
-          <div
-            className={cn(
-              'rounded-card border border-border bg-surface p-4 sm:max-w-xs',
-              summary.isPlaceholderData && 'opacity-60',
-            )}
-            aria-busy={summary.isFetching}
-          >
-            <p className="text-sm text-fg-muted">{t('summary.totalReceived')}</p>
-            <p className="text-lg font-bold tabular-nums">
-              <Money value={summary.data.totalReceived} />
-            </p>
-            <p className="text-sm text-fg-muted">
-              {t('summary.entries', { count: summary.data.entryCount })}
-            </p>
-          </div>
-        )}
-      </section>
+      <CommissionKpis slug={slug} businessId={businessId} {...period} />
 
       <EntriesList
         slug={slug}
