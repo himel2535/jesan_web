@@ -71,7 +71,7 @@ export function ProductDetail({
                 <Link
                   href={`/b/${encodeURIComponent(slug)}/stock/${p.id}`}
                   prefetch={false}
-                  className="text-sm font-medium text-primary underline"
+                  className="text-sm font-medium text-fg underline"
                 >
                   {t('products.stockHistory')}
                 </Link>

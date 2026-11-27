@@ -107,7 +107,7 @@ export function CategoryDetail({
           <Link
             href={`${base}?category=${encodeURIComponent(category.id)}`}
             prefetch={false}
-            className="inline-block text-sm font-medium text-primary underline"
+            className="inline-block text-sm font-medium text-fg underline"
           >
             {t('categories.productsInCategory')}
           </Link>

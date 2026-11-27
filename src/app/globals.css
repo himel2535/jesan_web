@@ -52,6 +52,27 @@ html[lang='bn'] {
   box-shadow: var(--shadow-glass-value);
 }
 
+/*
+ * Dark mode: filled "primary" controls (buttons, active nav/tab chips) are a gray glass tint
+ * instead of white: a soft top-light gradient, hairline ring and inset highlight over the solid
+ * --primary gray. No backdrop blur (buttons sit on tables/lists), so it stays cheap.
+ */
+[data-theme='dark'] .bg-primary {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.04));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 0 0 1px rgb(255 255 255 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] .bg-primary {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.04));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.18),
+      0 0 0 1px rgb(255 255 255 / 0.1);
+  }
+}
+
 /* Route loading bar (src/core/ui/route-progress.tsx): indeterminate, no library, no blur. */
 @keyframes route-progress-slide {
   from {
