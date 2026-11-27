@@ -51,7 +51,6 @@ export function KpiTile({
   value,
   growth,
   pills,
-  headerAction,
   loading = false,
   errorText,
 }: {
@@ -63,8 +62,6 @@ export function KpiTile({
   value: ReactNode;
   growth: Growth | null;
   pills: ReactNode;
-  /** Replaces the chevron at the top-right (e.g. period dropdowns); sits above the card link. */
-  headerAction?: ReactNode;
   loading?: boolean;
   errorText?: string;
 }) {
@@ -97,18 +94,7 @@ export function KpiTile({
         <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--dash-fg)]">
           {title}
         </p>
-        {headerAction ? (
-          <div
-            className="pointer-events-auto relative z-10 shrink-0"
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            {headerAction}
-          </div>
-        ) : (
-          <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--dash-fg-muted)]" />
-        )}
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--dash-fg-muted)]" />
       </div>
 
       <div className="pointer-events-none min-w-0">
