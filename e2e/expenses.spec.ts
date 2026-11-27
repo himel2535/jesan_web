@@ -41,7 +41,10 @@ test('record an expense → the cash book counts it → void it → the cash boo
 
   await manager.goto('/b/example-cement/expenses');
   await expect(
-    manager.locator('[class*="rounded-card"]').filter({ hasText: "Today's Expenses" }).getByText('৳2,500.00'),
+    manager
+      .locator('[class*="rounded-card"]')
+      .filter({ hasText: "Today's Expenses" })
+      .getByText('৳2,500.00'),
   ).toBeVisible();
 
   // Voiding needs `expense.void` (owner-level by default).
