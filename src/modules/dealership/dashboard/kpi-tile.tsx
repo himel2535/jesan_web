@@ -27,8 +27,8 @@ export const HUE: Record<TileHue, { card: string; icon: string }> = {
 };
 
 /**
- * One KPI card from the reference: icon, title and a chevron on top, the figure
- * large beneath it, and the period pills along the bottom.
+ * One KPI card: icon and chevron on the sides of a centred title, the figure large and centred
+ * beneath it, and the period pills along the bottom.
  *
  * The whole card navigates through an overlay link. The pills sit above that
  * overlay and stop the click themselves, so changing a period never follows the
@@ -70,7 +70,8 @@ export function KpiTile({
         className="absolute inset-0 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
       />
 
-      <div className="pointer-events-none flex items-center gap-2">
+      {/* Two side cells of the same width, so the title sits in the exact middle of the card. */}
+      <div className="pointer-events-none grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-2">
         <span
           aria-hidden
           className={cn(
@@ -80,19 +81,22 @@ export function KpiTile({
         >
           {icon}
         </span>
-        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--dash-fg)]">
+        <p className="line-clamp-2 min-w-0 text-center text-[13px] leading-tight font-semibold text-[var(--dash-fg)]">
           {title}
         </p>
-        <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--dash-fg-muted)]" />
+        <ChevronRight
+          aria-hidden
+          className="size-4 shrink-0 justify-self-end text-[var(--dash-fg-muted)]"
+        />
       </div>
 
-      <div className="pointer-events-none min-w-0">
+      <div className="pointer-events-none flex min-w-0 flex-1 items-center justify-center text-center">
         {loading ? (
           <div className="h-7 w-28 animate-pulse rounded bg-[var(--dash-border)]" />
         ) : errorText ? (
           <p className="truncate text-sm text-[var(--dash-danger)]">{errorText}</p>
         ) : (
-          <p className="truncate text-xl leading-tight font-bold text-[var(--dash-fg)] tabular-nums">
+          <p className="max-w-full truncate text-xl leading-tight font-bold text-[var(--dash-fg)] tabular-nums">
             {value}
           </p>
         )}

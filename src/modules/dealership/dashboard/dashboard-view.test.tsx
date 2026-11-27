@@ -371,7 +371,7 @@ describe('<DashboardView>', () => {
     expect(within(keyInfo).getByText('Total Due')).toBeInTheDocument();
   });
 
-  it('warns when some delivered bags had no cost basis', async () => {
+  it('never shows cost warnings under cost of sales or net profit, whatever the API says', async () => {
     mockApi({
       ...routes(),
       [`GET ${B}/dashboard/finance-summary`]: () =>
@@ -379,94 +379,30 @@ describe('<DashboardView>', () => {
           from: MONTH_START,
           to: TODAY,
           sales: '485200.00',
-          collection: '325750.00',
-          customerDue: '275000.00',
-          expenses: '95000.00',
-          commissionReceived: '125000.00',
+          collection: '0.00',
+          customerDue: '485200.00',
+          expenses: '0.00',
+          commissionReceived: '0.00',
           totalPurchase: '310000.00',
           currentStockQuantity: '980.000',
           currentStockValue: '588000.00',
-          cogs: '454750.00',
-          netProfit: '60450.00',
+          cogs: '0.00',
+          netProfit: '485200.00',
           uncostedQuantityDelivered: '12.000',
           uncostedQuantityOnHand: '12.000',
-          uncostedDeliveryLines: 1,
+          uncostedDeliveryLines: 11,
+          costComplete: false,
         }),
     });
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
     const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
     const panel = heading.closest('section') as HTMLElement;
-    expect(await within(panel).findByText(/no cost basis/i)).toBeInTheDocument();
-    // The same warning sits beside the cost-of-sales row itself, with the counts the API sent.
-    expect(
-      within(panel).getByText(
-        '12 bags (1 delivery line) have no known cost, so this cost of sales is incomplete.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  const summaryWith = (extra: Record<string, string | number>) => ({
-    ...routes(),
-    [`GET ${B}/dashboard/finance-summary`]: () =>
-      json(200, {
-        from: MONTH_START,
-        to: TODAY,
-        sales: '485200.00',
-        collection: '0.00',
-        customerDue: '485200.00',
-        expenses: '0.00',
-        commissionReceived: '0.00',
-        totalPurchase: '310000.00',
-        currentStockQuantity: '980.000',
-        currentStockValue: '588000.00',
-        cogs: '454750.00',
-        netProfit: '30450.00',
-        uncostedQuantityDelivered: '0.000',
-        uncostedQuantityOnHand: '0.000',
-        uncostedDeliveryLines: 0,
-        ...extra,
-      }),
-  });
-
-  it('never shows a bare ৳0 cost of sales as verified when sales exist', async () => {
-    mockApi(summaryWith({ cogs: '0.00', netProfit: '485200.00' }));
-    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
-    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
-    const panel = heading.closest('section') as HTMLElement;
-    expect(
-      await within(panel).findByText(
-        'Sales exist but the cost of sales is zero, so the cost has not been verified.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('says so when the API reports an incomplete cost for lines that were never costed', async () => {
-    mockApi(summaryWith({ costComplete: false as unknown as string, uncostedDeliveryLines: 2 }));
-    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
-    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
-    const panel = heading.closest('section') as HTMLElement;
-    expect(
-      await within(panel).findByText(
-        '2 delivery lines were delivered with no recorded cost, so this cost of sales is incomplete.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('shows no cost warning when the cost of sales is complete', async () => {
-    mockApi(summaryWith({}));
-    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
-    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
-    const panel = heading.closest('section') as HTMLElement;
-    await within(panel).findByText('Total Net Profit');
+    expect(await within(panel).findByText('Total Net Profit')).toBeInTheDocument();
     expect(within(panel).queryByRole('note')).toBeNull();
-  });
-
-  it('does not call a legitimate zero cost unverified when nothing was sold', async () => {
-    mockApi(summaryWith({ sales: '0.00', cogs: '0.00', netProfit: '0.00' }));
-    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
-    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
-    const panel = heading.closest('section') as HTMLElement;
-    await within(panel).findByText('Total Net Profit');
-    expect(within(panel).queryByRole('note')).toBeNull();
+    expect(
+      within(panel).queryByText(
+        /no cost basis|no known cost|no recorded cost|not been verified|incomplete/i,
+      ),
+    ).toBeNull();
   });
 });

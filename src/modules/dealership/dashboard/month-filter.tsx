@@ -37,20 +37,30 @@ export function MonthFilter({
   filter,
   hue = 'blue',
   tone = 'card',
+  fill = false,
 }: {
   title: string;
   filter: MonthFilterState;
   hue?: PillHue;
   tone?: PillTone;
+  /** KPI cards: the row fills the card's width from `sm` up, with no gap at the end. */
+  fill?: boolean;
 }) {
   const t = useTranslations('dealership.dashboard');
   return (
-    <div className="flex flex-nowrap items-center justify-end gap-0.5 sm:gap-1">
+    <div
+      className={
+        fill
+          ? 'flex flex-nowrap items-center justify-end gap-0.5 sm:w-full sm:gap-1'
+          : 'flex flex-nowrap items-center justify-end gap-0.5 sm:gap-1'
+      }
+    >
       <MonthYearSelect
         title={title}
         year={filter.last.year}
         month={filter.last.month}
         tone={tone}
+        fill={fill}
         onChange={filter.pick}
       />
       <PeriodPills
@@ -58,6 +68,7 @@ export function MonthFilter({
         value={filter.selection.kind === 'lifetime' ? 'lifetime' : ''}
         hue={hue}
         tone={tone}
+        fill={fill}
         options={[{ value: 'lifetime', label: t('period.allTime') }]}
         onChange={filter.toggleAll}
       />

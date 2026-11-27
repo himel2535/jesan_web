@@ -39,12 +39,15 @@ export function PillSelect<T extends string | number>({
   options,
   onChange,
   tone = 'card',
+  fill = false,
 }: {
   label: string;
   value: T;
   options: readonly PillSelectOption<T>[];
   onChange: (value: T) => void;
   tone?: PillTone;
+  /** From `sm` up, stretch to share the row with its neighbours (KPI card filter rows). */
+  fill?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<PanelPosition | null>(null);
@@ -155,7 +158,8 @@ export function PillSelect<T extends string | number>({
           }
         }}
         className={cn(
-          'relative isolate inline-flex cursor-pointer items-center rounded-full py-1 pr-3.5 pl-1.5 text-[11px] font-medium whitespace-nowrap',
+          'relative isolate inline-flex cursor-pointer items-center rounded-md py-1 pr-3.5 pl-1.5 text-[11px] font-medium whitespace-nowrap',
+          fill && 'sm:min-w-0 sm:flex-1 sm:justify-center',
           'before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""]',
           'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)]',
           pillClass(false, 'blue', tone),
@@ -193,7 +197,7 @@ export function PillSelect<T extends string | number>({
                   setOpen(false);
                 }
               }}
-              className="z-50 max-h-[min(60vh,20rem)] overflow-y-auto rounded-xl border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1 text-[var(--dash-fg)] shadow-[var(--dash-shadow)]"
+              className="z-50 max-h-[min(60vh,20rem)] overflow-y-auto rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1 text-[var(--dash-fg)] shadow-[var(--dash-shadow)]"
             >
               {options.map((option, at) => {
                 const chosen = option.value === value;
@@ -214,7 +218,7 @@ export function PillSelect<T extends string | number>({
                       close(true);
                     }}
                     className={cn(
-                      'flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-xs whitespace-nowrap',
+                      'flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-3 text-left text-xs whitespace-nowrap',
                       'hover:bg-[var(--dash-bg)] focus-visible:bg-[var(--dash-bg)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]',
                       'disabled:cursor-not-allowed disabled:text-[var(--dash-fg-muted)] disabled:opacity-50 disabled:hover:bg-transparent',
                       chosen && 'font-semibold',
