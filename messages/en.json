@@ -1282,6 +1282,8 @@
         "due": "Due",
         "netProfit": "Total Net Profit",
         "uncostedWarning": "{bags} bags delivered with no cost basis, so this is overstated.",
+        "cogsUncosted": "{bags} bags ({lines, plural, one {# delivery line} other {# delivery lines}}) have no known cost, so this cost of sales is incomplete.",
+        "cogsUnverified": "Sales exist but the cost of sales is zero, so the cost has not been verified.",
         "monthlyDailyTitle": "Monthly / Daily Summary",
         "monthlyDailyFilter": "Summary scope",
         "runningMonth": "Running Month ({month})",
