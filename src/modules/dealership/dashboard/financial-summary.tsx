@@ -1,22 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { LayoutGrid, TrendingUp } from 'lucide-react';
 import { useFormat } from '@/core/i18n/use-format';
 import { cn } from '@/core/ui/cn';
 import { useDashboardFinanceSummary } from './api';
-import { changePercent, monthPeriods, type MonthSelection } from './periods';
-import { PeriodPills } from './period-pills';
-
-const PILLS: readonly {
-  value: MonthSelection;
-  label: 'period.thisMonth' | 'period.lastMonth' | 'period.allTime';
-}[] = [
-  { value: 'thisMonth', label: 'period.thisMonth' },
-  { value: 'previousMonth', label: 'period.lastMonth' },
-  { value: 'lifetime', label: 'period.allTime' },
-];
+import { changePercent, monthYearPeriods } from './periods';
+import { MonthFilter, useMonthFilter } from './month-filter';
 
 const DOT: Record<string, string> = {
   sales: 'bg-[var(--dash-chart-collection)]',
@@ -48,8 +38,8 @@ export function FinancialSummary({
 }) {
   const t = useTranslations('dealership.dashboard');
   const format = useFormat();
-  const [selection, setSelection] = useState<MonthSelection>('thisMonth');
-  const periods = monthPeriods(today, selection);
+  const filter = useMonthFilter(today);
+  const periods = monthYearPeriods(today, filter.selection);
   const current = useDashboardFinanceSummary(slug, businessId, periods.current);
   const previous = useDashboardFinanceSummary(
     slug,
@@ -101,12 +91,7 @@ export function FinancialSummary({
           <LayoutGrid aria-hidden className="size-4 text-[var(--dash-primary)]" />
           {t('summary.title')}
         </h2>
-        <PeriodPills
-          label={t('summary.filter')}
-          value={selection}
-          options={PILLS.map((pill) => ({ value: pill.value, label: t(pill.label) }))}
-          onChange={setSelection}
-        />
+        <MonthFilter title={t('summary.title')} filter={filter} tone="panel" />
       </header>
 
       <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,185px)]">

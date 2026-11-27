@@ -1207,8 +1207,7 @@
       }
     },
     "dashboard": {
-      "welcome": "Welcome back, {name} 👋",
-      "subtitle": "Here's your business overview for {month}",
+      "title": "Dashboard",
       "notifications": "Notifications ({count} pending approvals)",
       "monthly": {
         "title": "This Month"

@@ -189,6 +189,48 @@ describe('<DashboardView>', () => {
     );
   });
 
+  it('has no welcome text, only a screen-reader page title', async () => {
+    mockApi(routes());
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    await screen.findByRole('link', { name: 'Total Collection: open page' });
+    expect(screen.queryByText(/welcome/i)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
+  });
+
+  it('lists collection, sales and purchase in the overview chart legend', async () => {
+    mockApi(routes());
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    const heading = await screen.findByRole('heading', { name: 'Sales & Collection Overview' });
+    const panel = heading.closest('section') as HTMLElement;
+    const legend = within(panel).getByRole('list');
+    expect(within(legend).getAllByRole('listitem')).toHaveLength(3);
+  });
+
+  it('filters the panels with the same pastel dropdowns as the KPI cards', async () => {
+    mockApi(routes());
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    const user = userEvent.setup();
+    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
+    const panel = heading.closest('section') as HTMLElement;
+    await user.selectOptions(
+      within(panel).getByLabelText('Choose month for Financial Summary'),
+      '2',
+    );
+    expect(within(panel).getByRole('button', { name: 'All Time' })).toBeInTheDocument();
+    const daily = (await screen.findByRole('heading', { name: 'Monthly / Daily Summary' })).closest(
+      'section',
+    ) as HTMLElement;
+    await user.selectOptions(within(daily).getByRole('combobox'), 'today');
+    expect(within(daily).getByRole('combobox')).toHaveValue('today');
+    expect(
+      within(
+        screen
+          .getByRole('heading', { name: 'Sales & Collection Overview' })
+          .closest('section') as HTMLElement,
+      ).getByRole('combobox'),
+    ).toBeInTheDocument();
+  });
+
   it('picks a month and year from the dropdowns and keeps All Time at the bottom', async () => {
     mockApi(routes());
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
