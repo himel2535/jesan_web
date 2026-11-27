@@ -10,7 +10,7 @@ export interface PillOption<T extends string> {
 /** The selected pill takes its card's own colour, as in the reference. */
 export type PillHue = 'blue' | 'green' | 'purple' | 'orange';
 
-const SELECTED: Record<PillHue, string> = {
+export const SELECTED: Record<PillHue, string> = {
   blue: 'bg-[var(--dash-blue-accent)] text-white',
   green: 'bg-[var(--dash-green-accent)] text-white',
   purple: 'bg-[var(--dash-purple-accent)] text-white',

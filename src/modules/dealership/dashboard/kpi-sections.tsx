@@ -193,23 +193,20 @@ function MetricCard({
       growth={growth}
       loading={current.loading}
       errorText={current.error && !isForbidden(current.error) ? t('loadError') : undefined}
-      headerAction={
-        scope === 'month' ? (
-          <MonthYearSelect
-            title={title}
-            year={lastMonth.year}
-            month={lastMonth.month}
-            dimmed={month.kind === 'lifetime'}
-            onChange={(year, m) => {
-              setLastMonth({ year, month: m });
-              setMonth({ kind: 'month', year, month: m });
-            }}
-          />
-        ) : undefined
-      }
       pills={
         scope === 'month' ? (
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-1">
+            <MonthYearSelect
+              title={title}
+              hue={hue}
+              year={lastMonth.year}
+              month={lastMonth.month}
+              active={month.kind === 'month'}
+              onChange={(year, m) => {
+                setLastMonth({ year, month: m });
+                setMonth({ kind: 'month', year, month: m });
+              }}
+            />
             <PeriodPills
               label={t('periodFor', { title })}
               value={month.kind === 'lifetime' ? 'lifetime' : ''}

@@ -200,6 +200,11 @@ describe('<DashboardView>', () => {
     const month = within(collection).getByLabelText('Choose month for Total Collection');
     const year = within(collection).getByLabelText('Choose year for Total Collection');
     expect(collection.querySelector('a')?.contains(month)).toBe(false);
+    // Month, year and All Time sit together in the card's bottom row, not in its header.
+    const allTimeButton = within(collection).getByRole('button', { name: 'All Time' });
+    const row = month.closest('div') as HTMLElement;
+    expect(row.contains(year)).toBe(true);
+    expect(row.contains(allTimeButton)).toBe(true);
 
     await user.selectOptions(year, '2025');
     await user.selectOptions(month, '2');
