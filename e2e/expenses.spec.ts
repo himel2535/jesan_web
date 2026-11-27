@@ -42,8 +42,9 @@ test('record an expense → the cash book counts it → void it → the cash boo
   await manager.goto('/b/example-cement/expenses');
   await expect(
     manager
-      .locator('[class*="rounded-card"]')
-      .filter({ hasText: "Today's Expenses" })
+      .getByText("Today's Expenses", { exact: true })
+      .locator('..')
+      .locator('..')
       .getByText('৳2,500.00'),
   ).toBeVisible();
 
