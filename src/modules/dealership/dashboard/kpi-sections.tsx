@@ -1,21 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Box, CalendarDays, ShoppingCart, Sun, Truck, Wallet, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/core/api/errors';
 import { useFormat } from '@/core/i18n/use-format';
-import { collectionsReportQuery, salesReportQuery } from '../reports/api';
-import { purchaseTotalsQuery } from '../purchases/api';
 import { useDefaultUnit } from '../commission/shared';
-import {
-  changePercent,
-  dayPeriods,
-  monthYearPeriods,
-  type DayRange,
-  type DaySelection,
-} from './periods';
+import { useDashboardKpis } from './api';
+import type { KpiWindow } from './types';
+import { changePercent, dayPeriods, monthYearPeriods, type DaySelection } from './periods';
 import { KpiTile, type Growth, type TileHue } from './kpi-tile';
 import { PeriodPills } from './period-pills';
 import { MonthFilter, useMonthFilter } from './month-filter';
@@ -65,50 +58,13 @@ function isForbidden(error: unknown): boolean {
   return error instanceof ApiError && error.status === 403;
 }
 
-/** One metric over one window; the disabled windows never fetch. */
-function useMetric(metric: Metric, slug: string, businessId: string, range: DayRange | null) {
-  const enabled = range !== null;
-  const window = range ?? { from: '', to: '' };
-
-  const collection = useQuery({
-    ...collectionsReportQuery(slug, businessId, { groupBy: 'date', ...window, page: 1 }),
-    enabled: enabled && metric === 'collection',
-  });
-  const sales = useQuery({
-    ...salesReportQuery(slug, businessId, { groupBy: 'date', ...window, page: 1 }),
-    enabled: enabled && (metric === 'sales' || metric === 'salesQuantity'),
-  });
-  const purchases = useQuery({
-    ...purchaseTotalsQuery(slug, businessId, window),
-    enabled: enabled && metric === 'purchaseQuantity',
-  });
-
-  if (metric === 'collection') {
-    return {
-      value: collection.data?.totalAmount,
-      error: collection.error,
-      loading: enabled && collection.isPending,
-    };
-  }
-  if (metric === 'sales') {
-    return {
-      value: sales.data?.totalAmount,
-      error: sales.error,
-      loading: enabled && sales.isPending,
-    };
-  }
-  if (metric === 'salesQuantity') {
-    return {
-      value: sales.data?.totalQuantity,
-      error: sales.error,
-      loading: enabled && sales.isPending,
-    };
-  }
-  return {
-    value: purchases.data?.totalQuantity,
-    error: purchases.error,
-    loading: enabled && purchases.isPending,
-  };
+/** The figure a card shows from one window of `dashboard/kpis`; `undefined` when it is absent. */
+function metricValue(metric: Metric, window: KpiWindow | null | undefined): string | undefined {
+  if (!window) return undefined;
+  if (metric === 'collection') return window.collection;
+  if (metric === 'sales') return window.sales;
+  if (metric === 'salesQuantity') return window.salesQuantity;
+  return window.purchaseQuantity;
 }
 
 function MetricCard({
@@ -135,10 +91,24 @@ function MetricCard({
 
   const periods =
     scope === 'month' ? monthYearPeriods(today, month.selection) : dayPeriods(today, day);
-  const current = useMetric(metric, slug, businessId, periods.current);
-  const previous = useMetric(metric, slug, businessId, periods.previous);
+  // One request for all four figures and both windows. Cards with the same windows share it.
+  const kpis = useDashboardKpis(slug, businessId, periods);
+  const current = {
+    value: metricValue(metric, kpis.data?.current),
+    error: kpis.error,
+    loading: kpis.isPending,
+  };
+  const previousValue = metricValue(metric, kpis.data?.previous);
 
   if (isForbidden(current.error)) return null;
+  // Bags bought come only with `purchase.view`; without it the answer has no such field.
+  if (
+    metric === 'purchaseQuantity' &&
+    kpis.data &&
+    kpis.data.current.purchaseQuantity === undefined
+  ) {
+    return null;
+  }
 
   const title = t(TITLE[scope][metric]);
   const isQuantity = metric === 'salesQuantity' || metric === 'purchaseQuantity';
@@ -157,8 +127,8 @@ function MetricCard({
       ? null
       : {
           percent:
-            previous.value !== undefined && current.value !== undefined
-              ? changePercent(Number(current.value), Number(previous.value))
+            previousValue !== undefined && current.value !== undefined
+              ? changePercent(Number(current.value), Number(previousValue))
               : null,
           label: scope === 'month' ? t('compare.vsLastMonth') : t('compare.vsYesterday'),
         };

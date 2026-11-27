@@ -67,3 +67,19 @@ export interface FinanceSummaryResponse {
   uncostedQuantityOnHand?: string;
   uncostedDeliveryLines?: number;
 }
+
+/** One window of `GET dashboard/kpis`. `purchaseQuantity` is absent without `purchase.view`. */
+export interface KpiWindow {
+  from: string;
+  to: string;
+  collection: string;
+  sales: string;
+  salesQuantity: string;
+  purchaseQuantity?: string;
+}
+
+export interface KpisResponse {
+  current: KpiWindow;
+  /** `null` when no comparison window was asked for (All Time). */
+  previous: KpiWindow | null;
+}

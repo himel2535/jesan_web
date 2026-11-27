@@ -39,6 +39,9 @@ const base = (slug: string) => `/b/${encodeURIComponent(slug)}`;
  * - a delivery moves stock and the ledger
  * - a collection only moves the balance and the ledger
  */
+/** The dashboard figures a delivery, collection or purchase moves (sales, collection, finance, charts). */
+const DASHBOARD_MONEY = ['dashboardKpis', 'dashboardFinance', 'dashboardMonthly'] as const;
+
 export const ORDER_CREATE_REFRESH = ['orders', 'customers'] as const;
 export const ORDER_REFRESH = [
   'orders',
@@ -56,6 +59,7 @@ export const DELIVERY_REFRESH = [
   'ledger',
   'accountsSummary',
   'reportsSales',
+  ...DASHBOARD_MONEY,
 ] as const;
 export const COLLECTION_REFRESH = [
   'collections',
@@ -63,6 +67,8 @@ export const COLLECTION_REFRESH = [
   'ledger',
   'accountsSummary',
   'accountsLedger',
+  ...DASHBOARD_MONEY,
+  'dashboardCashbook',
 ] as const;
 
 export function useRefreshEntities(businessId: string) {

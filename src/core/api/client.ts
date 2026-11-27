@@ -34,16 +34,30 @@ export function setAuthFailureHandler(handler: (() => void) | null): void {
   onAuthFailure = handler;
 }
 
-export function buildUrl(path: string, query?: QueryParams): string {
-  const url = `${BROWSER_API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
-  if (!query) return url;
+/** `?a=1&b=2` for the set values of `query`, or an empty string. */
+export function queryString(query?: QueryParams): string {
+  if (!query) return '';
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value !== undefined && value !== null) params.set(key, String(value));
   }
   const qs = params.toString();
-  return qs ? `${url}?${qs}` : url;
+  return qs ? `?${qs}` : '';
 }
+
+export function buildUrl(path: string, query?: QueryParams): string {
+  const url = `${BROWSER_API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+  return `${url}${queryString(query)}`;
+}
+
+/**
+ * How a read reaches the API. Query factories take one so the same query (same key, same path)
+ * can be fetched by the browser (`apiFetch`) or prefetched on the server (`serverGetter`).
+ */
+export type ApiGetter = <T>(
+  path: string,
+  options: { query?: QueryParams; signal?: AbortSignal },
+) => Promise<T>;
 
 async function send(path: string, options: ApiRequestOptions): Promise<Response> {
   const { method = 'GET', body, query, headers, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = options;

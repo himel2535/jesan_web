@@ -1,10 +1,11 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { apiFetch } from '@/core/api/client';
-import { dealershipKeys } from '../master-data/api';
+import { apiFetch, type ApiGetter } from '@/core/api/client';
+import { dealershipKeys } from '../keys';
 import type {
   CashbookResponse,
   CommissionSeriesResponse,
   FinanceSummaryResponse,
+  KpisResponse,
   MonthlySeriesResponse,
 } from './types';
 
@@ -16,33 +17,48 @@ export interface DashboardRange {
 }
 
 /** Cash, bank and unassigned positions for a date range (`cashbook.view`). */
-export function dashboardCashbookQuery(slug: string, businessId: string, range: DashboardRange) {
+export function dashboardCashbookQuery(
+  slug: string,
+  businessId: string,
+  range: DashboardRange,
+  get: ApiGetter = apiFetch,
+) {
   return {
     queryKey: dealershipKeys.list(businessId, 'dashboardCashbook', { ...range }),
     queryFn: ({ signal }: { signal: AbortSignal }) =>
-      apiFetch<CashbookResponse>(`${base(slug)}/cashbook`, { query: { ...range }, signal }),
+      get<CashbookResponse>(`${base(slug)}/cashbook`, { query: { ...range }, signal }),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   };
 }
 
 /** Twelve months of collection, sales and quantities for one year (`report.view`). */
-export function dashboardMonthlySeriesQuery(slug: string, businessId: string, year: number) {
+export function dashboardMonthlySeriesQuery(
+  slug: string,
+  businessId: string,
+  year: number,
+  get: ApiGetter = apiFetch,
+) {
   return {
     queryKey: dealershipKeys.list(businessId, 'dashboardMonthly', { year }),
     queryFn: ({ signal }: { signal: AbortSignal }) =>
-      apiFetch<MonthlySeriesResponse>(`${base(slug)}/monthly-series`, { query: { year }, signal }),
+      get<MonthlySeriesResponse>(`${base(slug)}/monthly-series`, { query: { year }, signal }),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   };
 }
 
 /** Commission received by month (`commission.view`, owner-only). */
-export function dashboardCommissionSeriesQuery(slug: string, businessId: string, year: number) {
+export function dashboardCommissionSeriesQuery(
+  slug: string,
+  businessId: string,
+  year: number,
+  get: ApiGetter = apiFetch,
+) {
   return {
     queryKey: dealershipKeys.list(businessId, 'dashboardCommission', { year }),
     queryFn: ({ signal }: { signal: AbortSignal }) =>
-      apiFetch<CommissionSeriesResponse>(`${base(slug)}/commission-series`, {
+      get<CommissionSeriesResponse>(`${base(slug)}/commission-series`, {
         query: { year },
         signal,
       }),
@@ -74,11 +90,12 @@ export function dashboardFinanceSummaryQuery(
   slug: string,
   businessId: string,
   range: DashboardRange,
+  get: ApiGetter = apiFetch,
 ) {
   return {
     queryKey: dealershipKeys.list(businessId, 'dashboardFinance', { ...range }),
     queryFn: ({ signal }: { signal: AbortSignal }) =>
-      apiFetch<FinanceSummaryResponse>(`${base(slug)}/finance-summary`, {
+      get<FinanceSummaryResponse>(`${base(slug)}/finance-summary`, {
         query: { ...range },
         signal,
       }),
@@ -93,4 +110,39 @@ export function useDashboardFinanceSummary(
   range: DashboardRange,
 ) {
   return useQuery(dashboardFinanceSummaryQuery(slug, businessId, range));
+}
+
+/** A KPI card's window and, unless it is "All Time", the window it is compared with. */
+export interface KpiWindows {
+  current: DashboardRange;
+  previous: DashboardRange | null;
+}
+
+/**
+ * The four KPI figures (collection, sales, bags sold, bags bought) for a window and its
+ * comparison window in one call. Cards that share both windows share this query, so a whole
+ * row of cards costs one request.
+ */
+export function dashboardKpisQuery(
+  slug: string,
+  businessId: string,
+  windows: KpiWindows,
+  get: ApiGetter = apiFetch,
+) {
+  const query = {
+    from: windows.current.from,
+    to: windows.current.to,
+    ...(windows.previous ? { prevFrom: windows.previous.from, prevTo: windows.previous.to } : {}),
+  };
+  return {
+    queryKey: dealershipKeys.list(businessId, 'dashboardKpis', query),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      get<KpisResponse>(`${base(slug)}/kpis`, { query, signal }),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  };
+}
+
+export function useDashboardKpis(slug: string, businessId: string, windows: KpiWindows) {
+  return useQuery(dashboardKpisQuery(slug, businessId, windows));
 }

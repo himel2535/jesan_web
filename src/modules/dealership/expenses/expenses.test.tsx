@@ -218,6 +218,8 @@ describe('<ExpenseDetail>', () => {
       JSON.stringify(['dealership', BID, 'expenses']),
       JSON.stringify(['dealership', BID, 'cashBook']),
       JSON.stringify(['dealership', BID, 'reportsExpenses']),
+      JSON.stringify(['dealership', BID, 'dashboardFinance']),
+      JSON.stringify(['dealership', BID, 'dashboardCashbook']),
     ]);
   });
 

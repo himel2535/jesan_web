@@ -3,7 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/core/api/client';
 import { ApiError } from '@/core/api/errors';
-import { createModuleKeys } from '@/core/api/query-keys';
+import { dealershipKeys } from '../keys';
 import type {
   ActiveFilter,
   Category,
@@ -15,12 +15,7 @@ import type {
   UnitsResponse,
 } from './types';
 
-/**
- * Query keys: ['dealership', businessId, entity, …]. A change refreshes only what it touches:
- * a product → products; a category → categories and products (rows show category names);
- * a customer → customers. Never the whole cache.
- */
-export const dealershipKeys = createModuleKeys('dealership');
+export { dealershipKeys };
 
 const base = (slug: string) => `/b/${encodeURIComponent(slug)}`;
 

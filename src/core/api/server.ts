@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { ACCESS_COOKIE } from '@/core/auth/constants';
 import { serverApiBaseUrl } from './config';
 import { ApiError, apiErrorFromResponse } from './errors';
-import { DEFAULT_TIMEOUT_MS } from './client';
+import { DEFAULT_TIMEOUT_MS, queryString, type ApiGetter } from './client';
 
 /**
  * Server-side API call from Server Components. The browser's cookies do not travel by themselves
@@ -46,3 +46,7 @@ export async function serverApiGet<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_
   if (!response.ok) throw apiErrorFromResponse(response.status, body, response.headers);
   return body as T;
 }
+
+/** `serverApiGet` as an `ApiGetter`, so a query factory can be prefetched in a Server Component. */
+export const serverGetter: ApiGetter = (path, { query }) =>
+  serverApiGet(`${path}${queryString(query)}`);

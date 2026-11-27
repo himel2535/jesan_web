@@ -306,6 +306,9 @@ describe('<DeliveryDetail>', () => {
       JSON.stringify(['dealership', BID, 'ledger']),
       JSON.stringify(['dealership', BID, 'accountsSummary']),
       JSON.stringify(['dealership', BID, 'reportsSales']),
+      JSON.stringify(['dealership', BID, 'dashboardKpis']),
+      JSON.stringify(['dealership', BID, 'dashboardFinance']),
+      JSON.stringify(['dealership', BID, 'dashboardMonthly']),
     ]);
   });
 

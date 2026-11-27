@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { businessToday } from '@/core/i18n/format';
@@ -28,7 +28,17 @@ const bucket = {
 };
 
 /** Every endpoint the dashboard calls, with self-consistent figures. */
+const kpiWindow = {
+  from: MONTH_START,
+  to: TODAY,
+  collection: '325750.00',
+  sales: '485200.00',
+  salesQuantity: '1250.000',
+  purchaseQuantity: '980.000',
+};
+
 const routes = ({ withProfit = true }: { withProfit?: boolean } = {}) => ({
+  [`GET ${B}/dashboard/kpis`]: () => json(200, { current: kpiWindow, previous: kpiWindow }),
   [`GET ${B}/reports/sales`]: () =>
     json(200, {
       totalAmount: '485200.00',
@@ -129,7 +139,8 @@ describe('<DashboardView>', () => {
       'Monthly / Daily Summary',
       'Cash Flow Snapshot',
     ]) {
-      expect(screen.getByRole('heading', { name })).toBeInTheDocument();
+      // The chart panels load their code lazily, so wait for them.
+      expect(await screen.findByRole('heading', { name })).toBeInTheDocument();
     }
     await expectNoA11yViolations(container);
   });
@@ -187,6 +198,34 @@ describe('<DashboardView>', () => {
       'href',
       `${B}/sales?from=${MONTH_START}&to=${TODAY}`,
     );
+  });
+
+  it('asks for the KPI figures once per row, not once per card and window', async () => {
+    const { calls } = mockApi(routes());
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    await screen.findByRole('link', { name: 'Total Collection: open page' });
+    const paths = calls.map((call) => call.path);
+    // This Month row and Today row: one request each, carrying both windows.
+    expect(paths.filter((p) => p === `${B}/dashboard/kpis`)).toHaveLength(2);
+    expect(paths).not.toContain(`${B}/reports/sales`);
+    expect(paths).not.toContain(`${B}/reports/collections`);
+    expect(paths).not.toContain(`${B}/purchases/summary`);
+  });
+
+  it('hides the bags-bought cards when the answer has no purchase quantity', async () => {
+    mockApi({
+      ...routes(),
+      [`GET ${B}/dashboard/kpis`]: () => {
+        const { purchaseQuantity: _omitted, ...withoutPurchase } = kpiWindow;
+        return json(200, { current: withoutPurchase, previous: withoutPurchase });
+      },
+    });
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    await screen.findByRole('link', { name: 'Total Collection: open page' });
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'Purchase Quantity: open page' })).toBeNull(),
+    );
+    expect(screen.getByRole('link', { name: 'Total Sales: open page' })).toBeInTheDocument();
   });
 
   it('has no welcome text, only a screen-reader page title', async () => {
