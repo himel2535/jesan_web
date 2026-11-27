@@ -219,7 +219,7 @@ export function ApprovalDetail({ slug, id }: { slug: string; id: string }) {
 
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {href ? (
-            <Link href={href} prefetch={false} className="font-medium text-primary underline">
+            <Link href={href} prefetch={false} className="font-medium text-fg underline">
               {t('detail.openRecord')}
             </Link>
           ) : null}

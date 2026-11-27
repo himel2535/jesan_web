@@ -31,7 +31,7 @@ export function TabNav({
                 className={cn(
                   'inline-flex min-h-11 items-center border-b-2 px-4 text-sm font-medium whitespace-nowrap',
                   active
-                    ? 'border-primary text-fg'
+                    ? 'border-fg text-fg'
                     : 'border-transparent text-fg-muted hover:text-fg',
                 )}
               >
