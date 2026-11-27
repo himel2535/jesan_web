@@ -2,25 +2,40 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useCan } from '@/core/auth/can';
-import { ApiError } from '@/core/api/errors';
-import { useDashboardCommissionSeries } from './api';
-import { monthPeriods, type MonthSelection } from './periods';
-import { ledgerAmount, usePeriodSources } from './period-sources';
-import { PendingRow, SummaryRow } from './summary-rows';
+import { LayoutGrid, TrendingUp } from 'lucide-react';
+import { useFormat } from '@/core/i18n/use-format';
+import { cn } from '@/core/ui/cn';
+import { useDashboardFinanceSummary } from './api';
+import { changePercent, monthPeriods, type MonthSelection } from './periods';
+import { PeriodPills } from './period-pills';
 
-const OPTIONS: MonthSelection[] = ['thisMonth', 'previousMonth', 'lifetime'];
-const LABEL = {
-  thisMonth: 'period.thisMonth',
-  previousMonth: 'period.previousMonth',
-  lifetime: 'period.lifetime',
-} as const;
+const PILLS: readonly {
+  value: MonthSelection;
+  label: 'period.thisMonth' | 'period.lastMonth' | 'period.allTime';
+}[] = [
+  { value: 'thisMonth', label: 'period.thisMonth' },
+  { value: 'previousMonth', label: 'period.lastMonth' },
+  { value: 'lifetime', label: 'period.allTime' },
+];
+
+const DOT: Record<string, string> = {
+  sales: 'bg-[var(--dash-chart-collection)]',
+  collection: 'bg-[var(--dash-chart-sales)]',
+  due: 'bg-[var(--dash-orange-accent)]',
+  cogs: 'bg-[var(--dash-chart-purchase)]',
+  expense: 'bg-[var(--dash-danger)]',
+  commission: 'bg-[var(--dash-purple-accent)]',
+};
 
 /**
- * Financial Summary. Profit lines (sales revenue, commission received, expenses) are one group;
- * balances (collection, cash and bank, customer due, commission receivable) are another. They are
- * never added to each other. COGS and Net Profit need the costing decision, so they show "pending"
- * rather than a number.
+ * The reference's Financial Summary: the figures that make up the month on the
+ * left, the net profit beside them.
+ *
+ * Only four of these rows are part of the profit — sales, the cost of what was
+ * sold, expenses and commission received — and they add up to the figure shown.
+ * Collection and customer due are money moving and money owed; they are listed
+ * because the reference lists them, but they are kept below a divider and
+ * carry no sign, so they can never be mistaken for part of the sum.
  */
 export function FinancialSummary({
   slug,
@@ -32,24 +47,46 @@ export function FinancialSummary({
   today: string;
 }) {
   const t = useTranslations('dealership.dashboard');
+  const format = useFormat();
   const [selection, setSelection] = useState<MonthSelection>('thisMonth');
-  const range = monthPeriods(today, selection).current;
-  const sources = usePeriodSources(slug, businessId, range);
-  const canCommission = useCan('commission.view');
-  const commission = useDashboardCommissionSeries(
+  const periods = monthPeriods(today, selection);
+  const current = useDashboardFinanceSummary(slug, businessId, periods.current);
+  const previous = useDashboardFinanceSummary(
     slug,
     businessId,
-    Number(today.slice(0, 4)),
-    canCommission,
+    periods.previous ?? periods.current,
   );
 
-  const commissionForbidden =
-    !canCommission || (commission.error instanceof ApiError && commission.error.status === 403);
-  const accounts = sources.accounts.data;
-  const salesAmount = sources.sales.data?.totalAmount;
-  const commissionReceived = ledgerAmount(accounts, 'commission_receipt', 'in');
-  const expenses = ledgerAmount(accounts, 'expense', 'out');
-  const collection = ledgerAmount(accounts, 'collection', 'in');
+  const data = current.data;
+  const hasProfit = data?.netProfit !== undefined;
+  const growth =
+    periods.previous === null || !hasProfit || previous.data?.netProfit === undefined
+      ? null
+      : changePercent(Number(data.netProfit), Number(previous.data.netProfit));
+  const up = (growth ?? 0) >= 0;
+  const uncosted = Number(data?.uncostedQuantityDelivered ?? '0') > 0;
+
+  const profitRows = [
+    { key: 'sales', label: t('summary.totalSales'), value: data?.sales, sign: '+' as const },
+    { key: 'cogs', label: t('summary.cogs'), value: data?.cogs, sign: '−' as const },
+    {
+      key: 'expense',
+      label: t('summary.partialExpense'),
+      value: data?.expenses,
+      sign: '−' as const,
+    },
+    {
+      key: 'commission',
+      label: t('summary.commission'),
+      value: data?.commissionReceived,
+      sign: '+' as const,
+    },
+  ].filter((row) => row.value !== undefined);
+
+  const infoRows = [
+    { key: 'collection', label: t('summary.collection'), value: data?.collection },
+    { key: 'due', label: t('summary.due'), value: data?.customerDue },
+  ];
 
   return (
     <section
@@ -57,83 +94,95 @@ export function FinancialSummary({
       className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3 shadow-[var(--dash-shadow)] lg:h-full"
     >
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="dash-financial" className="text-sm font-semibold text-[var(--dash-fg)]">
+        <h2
+          id="dash-financial"
+          className="flex items-center gap-1.5 text-sm font-bold text-[var(--dash-fg)]"
+        >
+          <LayoutGrid aria-hidden className="size-4 text-[var(--dash-primary)]" />
           {t('summary.title')}
         </h2>
-        <div role="group" aria-label={t('summary.filter')} className="flex gap-1">
-          {OPTIONS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={selection === option}
-              onClick={() => setSelection(option)}
-              className={
-                selection === option
-                  ? 'h-10 rounded-md border border-[var(--dash-primary)] px-2 text-xs font-medium text-[var(--dash-primary)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]'
-                  : 'h-10 rounded-md border border-[var(--dash-border)] px-2 text-xs font-medium text-[var(--dash-fg-muted)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]'
-              }
-            >
-              {t(LABEL[option])}
-            </button>
-          ))}
-        </div>
+        <PeriodPills
+          label={t('summary.filter')}
+          value={selection}
+          options={PILLS.map((pill) => ({ value: pill.value, label: t(pill.label) }))}
+          onChange={setSelection}
+        />
       </header>
 
-      <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,220px)]">
-        <div className="flex min-w-0 flex-col gap-2">
-          <div>
-            <h3 className="mb-1 text-xs font-semibold tracking-wide text-[var(--dash-fg-muted)] uppercase">
-              {t('summary.profitGroup')}
-            </h3>
+      <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,185px)]">
+        <ul className="flex min-w-0 flex-col gap-1">
+          {profitRows.map((row) => (
+            <li key={row.key} className="flex min-w-0 items-baseline justify-between gap-2 text-sm">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span aria-hidden className={cn('size-2 shrink-0 rounded-full', DOT[row.key])} />
+                <span className="truncate text-[var(--dash-fg-muted)]">{row.label}</span>
+              </span>
+              <span
+                className={cn(
+                  'shrink-0 font-semibold tabular-nums',
+                  row.sign === '+' ? 'text-[var(--dash-success)]' : 'text-[var(--dash-danger)]',
+                )}
+              >
+                {row.sign} {format.moneyRounded(row.value ?? '0')}
+              </span>
+            </li>
+          ))}
+          <li className="mt-1 border-t border-[var(--dash-border)] pt-1">
             <ul className="flex flex-col gap-1">
-              <SummaryRow label={t('summary.salesRevenue')} value={salesAmount} sign="plus" />
-              {!commissionForbidden && (
-                <SummaryRow
-                  label={t('summary.commissionReceived')}
-                  value={commissionReceived}
-                  sign="plus"
-                />
-              )}
-              <SummaryRow label={t('summary.expenses')} value={expenses} sign="minus" />
-              <PendingRow label={t('summary.cogs')} reason={t('summary.awaitingApproval')} />
-              <PendingRow label={t('summary.grossProfit')} reason={t('summary.awaitingApproval')} />
+              {infoRows.map((row) => (
+                <li
+                  key={row.key}
+                  className="flex min-w-0 items-baseline justify-between gap-2 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className={cn('size-2 shrink-0 rounded-full', DOT[row.key])}
+                    />
+                    <span className="truncate text-[var(--dash-fg-muted)]">{row.label}</span>
+                  </span>
+                  <span className="shrink-0 font-semibold text-[var(--dash-fg)] tabular-nums">
+                    {row.value === undefined ? '—' : format.moneyRounded(row.value)}
+                  </span>
+                </li>
+              ))}
             </ul>
-          </div>
-          <div>
-            <h3 className="mb-1 text-xs font-semibold tracking-wide text-[var(--dash-fg-muted)] uppercase">
-              {t('summary.balanceGroup')}
-            </h3>
-            <ul className="flex flex-col gap-1">
-              <SummaryRow label={t('summary.collection')} value={collection} sign="none" />
-              <SummaryRow
-                label={t('summary.customerDue')}
-                value={accounts?.totalDue}
-                sign="none"
-                hint={t('summary.asOfToday')}
-              />
-              {!commissionForbidden && (
-                <SummaryRow
-                  label={t('summary.commissionReceivable')}
-                  value={commission.data?.receivable}
-                  sign="none"
-                  hint={t('summary.asOfToday')}
-                />
-              )}
-              <PendingRow label={t('summary.supplierPayable')} reason={t('summary.notTracked')} />
-              <PendingRow label={t('summary.expensePayable')} reason={t('summary.notTracked')} />
-            </ul>
-          </div>
-        </div>
+          </li>
+        </ul>
 
-        <div className="flex flex-col justify-between gap-2 rounded-md border border-[var(--dash-border)] bg-[var(--dash-bg)] p-3">
-          <p className="text-xs font-semibold tracking-wide text-[var(--dash-fg-muted)] uppercase">
-            {t('summary.netProfit')}
-          </p>
-          <p className="text-sm font-semibold text-[var(--dash-fg)]">
-            {t('summary.netProfitPending')}
-          </p>
-          <p className="text-xs text-[var(--dash-fg-muted)]">{t('summary.netProfitNote')}</p>
-        </div>
+        {hasProfit && (
+          <div className="flex flex-col items-center justify-center gap-1 rounded-lg bg-[var(--dash-green-card-bg)] p-3 text-center">
+            <span
+              aria-hidden
+              className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--dash-green-icon-bg)] text-[var(--dash-green-accent)]"
+            >
+              <TrendingUp className="size-4" />
+            </span>
+            <p className="text-xs font-semibold text-[var(--dash-fg)]">{t('summary.netProfit')}</p>
+            <p className="text-xl font-bold text-[var(--dash-fg)] tabular-nums">
+              {format.moneyRounded(data.netProfit ?? '0')}
+            </p>
+            {growth !== null && (
+              <p
+                className={cn(
+                  'text-[11px] font-semibold',
+                  up ? 'text-[var(--dash-success)]' : 'text-[var(--dash-danger)]',
+                )}
+              >
+                <span aria-hidden>{up ? '▲' : '▼'}</span> {up ? '+' : ''}
+                {growth.toFixed(1)}%{' '}
+                <span className="font-normal text-[var(--dash-fg-muted)]">
+                  {t('compare.vsLastMonth')}
+                </span>
+              </p>
+            )}
+            {uncosted && (
+              <p className="text-[11px] text-[var(--dash-warning)]">
+                {t('summary.uncostedWarning', { bags: data.uncostedQuantityDelivered ?? '0' })}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

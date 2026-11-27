@@ -80,6 +80,15 @@ describe.each(Object.entries(THEMES))('dashboard contrast (%s)', (_name, selecto
     expect(contrast(get('dash-icon-fg'), get('dash-primary-fill'))).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('the uncosted-stock warning reads on the card it sits on (≥ 4.5:1)', () => {
+    expect(contrast(get('dash-warning'), get('dash-green-card-bg'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(get('dash-warning'), get('dash-surface'))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('the danger text reads on its own soft background (≥ 4.5:1)', () => {
+    expect(contrast(get('dash-danger'), get('dash-danger-soft'))).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('the primary text colour reads on the surface (≥ 4.5:1)', () => {
     expect(contrast(get('dash-primary'), get('dash-surface'))).toBeGreaterThanOrEqual(4.5);
   });

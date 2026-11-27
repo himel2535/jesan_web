@@ -1,16 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Box, ShoppingCart, Truck, Wallet, type LucideIcon } from 'lucide-react';
+import { Box, CalendarDays, ShoppingCart, Sun, Truck, Wallet, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/core/api/errors';
 import { useFormat } from '@/core/i18n/use-format';
-import { cn } from '@/core/ui/cn';
 import { collectionsReportQuery, salesReportQuery } from '../reports/api';
 import { purchaseTotalsQuery } from '../purchases/api';
 import { useDefaultUnit } from '../commission/shared';
-import { Money } from '../master-data/shared/display';
 import {
   changePercent,
   dayPeriods,
@@ -18,29 +16,71 @@ import {
   type DayRange,
   type DaySelection,
   type MonthSelection,
-  type PeriodPair,
 } from './periods';
 import { KpiTile, type Growth, type TileHue } from './kpi-tile';
-import { PeriodSelect } from './period-select';
+import { PeriodPills } from './period-pills';
 
 export type Metric = 'collection' | 'sales' | 'salesQuantity' | 'purchaseQuantity';
 
-interface MetricState {
-  value: string | undefined;
-  error: unknown;
-  loading: boolean;
+type PeriodKey =
+  'period.thisMonth' | 'period.lastMonth' | 'period.allTime' | 'period.today' | 'period.yesterday';
+
+const MONTH_PILLS: readonly { value: MonthSelection; label: PeriodKey }[] = [
+  { value: 'thisMonth', label: 'period.thisMonth' },
+  { value: 'previousMonth', label: 'period.lastMonth' },
+  { value: 'lifetime', label: 'period.allTime' },
+];
+
+const DAY_PILLS: readonly { value: DaySelection; label: PeriodKey }[] = [
+  { value: 'today', label: 'period.today' },
+  { value: 'yesterday', label: 'period.yesterday' },
+  { value: 'lifetime', label: 'period.allTime' },
+];
+
+const METRIC_ICON: Record<Metric, LucideIcon> = {
+  collection: Wallet,
+  sales: ShoppingCart,
+  salesQuantity: Box,
+  purchaseQuantity: Truck,
+};
+
+const METRIC_HUE: Record<Metric, TileHue> = {
+  collection: 'blue',
+  sales: 'green',
+  salesQuantity: 'purple',
+  purchaseQuantity: 'orange',
+};
+
+const METRIC_PARENT: Record<Metric, string> = {
+  collection: 'collections',
+  sales: 'sales',
+  salesQuantity: 'reports/sales',
+  purchaseQuantity: 'purchases',
+};
+
+const TITLE = {
+  month: {
+    collection: 'metric.collection',
+    sales: 'metric.sales',
+    salesQuantity: 'metric.salesQuantity',
+    purchaseQuantity: 'metric.purchaseQuantity',
+  },
+  day: {
+    collection: 'metric.todayCollection',
+    sales: 'metric.todaySales',
+    salesQuantity: 'metric.todaySalesQuantity',
+    purchaseQuantity: 'metric.todayPurchaseQuantity',
+  },
+} as const;
+
+const METRICS: readonly Metric[] = ['collection', 'sales', 'salesQuantity', 'purchaseQuantity'];
+
+function isForbidden(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 403;
 }
 
-/**
- * The value of one metric over one window. Every metric has exactly one query; the disabled
- * ones never fetch. `range === null` disables the call (used for a window with no comparison).
- */
-export function useMetric(
-  metric: Metric,
-  slug: string,
-  businessId: string,
-  range: DayRange | null,
-): MetricState {
+/** One metric over one window; the disabled windows never fetch. */
+function useMetric(metric: Metric, slug: string, businessId: string, range: DayRange | null) {
   const enabled = range !== null;
   const window = range ?? { from: '', to: '' };
 
@@ -85,242 +125,128 @@ export function useMetric(
   };
 }
 
-function isForbidden(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 403;
-}
-
-interface CardCommon {
+function MetricCard({
+  metric,
+  scope,
+  slug,
+  businessId,
+  today,
+  unitName,
+}: {
+  metric: Metric;
+  scope: 'month' | 'day';
   slug: string;
   businessId: string;
   today: string;
   unitName: string;
-}
-
-const METRIC_ICON: Record<Metric, LucideIcon> = {
-  collection: Wallet,
-  sales: ShoppingCart,
-  salesQuantity: Box,
-  purchaseQuantity: Truck,
-};
-
-const METRIC_HUE: Record<Metric, TileHue> = {
-  collection: 'blue',
-  sales: 'green',
-  salesQuantity: 'purple',
-  purchaseQuantity: 'orange',
-};
-
-const METRIC_PARENT: Record<Metric, string> = {
-  collection: 'collections',
-  sales: 'sales',
-  salesQuantity: 'reports/sales',
-  purchaseQuantity: 'purchases',
-};
-
-function windowHref(slug: string, metric: Metric, range: DayRange): string {
-  const params = new URLSearchParams({ from: range.from, to: range.to });
-  return `/b/${encodeURIComponent(slug)}/${METRIC_PARENT[metric]}?${params.toString()}`;
-}
-
-/**
- * One KPI card: a metric, its period selection, its current and comparison values, and the
- * growth between them. Hides itself when the user lacks the permission behind the metric (the
- * API answers 403), so no empty placeholder is left behind.
- */
-function MetricCard({
-  metric,
-  scope,
-  initial,
-  common,
-  title,
-}: {
-  metric: Metric;
-  scope: 'month' | 'day';
-  initial: MonthSelection | DaySelection;
-  common: CardCommon;
-  title: string;
 }) {
   const t = useTranslations('dealership.dashboard');
   const format = useFormat();
-  const [selection, setSelection] = useState(initial);
-  const [customDate, setCustomDate] = useState(common.today);
+  const [month, setMonth] = useState<MonthSelection>('thisMonth');
+  const [day, setDay] = useState<DaySelection>('today');
 
-  const periods: PeriodPair = useMemo(
-    () =>
-      scope === 'month'
-        ? monthPeriods(common.today, selection as MonthSelection)
-        : dayPeriods(common.today, selection as DaySelection, customDate),
-    [scope, common.today, selection, customDate],
-  );
-
-  const current = useMetric(metric, common.slug, common.businessId, periods.current);
-  const previous = useMetric(metric, common.slug, common.businessId, periods.previous);
+  const periods = scope === 'month' ? monthPeriods(today, month) : dayPeriods(today, day);
+  const current = useMetric(metric, slug, businessId, periods.current);
+  const previous = useMetric(metric, slug, businessId, periods.previous);
 
   if (isForbidden(current.error)) return null;
 
+  const title = t(TITLE[scope][metric]);
   const isQuantity = metric === 'salesQuantity' || metric === 'purchaseQuantity';
-  const valueNode =
+  const value =
     current.value === undefined ? null : isQuantity ? (
       <>
         {format.quantity(current.value)}{' '}
-        <span className="text-sm font-medium text-[var(--dash-fg-muted)]">{common.unitName}</span>
+        <span className="text-sm font-semibold text-[var(--dash-fg-muted)]">{unitName}</span>
       </>
     ) : (
-      <Money value={current.value} />
+      format.moneyRounded(current.value)
     );
 
-  const percent =
-    previous.value !== undefined && current.value !== undefined
-      ? changePercent(Number(current.value), Number(previous.value))
-      : null;
   const growth: Growth | null =
-    periods.previous === null ? null : { percent, label: comparisonLabel(scope, selection, t) };
+    periods.previous === null
+      ? null
+      : {
+          percent:
+            previous.value !== undefined && current.value !== undefined
+              ? changePercent(Number(current.value), Number(previous.value))
+              : null,
+          label: scope === 'month' ? t('compare.vsLastMonth') : t('compare.vsYesterday'),
+        };
 
-  const options: readonly { value: string; label: PeriodKey }[] =
-    scope === 'month' ? MONTH_OPTIONS : DAY_OPTIONS;
-  const selector = (
-    <div className="flex flex-col gap-1.5">
-      <PeriodSelect
-        label={t('periodFor', { title })}
-        value={selection}
-        options={options.map((o) => ({ value: o.value, label: t(o.label) }))}
-        onChange={(value) => setSelection(value as MonthSelection | DaySelection)}
-      />
-      {scope === 'day' && selection === 'custom' && (
-        <input
-          type="date"
-          aria-label={t('customDate')}
-          value={customDate}
-          max={common.today}
-          onChange={(event) => {
-            if (event.target.value) setCustomDate(event.target.value);
-          }}
-          className="h-10 w-full rounded-md border border-[var(--dash-border)] bg-[var(--dash-surface)] px-2 text-sm text-[var(--dash-fg)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
-        />
-      )}
-    </div>
-  );
-
+  const params = new URLSearchParams({ from: periods.current.from, to: periods.current.to });
+  const href = `/b/${encodeURIComponent(slug)}/${METRIC_PARENT[metric]}?${params.toString()}`;
   const Icon = METRIC_ICON[metric];
+  const hue = METRIC_HUE[metric];
+
   return (
     <KpiTile
-      hue={METRIC_HUE[metric]}
+      hue={hue}
       icon={<Icon aria-hidden className="size-4" />}
       title={title}
       linkLabel={t('openLabel', { title })}
-      href={windowHref(common.slug, metric, periods.current)}
-      value={valueNode}
+      href={href}
+      value={value}
       growth={growth}
-      selector={selector}
       loading={current.loading}
       errorText={current.error && !isForbidden(current.error) ? t('loadError') : undefined}
+      pills={
+        scope === 'month' ? (
+          <PeriodPills
+            label={t('periodFor', { title })}
+            value={month}
+            hue={hue}
+            options={MONTH_PILLS.map((pill) => ({ value: pill.value, label: t(pill.label) }))}
+            onChange={setMonth}
+          />
+        ) : (
+          <PeriodPills
+            label={t('periodFor', { title })}
+            value={day}
+            hue={hue}
+            options={DAY_PILLS.map((pill) => ({ value: pill.value, label: t(pill.label) }))}
+            onChange={setDay}
+          />
+        )
+      }
     />
   );
 }
 
-type PeriodKey =
-  | 'period.thisMonth'
-  | 'period.previousMonth'
-  | 'period.lifetime'
-  | 'period.today'
-  | 'period.yesterday'
-  | 'period.custom';
-
-const MONTH_OPTIONS: readonly { value: MonthSelection; label: PeriodKey }[] = [
-  { value: 'thisMonth', label: 'period.thisMonth' },
-  { value: 'previousMonth', label: 'period.previousMonth' },
-  { value: 'lifetime', label: 'period.lifetime' },
-] as const;
-
-const DAY_OPTIONS: readonly { value: DaySelection; label: PeriodKey }[] = [
-  { value: 'today', label: 'period.today' },
-  { value: 'yesterday', label: 'period.yesterday' },
-  { value: 'custom', label: 'period.custom' },
-  { value: 'lifetime', label: 'period.lifetime' },
-];
-
-function comparisonLabel(
-  scope: 'month' | 'day',
-  selection: MonthSelection | DaySelection,
-  t: ReturnType<typeof useTranslations<'dealership.dashboard'>>,
-): string {
-  if (scope === 'month') {
-    return selection === 'previousMonth'
-      ? t('compare.monthBefore')
-      : t('compare.sameDaysLastMonth');
-  }
-  if (selection === 'yesterday') return t('compare.dayBefore');
-  if (selection === 'custom') return t('compare.previousDay');
-  return t('compare.yesterday');
-}
-
-const MONTHLY_METRICS: Metric[] = ['collection', 'sales', 'salesQuantity', 'purchaseQuantity'];
-const DAILY_METRICS: Metric[] = ['collection', 'sales', 'salesQuantity', 'purchaseQuantity'];
-
-const TITLE_KEY = {
-  month: {
-    collection: 'metric.collection',
-    sales: 'metric.sales',
-    salesQuantity: 'metric.salesQuantity',
-    purchaseQuantity: 'metric.purchaseQuantity',
-  },
-  day: {
-    collection: 'metric.todayCollection',
-    sales: 'metric.todaySales',
-    salesQuantity: 'metric.todaySalesQuantity',
-    purchaseQuantity: 'metric.todayPurchaseQuantity',
-  },
-} as const;
-
-/** "This Month" section: four cards sharing one selection, set by the section's pills. */
-export function MonthlyKpiSection({
+function Row({
+  scope,
+  heading,
+  icon: Icon,
   slug,
   businessId,
   today,
+  unitName,
 }: {
+  scope: 'month' | 'day';
+  heading: string;
+  icon: LucideIcon;
   slug: string;
   businessId: string;
   today: string;
+  unitName: string;
 }) {
-  const t = useTranslations('dealership.dashboard');
-  const unit = useDefaultUnit(slug, businessId);
-  const [bulk, setBulk] = useState<MonthSelection>('thisMonth');
-  const common = { slug, businessId, today, unitName: unit.name };
-
+  const id = `dash-${scope}-heading`;
   return (
-    <section aria-labelledby="dash-monthly-heading" className="flex min-w-0 flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <h2 id="dash-monthly-heading" className="text-base font-semibold text-[var(--dash-fg)]">
-          {t('monthly.title')}
-        </h2>
-        <div role="group" aria-label={t('monthly.filter')} className="flex gap-1">
-          {MONTH_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={bulk === option.value}
-              onClick={() => setBulk(option.value)}
-              className={cn(
-                'h-10 rounded-full border px-3 text-xs font-medium focus-visible:outline-2 focus-visible:outline-[var(--focus)]',
-                bulk === option.value
-                  ? 'border-[var(--dash-primary)] bg-[var(--dash-primary-fill)] text-[var(--dash-icon-fg)]'
-                  : 'border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-fg-muted)]',
-              )}
-            >
-              {t(option.label)}
-            </button>
-          ))}
-        </div>
-      </div>
+    <section aria-labelledby={id} className="flex min-w-0 flex-col gap-1">
+      <h2 id={id} className="flex items-center gap-1.5 text-sm font-bold text-[var(--dash-fg)]">
+        <Icon aria-hidden className="size-4 text-[var(--dash-primary)]" />
+        {heading}
+      </h2>
       <div className="grid min-w-0 grid-cols-2 gap-[5px] xl:grid-cols-4">
-        {MONTHLY_METRICS.map((metric) => (
+        {METRICS.map((metric) => (
           <MetricCard
-            key={`${metric}-${bulk}`}
+            key={metric}
             metric={metric}
-            scope="month"
-            initial={bulk}
-            common={common}
-            title={t(TITLE_KEY.month[metric])}
+            scope={scope}
+            slug={slug}
+            businessId={businessId}
+            today={today}
+            unitName={unitName}
           />
         ))}
       </div>
@@ -328,8 +254,12 @@ export function MonthlyKpiSection({
   );
 }
 
-/** "Today" section: four cards, each with its own Today / Yesterday / Custom / All Time choice. */
-export function DailyKpiSection({
+/**
+ * The reference's two KPI rows, "This Month" and "Today", inside one white
+ * panel. Each card carries its own period pills; there is no section-wide
+ * control, which is what crowded the figures before.
+ */
+export function KpiSections({
   slug,
   businessId,
   today,
@@ -340,25 +270,27 @@ export function DailyKpiSection({
 }) {
   const t = useTranslations('dealership.dashboard');
   const unit = useDefaultUnit(slug, businessId);
-  const common = { slug, businessId, today, unitName: unit.name };
 
   return (
-    <section aria-labelledby="dash-daily-heading" className="flex min-w-0 flex-col gap-1.5">
-      <h2 id="dash-daily-heading" className="text-base font-semibold text-[var(--dash-fg)]">
-        {t('daily.title')}
-      </h2>
-      <div className="grid min-w-0 grid-cols-2 gap-[5px] xl:grid-cols-4">
-        {DAILY_METRICS.map((metric) => (
-          <MetricCard
-            key={metric}
-            metric={metric}
-            scope="day"
-            initial="today"
-            common={common}
-            title={t(TITLE_KEY.day[metric])}
-          />
-        ))}
-      </div>
-    </section>
+    <div className="flex min-w-0 flex-col gap-1.5 rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-2 shadow-[var(--dash-shadow)]">
+      <Row
+        scope="month"
+        heading={t('monthly.title')}
+        icon={CalendarDays}
+        slug={slug}
+        businessId={businessId}
+        today={today}
+        unitName={unit.name}
+      />
+      <Row
+        scope="day"
+        heading={t('daily.title')}
+        icon={Sun}
+        slug={slug}
+        businessId={businessId}
+        today={today}
+        unitName={unit.name}
+      />
+    </div>
   );
 }

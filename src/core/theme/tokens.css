@@ -89,6 +89,8 @@
   --dash-primary-fill: #1e5fd6;
   --dash-success: #047857;
   --dash-danger: #b91c1c;
+  --dash-danger-soft: #fef2f2;
+  --dash-warning: #b45309;
   --dash-icon-fg: #ffffff;
   --dash-icon-fg-on-orange: #101b46;
 
@@ -221,6 +223,8 @@
 /* Dark variants of the KPI accents and shadow (light values live in .dash-scope above). */
 [data-theme='dark'] .dash-scope {
   --dash-shadow: none;
+  --dash-danger-soft: #3a1b1b;
+  --dash-warning: #fbbf24;
   --dash-primary-fill: #2563eb;
   --dash-chart-collection: #60a5fa;
   --dash-chart-sales: #34d399;
@@ -238,6 +242,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .dash-scope {
     --dash-shadow: none;
+    --dash-danger-soft: #3a1b1b;
+    --dash-warning: #fbbf24;
     --dash-primary-fill: #2563eb;
     --dash-chart-collection: #60a5fa;
     --dash-chart-sales: #34d399;

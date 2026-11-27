@@ -12,20 +12,10 @@ import {
 } from 'recharts';
 import { ApiError } from '@/core/api/errors';
 import { useFormat } from '@/core/i18n/use-format';
-import { changePercent, monthKeyOf, previousMonthKey } from './periods';
+import { monthKeyOf } from './periods';
 import { useDashboardCommissionSeries } from './api';
 import type { CommissionSeriesResponse } from './types';
 import { Info } from 'lucide-react';
-
-/** Received commission for a `YYYY-MM` key, from whichever year's series holds it. */
-function receivedFor(
-  key: string,
-  thisYear: CommissionSeriesResponse | undefined,
-  lastYear: CommissionSeriesResponse | undefined,
-): string | undefined {
-  const source = Number(key.slice(0, 4)) === thisYear?.year ? thisYear : lastYear;
-  return source?.months.find((row) => row.month === key)?.received;
-}
 
 /**
  * Commission Overview, owner-only. Received commission (the money Akij actually paid) is shown
@@ -48,13 +38,6 @@ export function CommissionPanel({
   const lastYear = useDashboardCommissionSeries(slug, businessId, year - 1);
 
   const currentKey = monthKeyOf(today);
-  const previousKey = previousMonthKey(currentKey);
-  const currentReceived = receivedFor(currentKey, thisYear.data, lastYear.data);
-  const previousReceived = receivedFor(previousKey, thisYear.data, lastYear.data);
-  const growth = changePercent(
-    currentReceived === undefined ? null : Number(currentReceived),
-    previousReceived === undefined ? null : Number(previousReceived),
-  );
 
   const chart = (() => {
     const byMonth = (data: CommissionSeriesResponse | undefined) =>
@@ -77,40 +60,6 @@ export function CommissionPanel({
 
   if (thisYear.error instanceof ApiError && thisYear.error.status === 403) return null;
 
-  const cards: {
-    key: string;
-    label: string;
-    value: string | undefined;
-    note?: string | null;
-    tone?: 'success' | 'danger' | 'muted';
-  }[] = [
-    {
-      key: 'current',
-      label: t('commission.currentMonthReceived'),
-      value: currentReceived,
-      note:
-        growth === null
-          ? null
-          : `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}% ${t('commission.vsPreviousMonth')}`,
-      tone: growth === null ? 'muted' : growth >= 0 ? 'success' : 'danger',
-    },
-    { key: 'previous', label: t('commission.previousMonthReceived'), value: previousReceived },
-    {
-      key: 'year',
-      label: t('commission.yearReceived'),
-      value: thisYear.data?.yearReceived,
-      note: thisYear.data
-        ? t('commission.yearCalculated', { amount: format.money(thisYear.data.yearCalculated) })
-        : null,
-    },
-    {
-      key: 'receivable',
-      label: t('commission.receivable'),
-      value: thisYear.data?.receivable,
-      note: t('commission.receivableNote'),
-    },
-  ];
-
   return (
     <section
       aria-labelledby="dash-commission"
@@ -120,7 +69,7 @@ export function CommissionPanel({
         {t('commission.title')}
       </h2>
       <div className="flex min-h-0 flex-1 flex-col gap-2">
-        <div className="min-h-[150px] min-w-0">
+        <div className="min-h-0 min-w-0 flex-1">
           {thisYear.isPending || lastYear.isPending ? (
             <div className="h-full min-h-[150px] animate-pulse rounded bg-[var(--dash-border)]" />
           ) : (
@@ -174,36 +123,8 @@ export function CommissionPanel({
             </ResponsiveContainer>
           )}
         </div>
-        <ul className="grid grid-cols-2 gap-[5px]">
-          {cards.map((card) => (
-            <li
-              key={card.key}
-              className="flex min-w-0 flex-col gap-0.5 rounded-md border border-[var(--dash-border)] bg-[var(--dash-bg)] p-2"
-            >
-              <p className="truncate text-xs font-medium text-[var(--dash-fg-muted)]">
-                {card.label}
-              </p>
-              <p className="truncate text-base font-bold text-[var(--dash-fg)] tabular-nums">
-                {card.value === undefined ? '—' : format.money(card.value)}
-              </p>
-              {card.note && (
-                <p
-                  className={
-                    card.tone === 'success'
-                      ? 'truncate text-xs text-[var(--dash-success)]'
-                      : card.tone === 'danger'
-                        ? 'truncate text-xs text-[var(--dash-danger)]'
-                        : 'truncate text-xs text-[var(--dash-fg-muted)]'
-                  }
-                >
-                  {card.note}
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
       </div>
-      <p className="flex items-center gap-1 text-xs text-[var(--dash-fg-muted)]">
+      <p className="mt-auto flex shrink-0 items-center gap-1 text-[11px] text-[var(--dash-fg-muted)]">
         <Info aria-hidden className="size-3.5 shrink-0" />
         {t('commission.basisNote')}
       </p>

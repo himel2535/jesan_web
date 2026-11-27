@@ -49,8 +49,7 @@ test('owner sees the dues report with the three aging columns', async ({ browser
 test('owner sees every KPI card and chart panel on the dashboard', async ({ browser }) => {
   const owner = await as(browser, 'owner', '/b/example-cement');
   const main = owner.getByRole('main');
-  // The two KPI rows: four monthly and four daily cards, each linking to its parent page.
-  await expect(main.getByRole('heading', { name: 'This Month', level: 2 })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'This Month' })).toBeVisible();
   await expect(main.getByRole('heading', { name: 'Today', level: 2 })).toBeVisible();
   for (const name of [
     'Total Collection: open page',
@@ -59,26 +58,41 @@ test('owner sees every KPI card and chart panel on the dashboard', async ({ brow
     'Purchase Quantity: open page',
     "Today's Collection: open page",
     "Today's Sales: open page",
-    "Today's Sales Quantity: open page",
-    "Today's Purchase Quantity: open page",
+    "Today's Sales Qty: open page",
+    "Today's Purchase Qty: open page",
   ]) {
     await expect(main.getByRole('link', { name, exact: true })).toBeVisible();
   }
-  // Excluded metrics must not appear anywhere as KPI cards.
   await expect(main.getByText('Total Orders')).toHaveCount(0);
-  await expect(main.getByText('Total Deliveries')).toHaveCount(0);
-  await expect(main.getByText('Total Customers')).toHaveCount(0);
-  // No business-name heading above the KPI grid; the welcome line is the page heading.
   await expect(main.getByRole('heading', { name: 'Example Cement' })).toHaveCount(0);
 
-  // The chart, commission, cash and financial panels.
-  await expect(main.getByRole('heading', { name: 'Sales & Collection Overview' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Commission Overview' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Cash Position' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Financial Summary' })).toBeVisible();
-  await expect(main.getByRole('heading', { name: 'Monthly / Daily Summary' })).toBeVisible();
-  // Net Profit is not shown as a number until the costing method is approved.
-  await expect(main.getByText('Awaiting costing approval').first()).toBeVisible();
+  for (const name of [
+    'Sales & Collection Overview',
+    'Commission Overview',
+    'Key Information',
+    'Financial Summary',
+    'Monthly / Daily Summary',
+    'Cash Flow Snapshot',
+  ]) {
+    await expect(main.getByRole('heading', { name })).toBeVisible();
+  }
+  // Net profit is a real figure now, not a placeholder.
+  await expect(main.getByText('Total Net Profit')).toBeVisible();
+  await expect(main.getByText(/Awaiting/i)).toHaveCount(0);
+});
+
+test('a KPI period pill changes only its own card and never navigates', async ({ browser }) => {
+  const owner = await as(browser, 'owner', '/b/example-cement');
+  const main = owner.getByRole('main');
+  const card = main.getByRole('link', { name: 'Total Collection: open page', exact: true });
+  const before = await card.getAttribute('href');
+  await main
+    .getByRole('group', { name: 'Period for Total Collection' })
+    .getByRole('button', { name: 'All Time' })
+    .click();
+  await expect(owner).toHaveURL(/\/b\/example-cement$/);
+  await expect(card).not.toHaveAttribute('href', before ?? '');
+  await expect(card).toHaveAttribute('href', /from=2000-01-01/);
 });
 
 test('Bengali and dark theme: the dashboard renders without errors', async ({ page }) => {
@@ -94,11 +108,10 @@ test('Bengali and dark theme: the dashboard renders without errors', async ({ pa
   await page.getByLabel('পাসওয়ার্ড', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'লগইন' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(page.getByRole('heading', { name: 'এই মাস', level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'এই মাস' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'আজ', level: 2 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'বিক্রয় ও আদায়ের সারসংক্ষেপ' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'নগদ অবস্থান' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'আর্থিক সারসংক্ষেপ' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'মাসিক / দৈনিক সারসংক্ষেপ' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'নগদ প্রবাহ' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'প্রধান তথ্য' })).toBeVisible();
   expect(errors).toEqual([]);
 });

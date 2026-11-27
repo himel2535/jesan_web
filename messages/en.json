@@ -1278,12 +1278,11 @@
       }
     },
     "dashboard": {
-      "welcome": "Welcome back, {name}",
+      "welcome": "Welcome back, {name} 👋",
       "subtitle": "Here's your business overview for {month}",
       "notifications": "Notifications ({count} pending approvals)",
       "monthly": {
-        "title": "This Month",
-        "filter": "Monthly period"
+        "title": "This Month"
       },
       "daily": {
         "title": "Today"
@@ -1295,27 +1294,22 @@
         "purchaseQuantity": "Purchase Quantity",
         "todayCollection": "Today's Collection",
         "todaySales": "Today's Sales",
-        "todaySalesQuantity": "Today's Sales Quantity",
-        "todayPurchaseQuantity": "Today's Purchase Quantity"
+        "todaySalesQuantity": "Today's Sales Qty",
+        "todayPurchaseQuantity": "Today's Purchase Qty"
       },
       "period": {
         "thisMonth": "This Month",
-        "previousMonth": "Last Month",
-        "lifetime": "All Time",
+        "lastMonth": "Last Month",
+        "allTime": "All Time",
         "today": "Today",
-        "yesterday": "Yesterday",
-        "custom": "Custom date"
+        "yesterday": "Yesterday"
       },
       "periodFor": "Period for {title}",
-      "customDate": "Custom date",
       "openLabel": "{title}: open page",
       "loadError": "Could not load",
       "compare": {
-        "sameDaysLastMonth": "vs last month",
-        "monthBefore": "vs month before",
-        "dayBefore": "vs day before",
-        "yesterday": "vs yesterday",
-        "previousDay": "vs previous day"
+        "vsLastMonth": "vs Last Month",
+        "vsYesterday": "vs Yesterday"
       },
       "chart": {
         "salesCollectionTitle": "Sales & Collection Overview",
@@ -1328,54 +1322,40 @@
       },
       "commission": {
         "title": "Commission Overview",
-        "currentMonthReceived": "Commission Received: This Month",
-        "previousMonthReceived": "Commission Received: Last Month",
-        "yearReceived": "Commission Received: This Year",
-        "yearCalculated": "Calculated this year: {amount}",
-        "receivable": "Commission Receivable",
-        "receivableNote": "Calculated less received, all time",
-        "vsPreviousMonth": "vs last month",
-        "basisNote": "Received is the money actually paid by Akij. Calculated commission is shown only as the year total.",
-        "thisYearLegend": "This year",
-        "lastYearLegend": "Last year"
+        "range": "Commission range",
+        "thisYearLegend": "This Year",
+        "lastYearLegend": "Last Year",
+        "basisNote": "Received is the money Akij actually paid."
       },
-      "cashbook": {
-        "title": "Cash Position",
+      "keyInfo": {
+        "title": "Key Information",
+        "totalCommission": "Total Commission",
+        "monthlyCommission": "Monthly Commission",
+        "totalDue": "Total Due",
+        "thisYear": "(This Year)",
+        "thisMonth": "(This Month)"
+      },
+      "cashFlow": {
+        "title": "Cash Flow Snapshot",
         "cashInHand": "Cash in Hand",
-        "bankBalance": "Bank Balance",
-        "totalCashBank": "Total Cash + Bank",
-        "actualCashCollection": "Actual Cash Collection",
-        "actualBankCollection": "Actual Bank Collection",
-        "totalCashPayments": "Total Cash Payments",
-        "totalBankPayments": "Total Bank Payments",
-        "unassignedNote": "{amount} received without a payment method (for example commission) is not counted as cash or bank."
+        "customerDue": "Customer Due",
+        "netProfitNote": "Net Profit is calculated from Sales, COGS, Expenses and Commission."
       },
       "summary": {
         "title": "Financial Summary",
         "filter": "Summary period",
-        "profitGroup": "Profit",
-        "balanceGroup": "Balances (never added to profit)",
-        "salesRevenue": "Total Sales Revenue",
-        "commissionReceived": "Supplier Commission Received",
-        "expenses": "Expenses (all categories)",
-        "cogs": "COGS",
-        "grossProfit": "Gross Profit",
-        "collection": "Collection (cash received)",
-        "customerDue": "Customer Outstanding Due",
-        "commissionReceivable": "Commission Receivable",
-        "supplierPayable": "Supplier Payable",
-        "expensePayable": "Expense Payable",
-        "notTracked": "Not tracked by the system",
-        "asOfToday": "as of today",
-        "awaitingApproval": "Awaiting costing approval",
+        "totalSales": "Total Sales",
+        "cogs": "Purchase Cost of Sales",
+        "partialExpense": "Partial Expense",
+        "commission": "Commission",
+        "collection": "Collection",
+        "due": "Due",
         "netProfit": "Total Net Profit",
-        "netProfitPending": "Awaiting approval",
-        "netProfitNote": "Net Profit = Sales Revenue − COGS − Expenses + Commission received. Shown once the costing method is approved.",
+        "uncostedWarning": "{bags} bags delivered with no cost basis, so this is overstated.",
         "monthlyDailyTitle": "Monthly / Daily Summary",
-        "runningMonth": "Running Month",
-        "runningMonthFilter": "Running month period",
-        "today": "Today",
-        "todayFilter": "Today period",
+        "monthlyDailyFilter": "Summary scope",
+        "runningMonth": "Running Month ({month})",
+        "todayOn": "Today ({date})",
         "sales": "Sales",
         "purchase": "Purchase"
       }

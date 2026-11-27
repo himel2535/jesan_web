@@ -1,98 +1,79 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useCan } from '@/core/auth/can';
-import { useDashboardCommissionSeries } from './api';
-import { ApiError } from '@/core/api/errors';
-import { dayPeriods, monthPeriods, type DaySelection, type MonthSelection } from './periods';
-import { ledgerAmount, usePeriodSources, type PeriodSources } from './period-sources';
-import { PendingRow, SummaryRow } from './summary-rows';
-import { PeriodSelect } from './period-select';
+import { CalendarDays, CalendarRange, Sun } from 'lucide-react';
+import { useFormat } from '@/core/i18n/use-format';
+import { cn } from '@/core/ui/cn';
+import { useDashboardFinanceSummary } from './api';
+import { dayPeriods, monthPeriods } from './periods';
+import { PeriodPills } from './period-pills';
+import type { DayRange } from './periods';
 
-const MONTH_OPTIONS = [
-  { value: 'thisMonth', label: 'period.thisMonth' },
-  { value: 'previousMonth', label: 'period.previousMonth' },
-  { value: 'lifetime', label: 'period.lifetime' },
-] as const;
+type Scope = 'thisMonth' | 'today';
 
-const DAY_OPTIONS = [
-  { value: 'today', label: 'period.today' },
-  { value: 'yesterday', label: 'period.yesterday' },
-  { value: 'custom', label: 'period.custom' },
-] as const;
-
-/** One summary block: the same money rows for any window, all from the period sources. */
-function SummaryBlock({
-  title,
-  sources,
-  commissionReceived,
-  showCommission,
-  customerDue,
+/** One block: a heading with its date, then the three figures side by side. */
+function Block({
+  icon,
+  tone,
+  badge,
+  heading,
+  slug,
+  businessId,
+  range,
   canSeePurchaseCost,
-  headerControl,
 }: {
-  title: string;
-  sources: PeriodSources;
-  commissionReceived: string | undefined;
-  showCommission: boolean;
-  customerDue: string | undefined;
+  icon: React.ReactNode;
+  tone: string;
+  badge: string;
+  heading: string;
+  slug: string;
+  businessId: string;
+  range: DayRange;
   canSeePurchaseCost: boolean;
-  headerControl: ReactNode;
 }) {
   const t = useTranslations('dealership.dashboard');
-  const accounts = sources.accounts.data;
+  const format = useFormat();
+  const summary = useDashboardFinanceSummary(slug, businessId, range);
+  const data = summary.data;
+
+  const figures = [
+    { key: 'collection', label: t('summary.collection'), value: data?.collection },
+    { key: 'sales', label: t('summary.sales'), value: data?.sales },
+    ...(canSeePurchaseCost
+      ? [{ key: 'purchase', label: t('summary.purchase'), value: data?.totalPurchase }]
+      : []),
+  ];
+
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-md border border-[var(--dash-border)] bg-[var(--dash-bg)] p-2">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="min-w-0 truncate text-sm font-semibold text-[var(--dash-fg)]">{title}</h3>
-        {headerControl}
+    <div className={cn('flex min-w-0 items-start gap-2 rounded-lg p-2', tone)}>
+      <span
+        aria-hidden
+        className={cn('inline-flex size-8 shrink-0 items-center justify-center rounded-lg', badge)}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-bold text-[var(--dash-fg)]">{heading}</p>
+        <dl className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 text-xs">
+          {figures.map((figure) => (
+            <div key={figure.key} className="flex min-w-0 items-baseline gap-1">
+              <dt className="text-[var(--dash-fg-muted)]">{figure.label}:</dt>
+              <dd className="font-semibold text-[var(--dash-fg)] tabular-nums">
+                {figure.value === undefined ? '—' : format.moneyRounded(figure.value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
-      <ul className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
-        <SummaryRow
-          label={t('summary.collection')}
-          value={ledgerAmount(accounts, 'collection', 'in')}
-          sign="none"
-        />
-        <SummaryRow
-          label={t('summary.sales')}
-          value={sources.sales.data?.totalAmount}
-          sign="none"
-        />
-        {canSeePurchaseCost && (
-          <SummaryRow
-            label={t('summary.purchase')}
-            value={sources.purchases.data?.totalAmount}
-            sign="none"
-          />
-        )}
-        <SummaryRow
-          label={t('summary.expenses')}
-          value={ledgerAmount(accounts, 'expense', 'out')}
-          sign="none"
-        />
-        {showCommission && (
-          <SummaryRow
-            label={t('summary.commissionReceived')}
-            value={commissionReceived}
-            sign="none"
-          />
-        )}
-        <SummaryRow
-          label={t('summary.customerDue')}
-          value={customerDue}
-          sign="none"
-          hint={t('summary.asOfToday')}
-        />
-        <PendingRow label={t('summary.netProfit')} reason={t('summary.awaitingApproval')} />
-      </ul>
     </div>
   );
 }
 
 /**
- * Monthly / Daily Summary: the running month and today, side by side. Every figure is the same
- * one the KPI cards and the financial summary use for the same window.
+ * The reference's Monthly / Daily Summary: the running month and today, each
+ * with its collection, sales and purchase. The pills pick which one leads;
+ * both are always shown, as in the reference.
  */
 export function MonthlyDailySummary({
   slug,
@@ -106,84 +87,78 @@ export function MonthlyDailySummary({
   canSeePurchaseCost: boolean;
 }) {
   const t = useTranslations('dealership.dashboard');
-  const [monthSelection, setMonthSelection] = useState<MonthSelection>('thisMonth');
-  const [daySelection, setDaySelection] = useState<DaySelection>('today');
-  const [customDate, setCustomDate] = useState(today);
+  const format = useFormat();
+  const [scope, setScope] = useState<Scope>('thisMonth');
+  const month = monthPeriods(today, 'thisMonth').current;
+  const day = dayPeriods(today, 'today').current;
 
-  const monthRange = monthPeriods(today, monthSelection).current;
-  const dayRange = dayPeriods(today, daySelection, customDate).current;
-  const monthSources = usePeriodSources(slug, businessId, monthRange);
-  const daySources = usePeriodSources(slug, businessId, dayRange);
-  const canCommission = useCan('commission.view');
-  const commission = useDashboardCommissionSeries(
-    slug,
-    businessId,
-    Number(today.slice(0, 4)),
-    canCommission,
+  const monthLabel = format.date(`${month.from}T00:00:00.000Z`, {
+    month: 'long',
+    year: 'numeric',
+  });
+  const dayLabel = format.date(`${today}T00:00:00.000Z`, { dateStyle: 'long' });
+
+  const monthBlock = (
+    <Block
+      icon={<CalendarDays aria-hidden className="size-4" />}
+      tone="bg-[var(--dash-blue-card-bg)]"
+      badge="bg-[var(--dash-blue-icon-bg)] text-[var(--dash-blue-accent)]"
+      heading={t('summary.runningMonth', { month: monthLabel })}
+      slug={slug}
+      businessId={businessId}
+      range={month}
+      canSeePurchaseCost={canSeePurchaseCost}
+    />
   );
-  const commissionForbidden =
-    !canCommission || (commission.error instanceof ApiError && commission.error.status === 403);
-
-  /** Commission is owner-only: without its permission the row is left out, not zeroed. */
-  const commissionFor = (sources: PeriodSources) =>
-    commissionForbidden
-      ? undefined
-      : ledgerAmount(sources.accounts.data, 'commission_receipt', 'in');
+  const dayBlock = (
+    <Block
+      icon={<Sun aria-hidden className="size-4" />}
+      tone="bg-[var(--dash-orange-card-bg)]"
+      badge="bg-[var(--dash-orange-icon-bg)] text-[var(--dash-orange-accent)]"
+      heading={t('summary.todayOn', { date: dayLabel })}
+      slug={slug}
+      businessId={businessId}
+      range={day}
+      canSeePurchaseCost={canSeePurchaseCost}
+    />
+  );
 
   return (
     <section
       aria-labelledby="dash-monthly-daily"
       className="flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3 shadow-[var(--dash-shadow)] lg:h-full"
     >
-      <h2 id="dash-monthly-daily" className="text-sm font-semibold text-[var(--dash-fg)]">
-        {t('summary.monthlyDailyTitle')}
-      </h2>
-      <SummaryBlock
-        title={t('summary.runningMonth')}
-        sources={monthSources}
-        commissionReceived={commissionFor(monthSources)}
-        showCommission={!commissionForbidden}
-        customerDue={monthSources.accounts.data?.totalDue}
-        canSeePurchaseCost={canSeePurchaseCost}
-        headerControl={
-          <PeriodSelect
-            label={t('summary.runningMonthFilter')}
-            value={monthSelection}
-            options={MONTH_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
-            onChange={setMonthSelection}
-          />
-        }
-      />
-      <SummaryBlock
-        title={t('summary.today')}
-        sources={daySources}
-        commissionReceived={commissionFor(daySources)}
-        showCommission={!commissionForbidden}
-        customerDue={daySources.accounts.data?.totalDue}
-        canSeePurchaseCost={canSeePurchaseCost}
-        headerControl={
-          <div className="flex flex-col gap-1">
-            <PeriodSelect
-              label={t('summary.todayFilter')}
-              value={daySelection}
-              options={DAY_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
-              onChange={setDaySelection}
-            />
-            {daySelection === 'custom' && (
-              <input
-                type="date"
-                aria-label={t('customDate')}
-                value={customDate}
-                max={today}
-                onChange={(event) => {
-                  if (event.target.value) setCustomDate(event.target.value);
-                }}
-                className="h-10 rounded-md border border-[var(--dash-border)] bg-[var(--dash-surface)] px-2 text-sm text-[var(--dash-fg)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
-              />
-            )}
-          </div>
-        }
-      />
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <h2
+          id="dash-monthly-daily"
+          className="flex items-center gap-1.5 text-sm font-bold text-[var(--dash-fg)]"
+        >
+          <CalendarRange aria-hidden className="size-4 text-[var(--dash-primary)]" />
+          {t('summary.monthlyDailyTitle')}
+        </h2>
+        <PeriodPills
+          label={t('summary.monthlyDailyFilter')}
+          value={scope}
+          options={[
+            { value: 'thisMonth' as const, label: t('period.thisMonth') },
+            { value: 'today' as const, label: t('period.today') },
+          ]}
+          onChange={setScope}
+        />
+      </header>
+      <div className="flex flex-col gap-[5px]">
+        {scope === 'thisMonth' ? (
+          <>
+            {monthBlock}
+            {dayBlock}
+          </>
+        ) : (
+          <>
+            {dayBlock}
+            {monthBlock}
+          </>
+        )}
+      </div>
     </section>
   );
 }
