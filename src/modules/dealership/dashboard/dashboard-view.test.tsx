@@ -419,6 +419,18 @@ describe('<DashboardView>', () => {
     ).toBeInTheDocument();
   });
 
+  it('says so when the API reports an incomplete cost for lines that were never costed', async () => {
+    mockApi(summaryWith({ costComplete: false as unknown as string, uncostedDeliveryLines: 2 }));
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
+    const panel = heading.closest('section') as HTMLElement;
+    expect(
+      await within(panel).findByText(
+        '2 delivery lines were delivered with no recorded cost, so this cost of sales is incomplete.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('shows no cost warning when the cost of sales is complete', async () => {
     mockApi(summaryWith({}));
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });

@@ -61,7 +61,7 @@ export function FinancialSummary({
   // Cost of sales is only as good as the costs behind it. Say so beside the figure instead of
   // letting a bare ৳0 (or a short total) read as a verified result. Nothing is calculated here:
   // every number comes from the API.
-  const cogsIncomplete = uncosted || uncostedLines > 0;
+  const cogsIncomplete = uncosted || uncostedLines > 0 || data?.costComplete === false;
   const cogsUnverified =
     !cogsIncomplete &&
     data?.cogs !== undefined &&
@@ -69,10 +69,12 @@ export function FinancialSummary({
     sameMoney(data.cogs, '0') &&
     !sameMoney(data.sales, '0');
   const cogsNote = cogsIncomplete
-    ? t('summary.cogsUncosted', {
-        bags: format.quantity(data?.uncostedQuantityDelivered ?? '0'),
-        lines: uncostedLines,
-      })
+    ? uncosted
+      ? t('summary.cogsUncosted', {
+          bags: format.quantity(data?.uncostedQuantityDelivered ?? '0'),
+          lines: uncostedLines,
+        })
+      : t('summary.cogsLinesUncosted', { lines: uncostedLines })
     : cogsUnverified
       ? t('summary.cogsUnverified')
       : null;

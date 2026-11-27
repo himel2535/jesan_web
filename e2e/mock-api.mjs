@@ -1407,7 +1407,7 @@ http
           .filter((c) => c.isActive !== false && Number(c.currentBalance ?? 0) > 0)
           .reduce((a, c) => a + Number(c.currentBalance ?? 0), 0);
         // Half the delivered value stands in for cost here; the real figure is
-        // the weighted average snapshot on each delivery line.
+        // the FIFO cost frozen on each delivery line (docs/API.md).
         const cogs = salesTotal * 0.5;
         const body = {
           from,
@@ -1425,10 +1425,13 @@ http
           );
           body.currentStockValue = fixed(cogs);
           body.cogs = fixed(cogs);
+          body.grossProfit = fixed(salesTotal - cogs);
           body.netProfit = fixed(salesTotal - cogs - expenseTotal + commissionTotal);
           body.uncostedQuantityDelivered = '0.000';
           body.uncostedQuantityOnHand = '0.000';
           body.uncostedDeliveryLines = 0;
+          body.productsWithUnknownCostStock = 0;
+          body.costComplete = true;
         }
         return send(res, 200, body);
       }
