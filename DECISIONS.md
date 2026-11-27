@@ -692,3 +692,11 @@
 - **সরানো হয়েছে**: `cashbook-panel.tsx`, `period-select.tsx` (dropdown), `period-sources.ts`, `summary-rows.tsx` — নতুন ডিজাইনে আর লাগে না।
 - **ছোট বিচ্যুতি, কারণসহ**: রেফারেন্সের "pcs"-এর বদলে আসল একক (Bag/বস্তা) — CLAUDE.md হার্ডকোড এককের নাম নিষেধ করে। কমিশন চার্টের লেজেন্ড "This Year"/"Last Year", রেফারেন্সের "This Month"/"Last Month" নয় — বারো মাসের অক্ষে সেটা ভুল হতো। ড্যাশবোর্ডের হেডারে আলাদা ইউজার-চিপ নেই — টপবারেই একবার ইউজার দেখানো আছে, দুইবার দেখানো ভুল হতো।
 - **যাচাই**: `format:check`, `lint`, `type-check`, `test` (৪৮২টা, নতুন ৪টা cost/profit-সংক্রান্ত সহ), `build`, `test:e2e` (৩২টা) — সব সবুজ। প্রোডাকশন বিল্ডে ১০২৪×৭৬৮ থেকে ১৯২০×১০৮০ পর্যন্ত কোনো page scroll বা অনুভূমিক scroll নেই; ট্যাবলেট ও মোবাইলে শুধু উল্লম্ব scroll।
+
+## কমিশন সরল: "পাওয়া টাকা + কারণ" (২০২৬-১১-২৭, ক্লায়েন্টের চাওয়ায়)
+
+- **বাতিল**: কমিশন scheme (rateBase/targetQty/bonusRate), target, সার্ভার-হিসাব, "হিসাব করা/বাকি", আলাদা receipts, রসিদ-ভাউচার, কেনার পরিমাণের পরামর্শ ও বিস্তারিত পাতা। আগের কমিশন-সংক্রান্ত লাইনগুলো (Step 7, dashboard v3/v4/v5) এই সিদ্ধান্তে বদলে গেছে।
+- **এখন**: মালিক শুধু লেখেন কত টাকা পেলেন, কবে, কী কারণে (বাধ্যতামূলক মুক্ত লেখা, ≤৫০০ অক্ষর)। তালিকা `receivedDate` অনুযায়ী, ১০ সারি; বছরের "মোট প্রাপ্ত" ও সংখ্যা। কারণ নির্দিষ্ট তালিকা নয়, কারণ ক্লায়েন্ট নিজে ৪–৫টা কারণ লেখেন।
+- **নিট মুনাফায় যোগ**: ব্রাউজারে কোনো হিসাব নেই; backend `finance-summary.commissionReceived` (`receivedDate`-এর মাসে) নিট মুনাফায় যোগ করে। সেভের পর `commissionEntries`, `commissionSummary`, `dashboardFinance`, `dashboardCommission` রিফ্রেশ।
+- **ছোট সিদ্ধান্ত**: সারিতে `RowActions` মেনুর বদলে সরাসরি "সংশোধন" বাটন (মেনুর অন্য কাজ নেই: মোছা/নিষ্ক্রিয় নেই), অনুমতি না থাকলে বাটনই নেই; বিস্তারিত পাতা নেই কারণ সব ঘর তালিকাতেই দেখা যায়। `purchase-counters` frontend আর ডাকে না (backend-এ endpoint রয়ে গেছে)। `useDefaultUnit` dashboard ব্যবহার করে বলে `commission/shared.tsx`-এ রইল।
+- **ত্রুটি**: `COMMISSION_SCHEME_NOT_SET`, `COMMISSION_RECEIPT_NOT_FOUND`, `COMMISSION_DATE_RANGE_INVALID`, `RATE_BASE_TOO_SMALL`, `TARGET_QTY_TOO_SMALL`-এর বার্তা সরানো হয়েছে।

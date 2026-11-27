@@ -96,14 +96,10 @@ const routes = ({ withProfit = true }: { withProfit?: boolean } = {}) => ({
       year: Number(YEAR),
       months: Array.from({ length: 12 }, (_, i) => ({
         month: `${YEAR}-${String(i + 1).padStart(2, '0')}`,
-        calculated: '150000.00',
         received: '125000.00',
       })),
-      yearCalculated: '1500000.00',
       yearReceived: '1250000.00',
-      lifetimeCalculated: '1500000.00',
       lifetimeReceived: '1250000.00',
-      receivable: '250000.00',
     }),
   [`GET ${B}/product-units`]: () =>
     json(200, {

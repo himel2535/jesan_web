@@ -37,7 +37,7 @@ export function dashboardMonthlySeriesQuery(slug: string, businessId: string, ye
   };
 }
 
-/** Commission by month, calculated and received (`commission.view`, owner-only). */
+/** Commission received by month (`commission.view`, owner-only). */
 export function dashboardCommissionSeriesQuery(slug: string, businessId: string, year: number) {
   return {
     queryKey: dealershipKeys.list(businessId, 'dashboardCommission', { year }),

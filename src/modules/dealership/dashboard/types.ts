@@ -36,18 +36,14 @@ export interface MonthlySeriesResponse {
 
 export interface CommissionSeriesRow {
   month: string;
-  calculated: string;
   received: string;
 }
 
 export interface CommissionSeriesResponse {
   year: number;
   months: CommissionSeriesRow[];
-  yearCalculated: string;
   yearReceived: string;
-  lifetimeCalculated: string;
   lifetimeReceived: string;
-  receivable: string;
 }
 
 /** `GET dashboard/finance-summary`. Cost and profit fields need `profit.view`. */

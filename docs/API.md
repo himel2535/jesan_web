@@ -177,15 +177,10 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | GET | `/b/:businessSlug/stock/:productId/movements?from=&to=&kind=&page=` | হ্যাঁ | `stock.view` | 200 |
 | POST | `/b/:businessSlug/stock/adjustments` | হ্যাঁ | `stock.adjust` (দৈনিক সীমার বেশি হলে `stock.adjust.large`) | 201 |
 | GET | `/b/:businessSlug/purchase-counters?year=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
-| GET | `/b/:businessSlug/commission-scheme` | হ্যাঁ | `commission.view` (owner-only) | 200 |
-| PUT | `/b/:businessSlug/commission-scheme` | হ্যাঁ | `commission.manage` (owner-only) | 200 |
 | GET | `/b/:businessSlug/commission-entries?page=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
 | POST | `/b/:businessSlug/commission-entries` | হ্যাঁ | `commission.manage` (owner-only) | 201 |
 | GET | `/b/:businessSlug/commission-entries/:id` | হ্যাঁ | `commission.view` (owner-only) | 200 |
 | PATCH | `/b/:businessSlug/commission-entries/:id` | হ্যাঁ | `commission.manage` (owner-only) | 200 |
-| GET | `/b/:businessSlug/commission-entries/suggestion?from=&to=` | হ্যাঁ | `commission.manage` (owner-only) | 200 |
-| POST | `/b/:businessSlug/commission-entries/:entryId/receipts` | হ্যাঁ | `commission.manage` (owner-only) | 201 |
-| PATCH | `/b/:businessSlug/commission-entries/:entryId/receipts/:id` | হ্যাঁ | `commission.manage` (owner-only) | 200 |
 | GET | `/b/:businessSlug/commission-summary?year=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
 | POST | `/b/:businessSlug/orders` | হ্যাঁ | `sale.create` | 201 (একই `Idempotency-Key`: 200) |
 | GET | `/b/:businessSlug/orders?status=&customerId=&from=&to=&page=` | হ্যাঁ | `sale.view.all` বা নিজের অর্ডারে `sale.view.own` | 200 |
@@ -235,6 +230,7 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | POST | `/b/:businessSlug/accounts/entries` | হ্যাঁ | `ledger.entry.create` | 201 (একই `Idempotency-Key`: 200) |
 | POST | `/b/:businessSlug/accounts/payments` | হ্যাঁ | `payment.create` | 201 (একই `Idempotency-Key`: 200) |
 | GET | `/b/:businessSlug/dashboard/cashbook?from=&to=` | হ্যাঁ | `cashbook.view` | 200 |
+| GET | `/b/:businessSlug/dashboard/finance-summary?from=&to=` | হ্যাঁ | `report.view` (খরচ ও লাভের ঘর `profit.view`) | 200 |
 | GET | `/b/:businessSlug/dashboard/monthly-series?year=` | হ্যাঁ | `report.view` (কেনার টাকায় `product.cost.view`) | 200 |
 | GET | `/b/:businessSlug/dashboard/commission-series?year=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
 
@@ -1245,94 +1241,51 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 | 409 | `STOCK_INSUFFICIENT` | স্টক শূন্যের নিচে নামত (`details`-এ উপলব্ধ) |
 | 409 | `PURCHASE_ALREADY_VOID` | বাতিল কেনায় বাতিল বা সংশোধন |
 
-### কমিশন: scheme, entry ও receipt (Akij, Step 7)
+### কমিশন: পাওয়া টাকা ও কারণ (Akij)
 
 সব endpoint owner-only (`commission.view`/`commission.manage`): শুধু platform owner, ব্যবসা-স্তরের `owner` রোলও না। এখন শুধু Akij Cement-এর জন্য; BSRM-এর কমিশন আলাদা module-এ ভবিষ্যতে।
 
-**`GET commission-scheme`** — `commission.view`। বর্তমান scheme; না থাকলে `null`:
-```json
-{ "scheme": { "rateBase": "10.00", "targetQty": "10000", "bonusRate": "1.00", "updatedAt": "2026-11-01T10:00:00Z" } }
-```
+কমিশনের কোনো scheme, target বা হিসাব নেই। মালিক শুধু লেখেন **কত টাকা পেলেন**, **কবে**, আর **কী কারণে** (মুক্ত লেখা)। প্রতিটা entry একই transaction-এ খাতায় (`ledger`) একটা `in` / `commission_receipt` সারি (method ছাড়া) বসায়; নিট মুনাফা (`finance-summary`) এই পাওয়া টাকাই যোগ করে। Delete নেই।
 
-**`PUT commission-scheme`** — `commission.manage`। Upsert (create বা replace):
-```json
-{ "rateBase": "10.00", "targetQty": "10000", "bonusRate": "1.00" }
-```
-`rateBase` > ০, `targetQty` > ০, `bonusRate` ≥ ০ (শূন্য মানে শুধু base, bonus নেই)। পুরনো entry-র `calculatedAmount` বদলায় না — scheme snapshot নেই, entry সেভের সময়কার scheme দিয়ে একবারই হিসাব হয়।
-
-সূত্র: `baseAmount = quantity × rateBase`; `bonusAmount = max(0, quantity − targetQty) × bonusRate`; `totalAmount = baseAmount + bonusAmount`।
-
-**`GET commission-entries?page=`** — `commission.view`। তালিকা, `fromDate` নতুন আগে, পাতায় ১০টা:
+**`GET commission-entries?page=`** — `commission.view`। `receivedDate` নতুন আগে, পাতায় ১০টা:
 ```json
 {
   "items": [
-    {
-      "id": "...", "fromDate": "2026-11-01", "toDate": "2026-11-30",
-      "quantity": "38500", "calculatedAmount": "389500.00",
-      "receivedAmount": "350000.00", "pendingAmount": "39500.00",
-      "note": null, "createdAt": "2026-11-20T10:00:00Z"
-    }
+    { "id": "...", "amount": "25000.00", "receivedDate": "2026-11-25", "note": "নভেম্বরের টার্গেট বোনাস", "createdAt": "2026-11-25T10:00:00Z" }
   ],
   "page": 1, "pageSize": 10, "total": 5
 }
 ```
-`receivedAmount` = entry-র সব receipt-এর amount sum; `pendingAmount` = `calculatedAmount − receivedAmount`।
+`note` পুরনো রেকর্ডে `null` হতে পারে; নতুনে সবসময় থাকে।
 
-**`POST commission-entries`** — `commission.manage`। Owner নিজে quantity টাইপ করেন (purchase রেকর্ডের থেকে ভিন্নও হতে পারে):
+**`POST commission-entries`** — `commission.manage`:
 ```json
-{ "fromDate": "2026-11-01", "toDate": "2026-11-30", "quantity": "38500", "note": "নভেম্বর ২০২৬" }
+{ "amount": "25000.00", "receivedDate": "2026-11-25", "note": "নভেম্বরের টার্গেট বোনাস" }
 ```
-`fromDate ≤ toDate`, `toDate` ভবিষ্যতে নয়, scheme সেট না থাকলে `COMMISSION_SCHEME_NOT_SET`। সার্ভার `calculatedAmount` হিসাব করে সেভ করে। সাড়া: তৈরি হওয়া entry (`receipts: []`)।
+`amount` > ০ (স্ট্রিং), `receivedDate` ভবিষ্যতে নয়, `note` বাধ্যতামূলক (ফাঁকা নয়, সর্বোচ্চ ৫০০ অক্ষর)। সাড়া 201: তৈরি entry (তালিকার একটা item-এর মতো)।
 
-**`GET commission-entries/:id`** — `commission.view`। Entry + তার receipt-গুলো:
+**`GET commission-entries/:id`** — `commission.view`। একটা entry।
+
+**`PATCH commission-entries/:id`** — `commission.manage`। আংশিক: `amount`, `receivedDate`, `note` যেকোনো। খাতার সারিও একই সঙ্গে ঠিক হয়, তাই নিট মুনাফা মেলে। সাড়া: হালনাগাদ entry।
+
+**`GET commission-summary?year=`** — `commission.view`:
 ```json
-{
-  "id": "...", "fromDate": "2026-11-01", "toDate": "2026-11-30",
-  "quantity": "38500", "calculatedAmount": "389500.00",
-  "receivedAmount": "350000.00", "pendingAmount": "39500.00", "note": null,
-  "receipts": [
-    { "id": "...", "amount": "350000.00", "receivedDate": "2026-11-25", "reference": "AK-2026-1101", "note": null }
-  ]
-}
+{ "year": 2026, "totalReceived": "210000.00", "entryCount": 8 }
 ```
-
-**`PATCH commission-entries/:id`** — `commission.manage`। আংশিক: `fromDate`, `toDate`, `quantity`, `note` যেকোনো। তারিখ বা quantity বদলালে `calculatedAmount` বর্তমান scheme দিয়ে পুনরায় হিসাব হয় (scheme না থাকলে `COMMISSION_SCHEME_NOT_SET`)। Delete নেই।
-
-**`GET commission-entries/suggestion?from=&to=`** — `commission.manage`। ওই তারিখ-সীমায় সক্রিয় (বাতিল বাদে) কেনার মোট পরিমাণ, owner নিজে ভিন্ন সংখ্যা দিতে পারেন:
-```json
-{ "from": "2026-11-01", "to": "2026-11-30", "quantity": "40200" }
-```
-
-**`POST commission-entries/:entryId/receipts`** — `commission.manage`। Akij থেকে টাকা এলে রেকর্ড:
-```json
-{ "amount": "150000.00", "receivedDate": "2026-11-25", "reference": "AK-2026-1101", "note": null }
-```
-`amount` > ০, `receivedDate` ভবিষ্যতে নয়, `reference`/`note` ঐচ্ছিক (max 100/500 অক্ষর)। একটা entry-তে অনেক receipt হতে পারে। সাড়া: তৈরি হওয়া receipt।
-
-**`PATCH commission-entries/:entryId/receipts/:id`** — `commission.manage`। আংশিক: `amount`, `receivedDate`, `reference`, `note`। Delete নেই।
-
-**`GET commission-summary?year=`** — `commission.view`। বছরের সারাংশ:
-```json
-{
-  "year": 2026, "totalCalculated": "2500000.00", "totalReceived": "2100000.00",
-  "totalPending": "400000.00", "entryCount": 12, "receiptCount": 8
-}
-```
-`totalCalculated` = বছরের সব entry-র `calculatedAmount` sum (`fromDate`-এর বছর ধরে); `totalReceived` = বছরের সব receipt-এর `amount` sum (`receivedDate`-এর বছর ধরে); `totalPending` = তাদের বিয়োগফল।
+`receivedDate`-এর বছর ধরে।
 
 ### ত্রুটি (কমিশন)
 
 | Status | `code` (`field`) | কখন |
 |---|---|---|
-| 400 | `VALIDATION_FAILED` (`errors[]`) | body-র কাঠামো ভুল |
-| 400 | `COMMISSION_SCHEME_NOT_SET` | scheme সেট ছাড়া entry তৈরি বা সংশোধন |
-| 400 | `RATE_BASE_TOO_SMALL` (`rateBase`) | scheme-এ `rateBase` শূন্য বা তার নিচে |
-| 400 | `TARGET_QTY_TOO_SMALL` (`targetQty`) | scheme-এ `targetQty` শূন্য বা তার নিচে |
-| 400 | `COMMISSION_DATE_INVALID` (`fromDate`/`toDate`/`receivedDate`) | আসল তারিখ নয় |
-| 400 | `COMMISSION_DATE_IN_FUTURE` (`toDate`/`receivedDate`) | ভবিষ্যতের তারিখ |
-| 400 | `COMMISSION_DATE_RANGE_INVALID` (`fromDate`) | `fromDate` > `toDate` |
+| 400 | `VALIDATION_FAILED` (`errors[]`) | body-র কাঠামো ভুল, `note` ফাঁকা বা ৫০০ অক্ষরের বেশি |
+| 400 | `AMOUNT_TOO_SMALL` (`amount`) | `amount` শূন্য বা তার নিচে |
+| 400 | `COMMISSION_DATE_INVALID` (`receivedDate`) | আসল তারিখ নয় |
+| 400 | `COMMISSION_DATE_IN_FUTURE` (`receivedDate`) | ভবিষ্যতের তারিখ |
 | 403 | `ACCESS_DENIED` | owner-only অনুমতি নেই |
-| 404 | `COMMISSION_ENTRY_NOT_FOUND`, `COMMISSION_RECEIPT_NOT_FOUND` | নেই, অন্য ব্যবসার, বা receipt ভিন্ন entry-র |
+| 404 | `COMMISSION_ENTRY_NOT_FOUND` | নেই বা অন্য ব্যবসার |
+
+> বাতিল (২০২৬-১১-২৭): `commission-scheme`, `commission-entries/suggestion`, entry-র নিচের `receipts` endpoint, এবং `calculatedAmount`/`pendingAmount`/`quantity`/`fromDate`/`toDate`। ত্রুটি-code `COMMISSION_SCHEME_NOT_SET`, `RATE_BASE_TOO_SMALL`, `TARGET_QTY_TOO_SMALL`, `COMMISSION_DATE_RANGE_INVALID`, `COMMISSION_RECEIPT_NOT_FOUND` আর আসে না।
 
 ---
 
@@ -2082,6 +2035,8 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 আদায়/খরচ/কেনা বাতিল হলে সংশ্লিষ্ট এন্ট্রি `status: "void"` হয়ে যায় (নতুন উল্টো এন্ট্রি নয়)।
 
+কেনা **সংশোধন** হলে (দাম বা পরিমাণ বদল) তার এন্ট্রির `amount` একই সারিতে হালনাগাদ হয়, নতুন সারি তৈরি হয় না; কেনার তারিখ বদলালে `entryDate`-ও সঙ্গে যায়, যাতে এন্ট্রি কেনার নিজের মাসেই গোনা হয়। আগে এটা হতো না — সংশোধিত কেনায় `accounts/summary` ও `accounts/ledger` পুরনো টাকাই দেখাত, যদিও ক্যাশ বই (যা কেনার সারি সরাসরি গোনে) নতুন টাকা দেখাত।
+
 ### ত্রুটি
 
 | Status | `code` (`field`) | কখন |
@@ -2137,25 +2092,63 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 ### `GET dashboard/commission-series?year=` (`commission.view`, owner-only)
 
-কমিশনের মাসওয়ারি হিসাব, দুটো আলাদা অর্থে:
-
-- `calculated` = কমিশন এন্ট্রির `calculatedAmount`, এন্ট্রির `fromDate`-এর মাসে ধরা (অর্জিত হিসাব)।
-- `received` = কমিশন রসিদের `amount`, `receivedDate`-এর মাসে ধরা (আদায়কৃত)।
-
-`yearCalculated`/`yearReceived` = বছরের মোট (উপরের মাসের যোগফল)। `lifetimeCalculated`/`lifetimeReceived` = সব সময়ের মোট, আর `receivable` = `lifetimeCalculated − lifetimeReceived` (বাকি কমিশন, Akij-এর কাছে পাওনা)। `receivable` ঋণাত্মক হতে পারে, যদি রসিদ এন্ট্রির চেয়ে বেশি আসে।
+কমিশনে পাওয়া টাকার মাসওয়ারি হিসাব (`received` = entry-র `amount`, `receivedDate`-এর মাসে ধরা)। `yearReceived` = বছরের মোট, `lifetimeReceived` = সব সময়ের মোট।
 
 ```json
 {
   "year": 2026,
-  "months": [ { "month": "2026-11", "calculated": "389500.00", "received": "350000.00" } ],
-  "yearCalculated": "2500000.00", "yearReceived": "2100000.00",
-  "lifetimeCalculated": "2650000.00", "lifetimeReceived": "2100000.00", "receivable": "550000.00"
+  "months": [ { "month": "2026-11", "received": "350000.00" } ],
+  "yearReceived": "2100000.00", "lifetimeReceived": "2100000.00"
 }
 ```
 
 এই তিনটা endpoint-এ কোনো লেখা নেই, কোনো Idempotency-Key নেই। ত্রুটি: `from`/`to` ভুল বা অজানা তারিখ 400 (`FROM_INVALID` / `TO_INVALID`), `year` সীমার বাইরে 400 `VALIDATION_FAILED` (`year`), অনুমতি নেই 403 `ACCESS_DENIED`।
 
 ---
+
+### `GET dashboard/finance-summary?from=&to=` (`report.view`)
+
+আর্থিক সারসংক্ষেপের সব সংখ্যা একটা কলে, যাতে একই সময়ের দুটো ঘর কখনো আলাদা কথা না বলে। `from`/`to` না দিলে চলতি মাস।
+
+**নিট লাভ = বিক্রয় − বিক্রিত পণ্যের ক্রয়মূল্য − খরচ + পাওয়া কমিশন।**
+
+- **কেনার পুরো টাকা লাভ থেকে বাদ যায় না**: গুদামে পড়ে থাকা বস্তা খরচ নয়, সম্পদ। শুধু যা ডেলিভারি হয়েছে তা-ই বাদ যায়, প্রতিটা ডেলিভারি লাইনে জমা থাকা গড় ক্রয়মূল্যে (`delivery_items.cost_amount`), সঙ্গে এই সময়ে বসা কোনো সংশোধন।
+- **আদায় ও বাকি লাভের হিসাবে নেই**: টাকা ঢোকা মানে আয় নয়, আর পাওনা মানে খরচ নয়। দুটোই শুধু দেখানোর জন্য।
+
+`cogs`, `netProfit`, `totalPurchase`, `currentStockValue`, `uncostedQuantityDelivered`, `uncostedQuantityOnHand`, `uncostedDeliveryLines` শুধু `profit.view` (owner-only) থাকলে উত্তরে আসে; না থাকলে ঘরগুলো থাকেই না, বাকি সারসংক্ষেপ আসে।
+
+```json
+{
+  "from": "2026-11-01", "to": "2026-11-27",
+  "sales": "485200.00", "collection": "325750.00", "customerDue": "275000.00",
+  "expenses": "95000.00", "commissionReceived": "125000.00",
+  "totalPurchase": "310000.00",
+  "currentStockQuantity": "980.000", "currentStockValue": "588000.00",
+  "cogs": "454750.00", "netProfit": "60450.00",
+  "uncostedQuantityDelivered": "0.000", "uncostedQuantityOnHand": "0.000",
+  "uncostedDeliveryLines": 0
+}
+```
+
+**`uncosted*` শূন্য না হলে** সেই বস্তাগুলোর ক্রয়মূল্য জানা নেই (দাম ছাড়া স্টক সমন্বয়ে ঢোকা), তাই `cogs` কম দেখাচ্ছে আর `netProfit` বেশি — frontend তখন লাভের পাশে সতর্কতা দেখায়। কোনো দাম বানিয়ে বসানো হয় না।
+
+### মজুদের মূল্য: চলমান গড় (moving weighted average)
+
+প্রতিটা পণ্যের স্টক দুটো আলাদা ভাগে থাকে, যারা কখনো মেশে না:
+
+- **দামসহ**: যেসব বস্তার কেনা-দাম জানা। গড় = মোট মূল্য ÷ পরিমাণ, সবসময় হিসাব করে বের করা হয়, কখনো জমা রাখা হয় না — তাই গোল করা গড় কখনো আসল টাকার থেকে সরে যেতে পারে না।
+- **দাম ছাড়া**: দাম ছাড়া ঢোকা বস্তা (স্টক সমন্বয়ে "পাওয়া" বস্তা)। গোনা হয়, কিন্তু মূল্য বসে না, আর **পরের কেনা কখনো এদের দাম দিয়ে দেয় না**।
+
+উদাহরণ: হাতে ৩০ বস্তা ৬৭০ টাকায় (২০,১০০), নতুন কেনা ১০০ বস্তা ৫৮০ টাকায় (৫৮,০০০) → ১৩০ বস্তা, ৭৮,১০০ টাকা, গড় **৬০০.৭৬৯২৩১**। এরপর ৫০ বস্তা ডেলিভারি হলে তার ক্রয়মূল্য **৩০,০৩৮.৪৬**, আর বাকি ৮০ বস্তার মূল্য ৪৮,০৬১.৫৪।
+
+- **ডেলিভারির খরচ জমে যায়**: লাইনে `unit_cost`/`cost_amount` বসে যায় এবং পরের কেনা তা কখনো বদলায় না।
+- **হিসাবের ক্রম ব্যবসার তারিখ অনুযায়ী** (একই দিনে হলে এন্ট্রির ক্রমে)। ১ জানুয়ারির কেনা ১০ জানুয়ারি টাইপ করলেও ৫ জানুয়ারির ডেলিভারির আগেই গোনা হয়।
+- **পুরনো কেনা সংশোধন বা বাতিল হলে** পুরনো ডেলিভারির জমা খরচ বদলানো হয় না; পুরো ইতিহাস আবার হিসাব করে পার্থক্যটা আজকের তারিখে একটা সংশোধন হিসেবে বসে (`inventory_cost_corrections`) — যেভাবে এই সিস্টেমে সব উল্টো এন্ট্রি বাতিলের তারিখে বসে। ফলে বন্ধ হয়ে যাওয়া মাসের রিপোর্ট আর বদলায় না।
+- **কেনা বাতিল হলে** বস্তাগুলো যে দামে ঢুকেছিল সেই দামেই বের হয়, আজকের গড়ে নয়।
+- **ডেলিভারি বাতিল বা কমলে** বস্তা যে দামে বেরিয়েছিল ঠিক সেই দামেই ফেরত ঢোকে, তাই গড় অপরিবর্তিত থাকে।
+- **ব্যবসার তারিখের ক্রমে স্টক ঋণাত্মক হয়ে গেলে** (যে কেনা মাল দিয়েছে তার আগের তারিখে ডেলিভারি) কাজটা 409 `BACKDATED_STOCK_NEGATIVE` দিয়ে আটকে যায় (`details`: `productId`, `date`, `shortfall`) — আন্দাজে কোনো দাম বসানো হয় না।
+
+পুরনো ডেটায় খরচ বসাতে: `npm run inventory:cost-backfill -- --dry-run` (কিছু লেখে না, রিপোর্ট দেয়), তারপর দেখে নিয়ে `-- --commit`। migration শুধু খালি ঘর যোগ করে, নিজে কোনো হিসাব করে না।
 
 ## ১৫. ত্রুটির রূপ ও কোড
 
@@ -2427,11 +2420,11 @@ Retry-After: 60
 | `report.view` | dealership | | ✓ | ✓ | | বিক্রয়/আদায়/বাকি/স্টক/খরচ/দৈনিক সারাংশ রিপোর্ট দেখা |
 | `summary.finance.view` | dealership | | | | | মোট আয়ের সারাংশ (ভবিষ্যতের ধাপ) |
 | `reports.finance.view` | dealership | | | | | লাভ ও কমিশনের আর্থিক রিপোর্ট (ভবিষ্যতের ধাপ) |
-| `commission.view` | dealership | **হ্যাঁ** | | | | কমিশনের scheme, entry, receipt ও সারাংশ দেখা |
-| `commission.manage` | dealership | **হ্যাঁ** | | | | কমিশনের scheme সেট করা, entry ও receipt তৈরি/সংশোধন |
+| `commission.view` | dealership | **হ্যাঁ** | | | | কমিশনে পাওয়া টাকার তালিকা ও সারাংশ দেখা |
+| `commission.manage` | dealership | **হ্যাঁ** | | | | কমিশনে পাওয়া টাকা (পরিমাণ, তারিখ, কারণ) যোগ ও সংশোধন |
 | `profit.view` | dealership | **হ্যাঁ** | | | | লাভ দেখা |
 
-`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা, কেনা ও স্টক (অংশ ১০), অর্ডার, ডেলিভারি ও আদায় (অংশ ১১), খরচ, ক্যাশ বই ও রিপোর্ট (অংশ ১৩), আর Akij কমিশনের scheme/entry/receipt (অংশ ১০-এর শেষে) তৈরি হয়েছে; `summary.finance.view` ও `reports.finance.view` ভবিষ্যতের লাভের ধাপের জন্য আগে থেকে ঘোষণা করা আছে, এখনো কোনো endpoint নেই।
+`dealership` module-এর অনুমতি শুধু `type: "dealership"` ব্যবসায় প্রযোজ্য; ভবিষ্যতের অন্য ধরনের ব্যবসা (যেমন manufacturing) নিজের অনুমতি আনবে। এখন পর্যন্ত মাস্টার ডেটা, কেনা ও স্টক (অংশ ১০), অর্ডার, ডেলিভারি ও আদায় (অংশ ১১), খরচ, ক্যাশ বই ও রিপোর্ট (অংশ ১৩), আর Akij কমিশনে পাওয়া টাকা ও কারণ (অংশ ১০-এর শেষে) তৈরি হয়েছে; `summary.finance.view` ও `reports.finance.view` ভবিষ্যতের লাভের ধাপের জন্য আগে থেকে ঘোষণা করা আছে, এখনো কোনো endpoint নেই।
 
 তৈরির পরে বাকি বা সীমা বদল আর নিষ্ক্রিয় করার তিনটা অনুমতি (`customer.balance.edit`, `product.deactivate`, `customer.deactivate`), কেনার সংশোধন ও বাতিল (`purchase.edit`, `purchase.void`), বড় স্টক সমন্বয় (`stock.adjust.large`), অর্ডার, ডেলিভারি ও আদায়ের সংশোধন ও বাতিল (`sale.edit`, `sale.void`, `delivery.edit`, `delivery.void`, `collection.edit`, `collection.void`), খরচের সংশোধন ও বাতিল (`expense.edit`, `expense.void`), ক্রেডিট সীমা পারের অনুমতি (`delivery.credit.override`), আর `change.view.all` ও `change.approve`, কোনো স্টাফ রোলের ডিফল্টে নেই; ব্যবসা-স্তরের `owner` রোল ও platform owner এগুলো পান (owner-only নয়, তাই মালিক চাইলে কাউকে দিতে পারেন)। স্টাফ এসব বদল অনুরোধের মাধ্যমে করেন (অংশ ১২)।
 
