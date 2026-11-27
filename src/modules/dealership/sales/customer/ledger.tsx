@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Scale, Shield, Truck, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -15,6 +15,7 @@ import { PAGE_SIZE, parsePageParam } from '@/core/ui/pagination-logic';
 import { inputClass } from '@/core/ui/text-field';
 import { Balance, Money } from '../../master-data/shared/display';
 import { LoadError } from '../../master-data/shared/states';
+import { SummaryTile, SummaryTileGrid } from '../../dashboard/summary-tile';
 import { useCustomerLedger } from '../api';
 import { ListSkeleton } from '../skeletons';
 import { dateParam, useBusinessDay, useSetFilters } from '../shared';
@@ -70,42 +71,45 @@ export function CustomerLedger({
 
   return (
     <div className="space-y-4">
-      <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
-          <dt className="text-sm text-fg-muted">{t('openingBalance')}</dt>
-          <dd className="font-semibold">
-            <Balance value={customer.openingBalance} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-fg-muted">{t('deliveredAmount')}</dt>
-          <dd className="font-semibold">
-            <Money value={customer.deliveredAmount} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-fg-muted">{t('collectedAmount')}</dt>
-          <dd className="font-semibold">
-            <Money value={customer.collectedAmount} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-fg-muted">{t('currentBalance')}</dt>
-          <dd className="text-lg font-bold">
-            <Balance value={customer.currentBalance} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-fg-muted">{t('creditLimit')}</dt>
-          <dd className="font-semibold">
-            {customer.creditLimit === null ? (
-              <span className="text-fg-muted">{t('noLimit')}</span>
+      <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <SummaryTile
+          hue="blue"
+          icon={<Wallet aria-hidden className="size-3.5" />}
+          label={t('openingBalance')}
+          value={<Balance value={customer.openingBalance} />}
+        />
+        <SummaryTile
+          hue="green"
+          icon={<Truck aria-hidden className="size-3.5" />}
+          label={t('deliveredAmount')}
+          value={<Money value={customer.deliveredAmount} />}
+        />
+        <SummaryTile
+          hue="purple"
+          icon={<Wallet aria-hidden className="size-3.5" />}
+          label={t('collectedAmount')}
+          value={<Money value={customer.collectedAmount} />}
+        />
+        <SummaryTile
+          hue="orange"
+          icon={<Scale aria-hidden className="size-3.5" />}
+          label={t('currentBalance')}
+          value={<Balance value={customer.currentBalance} />}
+          highlighted
+        />
+        <SummaryTile
+          hue="blue"
+          icon={<Shield aria-hidden className="size-3.5" />}
+          label={t('creditLimit')}
+          value={
+            customer.creditLimit === null ? (
+              <span className="text-[var(--dash-fg-muted)]">{t('noLimit')}</span>
             ) : (
               <Money value={customer.creditLimit} />
-            )}
-          </dd>
-        </div>
-      </dl>
+            )
+          }
+        />
+      </SummaryTileGrid>
 
       <div className="flex flex-wrap items-end gap-3">
         <div>

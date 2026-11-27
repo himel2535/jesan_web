@@ -1,11 +1,13 @@
 'use client';
 
+import { Box, Truck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/core/api/errors';
 import { useFormat } from '@/core/i18n/use-format';
 import { usePurchasesSummary } from './api';
 import { Money } from '../master-data/shared/display';
 import { LoadError } from '../master-data/shared/states';
+import { SummaryTile, SummaryTileGrid } from '../dashboard/summary-tile';
 import type { PurchaseSummaryRanges } from './shared';
 import type { PurchaseTotals } from './types';
 
@@ -15,23 +17,21 @@ function isForbidden(error: unknown) {
 
 export function PurchasesSummaryCardsSkeleton() {
   return (
-    <div className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
+    <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className="space-y-2">
-          <div className="h-4 w-28 animate-pulse rounded bg-surface-muted" />
-          <div className="h-6 w-24 animate-pulse rounded bg-surface-muted" />
-        </div>
+        <SummaryTile
+          key={i}
+          hue="blue"
+          icon={<Truck aria-hidden className="size-3.5" />}
+          label=""
+          value={null}
+          loading
+        />
       ))}
-    </div>
+    </SummaryTileGrid>
   );
 }
 
-/**
- * Five KPI cards (`purchase.view`, same as the page itself, so a 403 on all four queries here
- * shouldn't happen in practice). The amount figure is its own, independently permission-gated
- * value (`product.cost.view`): when it's missing from a card's response, only that figure is
- * left out, not the whole card — the quantity and count stay visible.
- */
 export function PurchasesSummaryCards({
   slug,
   businessId,
@@ -67,27 +67,37 @@ export function PurchasesSummaryCards({
     data.totalAmount !== undefined ? <Money value={data.totalAmount} /> : null;
 
   return (
-    <dl className="grid gap-x-6 gap-y-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
-      <div>
-        <dt className="text-sm text-fg-muted">{t('totalAmount')}</dt>
-        <dd className="font-semibold">{amount(total.data)}</dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('totalQuantity')}</dt>
-        <dd className="font-semibold tabular-nums">{format.quantity(total.data.totalQuantity)}</dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('today')}</dt>
-        <dd className="font-semibold">{amount(today.data)}</dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('thisMonth')}</dt>
-        <dd className="font-semibold">{amount(thisMonth.data)}</dd>
-      </div>
-      <div>
-        <dt className="text-sm text-fg-muted">{t('thisYear')}</dt>
-        <dd className="font-semibold">{amount(thisYear.data)}</dd>
-      </div>
-    </dl>
+    <SummaryTileGrid className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <SummaryTile
+        hue="blue"
+        icon={<Truck aria-hidden className="size-3.5" />}
+        label={t('totalAmount')}
+        value={amount(total.data)}
+      />
+      <SummaryTile
+        hue="green"
+        icon={<Box aria-hidden className="size-3.5" />}
+        label={t('totalQuantity')}
+        value={format.quantity(total.data.totalQuantity)}
+      />
+      <SummaryTile
+        hue="purple"
+        icon={<Truck aria-hidden className="size-3.5" />}
+        label={t('today')}
+        value={amount(today.data)}
+      />
+      <SummaryTile
+        hue="orange"
+        icon={<Truck aria-hidden className="size-3.5" />}
+        label={t('thisMonth')}
+        value={amount(thisMonth.data)}
+      />
+      <SummaryTile
+        hue="blue"
+        icon={<Truck aria-hidden className="size-3.5" />}
+        label={t('thisYear')}
+        value={amount(thisYear.data)}
+      />
+    </SummaryTileGrid>
   );
 }
