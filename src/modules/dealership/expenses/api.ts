@@ -31,7 +31,14 @@ const base = (slug: string) => `/b/${encodeURIComponent(slug)}`;
  * derived cash book and the Expenses-page KPI cards (`reports/expenses`, `report.view`); an
  * expense type's status shows on every expense row that uses it.
  */
-export const EXPENSE_REFRESH = ['expenses', 'cashBook', 'reportsExpenses'] as const;
+export const EXPENSE_REFRESH = [
+  'expenses',
+  'cashBook',
+  'reportsExpenses',
+  // Expenses are part of net profit and move the cash position on the dashboard.
+  'dashboardFinance',
+  'dashboardCashbook',
+] as const;
 export const EXPENSE_CATEGORY_REFRESH = [
   'expenseCategories',
   'expenses',

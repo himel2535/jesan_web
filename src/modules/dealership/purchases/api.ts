@@ -24,7 +24,16 @@ import type { PurchaseSummaryRanges } from './shared';
 const base = (slug: string) => `/b/${encodeURIComponent(slug)}/purchases`;
 
 /** A purchase changes stock and the products' last purchase price: refresh exactly those. */
-export const PURCHASE_REFRESH = ['purchases', 'purchasesSummary', 'stock', 'products'] as const;
+export const PURCHASE_REFRESH = [
+  'purchases',
+  'purchasesSummary',
+  'stock',
+  'products',
+  // The dashboard's bags-bought card, financial summary and purchase series.
+  'dashboardKpis',
+  'dashboardFinance',
+  'dashboardMonthly',
+] as const;
 
 export function useRefreshAfterPurchase(businessId: string) {
   const queryClient = useQueryClient();

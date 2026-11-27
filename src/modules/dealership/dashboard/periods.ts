@@ -1,4 +1,8 @@
-import { LIFETIME_FROM } from '../expenses/shared';
+/**
+ * "All Time" starts here (the same date the other pages use). Defined here, not imported from a
+ * `'use client'` page module, so these functions also run on the server when it prefetches.
+ */
+const LIFETIME_FROM = '2000-01-01';
 
 /**
  * Calendar-date period logic for the dashboard. Every date is a business calendar date

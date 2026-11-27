@@ -231,6 +231,7 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | POST | `/b/:businessSlug/accounts/payments` | হ্যাঁ | `payment.create` | 201 (একই `Idempotency-Key`: 200) |
 | GET | `/b/:businessSlug/dashboard/cashbook?from=&to=` | হ্যাঁ | `cashbook.view` | 200 |
 | GET | `/b/:businessSlug/dashboard/finance-summary?from=&to=` | হ্যাঁ | `report.view` (খরচ ও লাভের ঘর `profit.view`) | 200 |
+| GET | `/b/:businessSlug/dashboard/kpis?from=&to=&prevFrom=&prevTo=` | হ্যাঁ | `report.view` (কেনার বস্তা `purchase.view`) | 200 |
 | GET | `/b/:businessSlug/dashboard/monthly-series?year=` | হ্যাঁ | `report.view` (কেনার টাকায় `product.cost.view`) | 200 |
 | GET | `/b/:businessSlug/dashboard/commission-series?year=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
 
@@ -2074,6 +2075,23 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 }
 ```
 
+### `GET dashboard/kpis?from=&to=&prevFrom=&prevTo=` (`report.view`)
+
+ড্যাশবোর্ডের KPI কার্ডের চারটা সংখ্যা এক কলে, একটা সময়ের (`from`/`to`) এবং চাইলে তুলনার আরেকটা সময়ের (`prevFrom`/`prevTo`)। আগে প্রতিটা সংখ্যার জন্য আলাদা রিপোর্ট কল লাগত। `from`/`to` না দিলে চলতি মাস। `prevFrom` ও `prevTo` একসাথে দিতে হয়, নয়তো একসাথেই বাদ।
+
+- `collection`: আদায় (active), `sales`: active ডেলিভারির মূল্য, `salesQuantity`: ডেলিভারি হওয়া বস্তা। তিনটাই `reports/collections` ও `reports/sales`-এর `totalAmount` / `totalQuantity`-এর সমান।
+- `purchaseQuantity`: কেনা বস্তা, `purchases/summary`-র `totalQuantity`-র সমান। শুধু `purchase.view` থাকলে উত্তরে আসে; না থাকলে ঘরটাই থাকে না (রিপোর্ট দেখার অনুমতি আছে এমন হিসাবরক্ষকের জন্যও না)।
+- `previous` তুলনার সময় না দিলে `null`।
+
+```json
+{
+  "current":  { "from": "2026-11-01", "to": "2026-11-27", "collection": "325750.00", "sales": "485200.00", "salesQuantity": "1250.000", "purchaseQuantity": "980.000" },
+  "previous": { "from": "2026-10-01", "to": "2026-10-27", "collection": "290000.00", "sales": "430000.00", "salesQuantity": "1100.000", "purchaseQuantity": "900.000" }
+}
+```
+
+ত্রুটি: `from`/`to` ভুল 400 (`FROM_INVALID` / `TO_INVALID`); তুলনার সময় আধা-পাঠালে 400 `PREV_FROM_REQUIRED` (`prevFrom`) / `PREV_TO_REQUIRED` (`prevTo`); তারিখ আসল নয়, বা `prevTo` < `prevFrom` হলে 400 `PREV_FROM_INVALID` / `PREV_TO_INVALID`; অনুমতি নেই 403 `ACCESS_DENIED`।
+
 ### `GET dashboard/monthly-series?year=` (`report.view`)
 
 একটা বছরের ১২ মাস: আদায়, বিক্রয় (সক্রিয় ডেলিভারির মূল্য), বিক্রয়ের বস্তা, কেনার বস্তা। ভবিষ্যৎ মাসও ০ হিসেবে আসে (কোনো আলাদা ধরন নেই)। `year` না দিলে চলতি বছর (ব্যবসার সময়-অঞ্চল); ২০০০–২১০০ বাইরে 400।
@@ -2326,6 +2344,8 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE` | 400 | `categoryId` | ধরন নেই, অন্য ব্যবসার, বা নিষ্ক্রিয় |
 | `EXPENSE_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `expenseDate` | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | `FROM_INVALID` / `TO_INVALID` | 400 | `from` / `to` | তারিখ আসল নয়, বা `to` < `from` |
+| `PREV_FROM_REQUIRED` / `PREV_TO_REQUIRED` | 400 | `prevFrom` / `prevTo` | তুলনার সময়ের একটা দিক পাঠানো হয়েছে, অন্যটা নয় |
+| `PREV_FROM_INVALID` / `PREV_TO_INVALID` | 400 | `prevFrom` / `prevTo` | তারিখ আসল নয়, বা `prevTo` < `prevFrom` |
 | `EXPENSE_NOT_FOUND` | 404 | - | খরচ নেই বা অন্য ব্যবসার |
 | `EXPENSE_CATEGORY_NOT_FOUND` | 404 | - | ধরন নেই বা অন্য ব্যবসার |
 | `EXPENSE_ALREADY_VOID` | 409 | - | বাতিল খরচে আবার বদল বা বাতিলের চেষ্টা |

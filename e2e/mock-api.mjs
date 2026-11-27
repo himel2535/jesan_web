@@ -1432,6 +1432,37 @@ http
         }
         return send(res, 200, body);
       }
+      if (rest === 'dashboard/kpis' && req.method === 'GET') {
+        if (!need('report.view')) return;
+        const f = Object.fromEntries(url.searchParams);
+        const windowOf = ({ from, to }) => {
+          const inRange = (date) => date >= from && date <= to;
+          const active = deliveries.filter((d) => d.status === 'active' && inRange(d.deliveryDate));
+          const out = {
+            from,
+            to,
+            collection: fixed(
+              collections
+                .filter((c) => c.status === 'active' && inRange(c.collectionDate))
+                .reduce((a, c) => a + Number(c.amount), 0),
+            ),
+            sales: fixed(active.reduce((a, d) => a + Number(dashDeliveryAmount(d)), 0)),
+            salesQuantity: qtyString(active.reduce((a, d) => a + deliveryQty(d), 0)),
+          };
+          if (perms.includes('purchase.view')) {
+            out.purchaseQuantity = qtyString(
+              purchases
+                .filter((pu) => pu.status === 'active' && inRange(pu.purchaseDate))
+                .reduce((a, pu) => a + pu.items.reduce((s2, i) => s2 + Number(i.quantity), 0), 0),
+            );
+          }
+          return out;
+        };
+        const current = windowOf(dashMonthRange(f));
+        const previous =
+          f.prevFrom && f.prevTo ? windowOf({ from: f.prevFrom, to: f.prevTo }) : null;
+        return send(res, 200, { current, previous });
+      }
       if (rest === 'dashboard/monthly-series' && req.method === 'GET') {
         if (!need('report.view')) return;
         const year = Number(url.searchParams.get('year') ?? new Date().getFullYear());

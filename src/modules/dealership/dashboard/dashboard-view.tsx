@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Bell, CalendarDays } from 'lucide-react';
@@ -8,14 +9,30 @@ import { usePendingCount } from '@/core/approvals/api';
 import { businessToday } from '@/core/i18n/format';
 import { useFormat } from '@/core/i18n/use-format';
 import { CashFlowSnapshot } from './cash-flow-snapshot';
-import { CommissionPanel } from './commission-panel';
 import { KeyInformation } from './key-information';
 import { KpiSections } from './kpi-sections';
 import { FinancialSummary } from './financial-summary';
 import { MonthlyDailySummary } from './monthly-daily-summary';
-import { SalesCollectionChart } from './sales-collection-chart';
 import { useDashboardFinanceSummary } from './api';
 import { monthPeriods } from './periods';
+
+/** Stands in for a chart panel while its code (recharts) loads. */
+function PanelSkeleton() {
+  return (
+    <div className="h-full min-h-[220px] animate-pulse rounded-card border border-[var(--dash-border)] bg-[var(--dash-surface)] lg:min-h-0" />
+  );
+}
+
+// recharts is the heaviest part of this page. It loads after the first paint, so the KPI cards and
+// summaries show without waiting for it (proposal §9.6).
+const SalesCollectionChart = dynamic(
+  () => import('./sales-collection-chart').then((m) => m.SalesCollectionChart),
+  { ssr: false, loading: PanelSkeleton },
+);
+const CommissionPanel = dynamic(() => import('./commission-panel').then((m) => m.CommissionPanel), {
+  ssr: false,
+  loading: PanelSkeleton,
+});
 
 /**
  * The business dashboard, laid out as in the reference: a compact header, the
