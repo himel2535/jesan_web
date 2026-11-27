@@ -76,35 +76,25 @@ describe('monthPeriods', () => {
 describe('dayPeriods', () => {
   const TODAY = '2026-11-26';
 
-  it('Today compares with yesterday', () => {
-    expect(dayPeriods(TODAY, 'today')).toEqual({
-      current: { from: TODAY, to: TODAY },
-      previous: { from: '2026-11-25', to: '2026-11-25' },
+  it('Today is just today, with nothing to compare against', () => {
+    expect(dayPeriods(TODAY, 'today')).toEqual({ current: { from: TODAY, to: TODAY } });
+  });
+
+  it('Yesterday is the day before today', () => {
+    expect(dayPeriods(TODAY, 'yesterday')).toEqual({
+      current: { from: '2026-11-25', to: '2026-11-25' },
     });
   });
 
-  it('Yesterday compares with the day before', () => {
-    expect(dayPeriods(TODAY, 'yesterday').current).toEqual({
-      from: '2026-11-25',
-      to: '2026-11-25',
-    });
-    expect(dayPeriods(TODAY, 'yesterday').previous).toEqual({
-      from: '2026-11-24',
-      to: '2026-11-24',
-    });
-  });
-
-  it('a custom date compares with the day before that date', () => {
+  it('a custom date is that one day', () => {
     expect(dayPeriods(TODAY, 'custom', '2026-11-10')).toEqual({
       current: { from: '2026-11-10', to: '2026-11-10' },
-      previous: { from: '2026-11-09', to: '2026-11-09' },
     });
   });
 
-  it('All Time is lifetime with no comparison', () => {
+  it('All Time is everything up to today', () => {
     expect(dayPeriods(TODAY, 'lifetime')).toEqual({
       current: { from: '2000-01-01', to: TODAY },
-      previous: null,
     });
   });
 });

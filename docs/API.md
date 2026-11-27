@@ -231,6 +231,8 @@ Next.js-এর Server Component বা Route Handler থেকে ডাকল�
 | POST | `/b/:businessSlug/accounts/payments` | হ্যাঁ | `payment.create` | 201 (একই `Idempotency-Key`: 200) |
 | GET | `/b/:businessSlug/dashboard/cashbook?from=&to=` | হ্যাঁ | `cashbook.view` | 200 |
 | GET | `/b/:businessSlug/dashboard/finance-summary?from=&to=` | হ্যাঁ | `report.view` (খরচ ও লাভের ঘর `profit.view`) | 200 |
+| GET | `/b/:businessSlug/inventory/batches?productId=&supplierId=&purchaseFrom=&purchaseTo=&deliveryFrom=&deliveryTo=&result=&source=&page=` | হ্যাঁ | `profit.view` (owner-only) | 200 |
+| GET | `/b/:businessSlug/inventory/batches/:id` | হ্যাঁ | `profit.view` (owner-only) | 200 |
 | GET | `/b/:businessSlug/dashboard/kpis?from=&to=&prevFrom=&prevTo=` | হ্যাঁ | `report.view` (কেনার বস্তা `purchase.view`) | 200 |
 | GET | `/b/:businessSlug/dashboard/monthly-series?year=` | হ্যাঁ | `report.view` (কেনার টাকায় `product.cost.view`) | 200 |
 | GET | `/b/:businessSlug/dashboard/commission-series?year=` | হ্যাঁ | `commission.view` (owner-only) | 200 |
@@ -2075,22 +2077,20 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 }
 ```
 
-### `GET dashboard/kpis?from=&to=&prevFrom=&prevTo=` (`report.view`)
+### `GET dashboard/kpis?from=&to=` (`report.view`)
 
-ড্যাশবোর্ডের KPI কার্ডের চারটা সংখ্যা এক কলে, একটা সময়ের (`from`/`to`) এবং চাইলে তুলনার আরেকটা সময়ের (`prevFrom`/`prevTo`)। আগে প্রতিটা সংখ্যার জন্য আলাদা রিপোর্ট কল লাগত। `from`/`to` না দিলে চলতি মাস। `prevFrom` ও `prevTo` একসাথে দিতে হয়, নয়তো একসাথেই বাদ।
+ড্যাশবোর্ডের KPI কার্ডের চারটা সংখ্যা এক কলে, একটা সময়ের (`from`/`to`)। আগে প্রতিটা সংখ্যার জন্য আলাদা রিপোর্ট কল লাগত। `from`/`to` না দিলে চলতি মাস। **কোনো তুলনার সময় নেই**: `prevFrom`/`prevTo` ও উত্তরের `previous` তুলে দেওয়া হয়েছে (মালিকের নির্দেশে, KPI কার্ডে গত মাস/গতকালের সঙ্গে তুলনা নেই); `prevFrom`/`prevTo` পাঠালে এখন অন্য সব অজানা প্যারামিটারের মতো 400 `NOT_ALLOWED`। তাই **ডিপ্লয়ের ক্রম: আগে frontend, পরে API**।
 
 - `collection`: আদায় (active), `sales`: active ডেলিভারির মূল্য, `salesQuantity`: ডেলিভারি হওয়া বস্তা। তিনটাই `reports/collections` ও `reports/sales`-এর `totalAmount` / `totalQuantity`-এর সমান।
 - `purchaseQuantity`: কেনা বস্তা, `purchases/summary`-র `totalQuantity`-র সমান। শুধু `purchase.view` থাকলে উত্তরে আসে; না থাকলে ঘরটাই থাকে না (রিপোর্ট দেখার অনুমতি আছে এমন হিসাবরক্ষকের জন্যও না)।
-- `previous` তুলনার সময় না দিলে `null`।
 
 ```json
 {
-  "current":  { "from": "2026-11-01", "to": "2026-11-27", "collection": "325750.00", "sales": "485200.00", "salesQuantity": "1250.000", "purchaseQuantity": "980.000" },
-  "previous": { "from": "2026-10-01", "to": "2026-10-27", "collection": "290000.00", "sales": "430000.00", "salesQuantity": "1100.000", "purchaseQuantity": "900.000" }
+  "current": { "from": "2026-11-01", "to": "2026-11-27", "collection": "325750.00", "sales": "485200.00", "salesQuantity": "1250.000", "purchaseQuantity": "980.000" }
 }
 ```
 
-ত্রুটি: `from`/`to` ভুল 400 (`FROM_INVALID` / `TO_INVALID`); তুলনার সময় আধা-পাঠালে 400 `PREV_FROM_REQUIRED` (`prevFrom`) / `PREV_TO_REQUIRED` (`prevTo`); তারিখ আসল নয়, বা `prevTo` < `prevFrom` হলে 400 `PREV_FROM_INVALID` / `PREV_TO_INVALID`; অনুমতি নেই 403 `ACCESS_DENIED`।
+ত্রুটি: `from`/`to` ভুল 400 (`FROM_INVALID` / `TO_INVALID`); অনুমতি নেই 403 `ACCESS_DENIED`। (`PREV_*` code আর আসে না; নিচের তালিকায় শুধু ইতিহাস হিসেবে আছে, অন্য অর্থে ব্যবহার হবে না।)
 
 ### `GET dashboard/monthly-series?year=` (`report.view`)
 
@@ -2128,45 +2128,69 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 
 আর্থিক সারসংক্ষেপের সব সংখ্যা একটা কলে, যাতে একই সময়ের দুটো ঘর কখনো আলাদা কথা না বলে। `from`/`to` না দিলে চলতি মাস।
 
-**নিট লাভ = বিক্রয় − বিক্রিত পণ্যের ক্রয়মূল্য − খরচ + পাওয়া কমিশন।**
+**মোট লাভ = বিক্রয় − বিক্রিত পণ্যের ক্রয়মূল্য (`cogs`)। নিট লাভ = বিক্রয় − `cogs` − খরচ + পাওয়া কমিশন।**
 
-- **কেনার পুরো টাকা লাভ থেকে বাদ যায় না**: গুদামে পড়ে থাকা বস্তা খরচ নয়, সম্পদ। শুধু যা ডেলিভারি হয়েছে তা-ই বাদ যায়, প্রতিটা ডেলিভারি লাইনে জমা থাকা গড় ক্রয়মূল্যে (`delivery_items.cost_amount`), সঙ্গে এই সময়ে বসা কোনো সংশোধন।
-- **আদায় ও বাকি লাভের হিসাবে নেই**: টাকা ঢোকা মানে আয় নয়, আর পাওনা মানে খরচ নয়। দুটোই শুধু দেখানোর জন্য।
+- **বিক্রয় ডেলিভারির দিনে**: অর্ডার বা ইনভয়েসে নয়; আংশিক ডেলিভারিতে শুধু যতটুকু পৌঁছেছে। মাসিক ও দৈনিক সংখ্যা ডেলিভারির তারিখে, কেনার তারিখে নয়।
+- **কেনার পুরো টাকা লাভ থেকে বাদ যায় না**: গুদামে পড়ে থাকা বস্তা খরচ নয়, সম্পদ। শুধু যা ডেলিভারি হয়েছে তা-ই বাদ যায়, প্রতিটা বস্তা যে কেনার ব্যাচ থেকে এসেছে সেই ব্যাচের দামে (FIFO)। প্রতিটা ডেলিভারি লাইনে জমা থাকা সেই খরচ (`delivery_items.cost_amount`), সঙ্গে এই সময়ে বসা কোনো সংশোধন (`inventory_cost_corrections`)।
+- **আদায় ও বাকি লাভের হিসাবে নেই**: টাকা ঢোকা মানে আয় নয়, আর পাওনা মানে খরচ নয়। দুটোই শুধু দেখানোর জন্য; আদায় ডেলিভারির খরচ বদলায় না।
+- **কমিশন আলাদা আয়**: বিক্রয়ে মেশে না, শুধু পাওয়া কমিশন (`commission_receipt`) একবার যোগ হয়।
 
-`cogs`, `netProfit`, `totalPurchase`, `currentStockValue`, `uncostedQuantityDelivered`, `uncostedQuantityOnHand`, `uncostedDeliveryLines` শুধু `profit.view` (owner-only) থাকলে উত্তরে আসে; না থাকলে ঘরগুলো থাকেই না, বাকি সারসংক্ষেপ আসে।
+`cogs`, `grossProfit`, `netProfit`, `totalPurchase`, `currentStockValue`, `openingStockValue`, `closingStockValue`, `uncostedQuantityDelivered`, `uncostedQuantityOnHand`, `uncostedDeliveryLines`, `productsWithUnknownCostStock`, `costComplete` শুধু `profit.view` (owner-only) থাকলে উত্তরে আসে; `purchaseQuantity` শুধু `purchase.view` থাকলে। না থাকলে ঘরগুলো থাকেই না, বাকি সারসংক্ষেপ আসে।
 
 ```json
 {
   "from": "2026-11-01", "to": "2026-11-27",
   "sales": "485200.00", "collection": "325750.00", "customerDue": "275000.00",
   "expenses": "95000.00", "commissionReceived": "125000.00",
-  "totalPurchase": "310000.00",
+  "totalPurchase": "310000.00", "purchaseQuantity": "540.000",
   "currentStockQuantity": "980.000", "currentStockValue": "588000.00",
-  "cogs": "454750.00", "netProfit": "60450.00",
+  "openingStockQuantity": "620.000", "closingStockQuantity": "980.000",
+  "openingStockValue": "356000.00", "closingStockValue": "588000.00",
+  "cogs": "454750.00", "grossProfit": "30450.00", "netProfit": "60450.00",
   "uncostedQuantityDelivered": "0.000", "uncostedQuantityOnHand": "0.000",
-  "uncostedDeliveryLines": 0
+  "uncostedDeliveryLines": 0, "productsWithUnknownCostStock": 0, "costComplete": true
 }
 ```
 
-**`uncosted*` শূন্য না হলে** সেই বস্তাগুলোর ক্রয়মূল্য জানা নেই (দাম ছাড়া স্টক সমন্বয়ে ঢোকা), তাই `cogs` কম দেখাচ্ছে আর `netProfit` বেশি — frontend তখন লাভের পাশে সতর্কতা দেখায়। কোনো দাম বানিয়ে বসানো হয় না।
+- **মজুদের হিসাব মেলে**: `শুরুর মূল্য + এই সময়ে কেনা − cogs ± সমন্বয় = শেষ মূল্য`। এক মাসের শেষ পরের মাসের শুরু; মাস বদলালে খরচ শূন্য হয় না। `openingStock*` মানে `from`-এর আগের দিনের শেষ, `closingStock*` মানে `to`-এর শেষ। `*StockQuantity` সব স্টকের (stock movements থেকে); `*StockValue` শুধু জানা-দামের ব্যাচের (দাম অজানা বস্তার মূল্য বসে না)।
+- **`costComplete: false`** মানে এই সময়ে এমন বস্তা ডেলিভারি হয়েছে যার ক্রয়মূল্য জানা নেই (দাম ছাড়া স্টক সমন্বয়ে ঢোকা, বা ব্যাচ-ব্যবস্থার আগের স্টক)। তখন `cogs` অসম্পূর্ণ, `grossProfit`/`netProfit` বেশি দেখাচ্ছে — যাচাই-করা নয়। `uncostedQuantityDelivered` (বস্তা) ও `uncostedDeliveryLines` (লাইন) দেখায় কতটা। frontend তখন সতর্কতা দেখায়; শূন্য `cogs`-কে যাচাই-করা ফল বলে দেখায় না। কোনো দাম বানিয়ে বসানো হয় না।
 
-### মজুদের মূল্য: চলমান গড় (moving weighted average)
+### মজুদের মূল্য: FIFO, ক্রয়-ব্যাচ ধরে
 
-প্রতিটা পণ্যের স্টক দুটো আলাদা ভাগে থাকে, যারা কখনো মেশে না:
+আগের চলমান-গড় পদ্ধতি বদলে FIFO (First In, First Out) এসেছে (কারণ ও সিদ্ধান্ত `DECISIONS.md`-তে)। শারীরিকভাবে গুদামে বস্তা মেশানো থাকতে পারে; FIFO শুধু হিসাবের বণ্টন।
 
-- **দামসহ**: যেসব বস্তার কেনা-দাম জানা। গড় = মোট মূল্য ÷ পরিমাণ, সবসময় হিসাব করে বের করা হয়, কখনো জমা রাখা হয় না — তাই গোল করা গড় কখনো আসল টাকার থেকে সরে যেতে পারে না।
-- **দাম ছাড়া**: দাম ছাড়া ঢোকা বস্তা (স্টক সমন্বয়ে "পাওয়া" বস্তা)। গোনা হয়, কিন্তু মূল্য বসে না, আর **পরের কেনা কখনো এদের দাম দিয়ে দেয় না**।
-
-উদাহরণ: হাতে ৩০ বস্তা ৬৭০ টাকায় (২০,১০০), নতুন কেনা ১০০ বস্তা ৫৮০ টাকায় (৫৮,০০০) → ১৩০ বস্তা, ৭৮,১০০ টাকা, গড় **৬০০.৭৬৯২৩১**। এরপর ৫০ বস্তা ডেলিভারি হলে তার ক্রয়মূল্য **৩০,০৩৮.৪৬**, আর বাকি ৮০ বস্তার মূল্য ৪৮,০৬১.৫৪।
-
-- **ডেলিভারির খরচ জমে যায়**: লাইনে `unit_cost`/`cost_amount` বসে যায় এবং পরের কেনা তা কখনো বদলায় না।
-- **হিসাবের ক্রম ব্যবসার তারিখ অনুযায়ী** (একই দিনে হলে এন্ট্রির ক্রমে)। ১ জানুয়ারির কেনা ১০ জানুয়ারি টাইপ করলেও ৫ জানুয়ারির ডেলিভারির আগেই গোনা হয়।
-- **পুরনো কেনা সংশোধন বা বাতিল হলে** পুরনো ডেলিভারির জমা খরচ বদলানো হয় না; পুরো ইতিহাস আবার হিসাব করে পার্থক্যটা আজকের তারিখে একটা সংশোধন হিসেবে বসে (`inventory_cost_corrections`) — যেভাবে এই সিস্টেমে সব উল্টো এন্ট্রি বাতিলের তারিখে বসে। ফলে বন্ধ হয়ে যাওয়া মাসের রিপোর্ট আর বদলায় না।
-- **কেনা বাতিল হলে** বস্তাগুলো যে দামে ঢুকেছিল সেই দামেই বের হয়, আজকের গড়ে নয়।
-- **ডেলিভারি বাতিল বা কমলে** বস্তা যে দামে বেরিয়েছিল ঠিক সেই দামেই ফেরত ঢোকে, তাই গড় অপরিবর্তিত থাকে।
+- **প্রতিটা কেনার লাইন নিজেই একটা ব্যাচ** (`inventory_batches`): নিজের পণ্য, তারিখ, পরিমাণ, প্রতি বস্তার দাম, বাকি পরিমাণ। নতুন কেনা আগের ব্যাচের দাম মেশায় না বা বদলায় না। যা প্রথম এন্ট্রি হয়েছিল (`original*`) তা চিরকাল থাকে (ডেটাবেস trigger-এ আটকানো); সংশোধনের পর চলতি মান আলাদা কলামে।
+- **ডেলিভারি সবচেয়ে পুরনো ব্যাচ থেকে নেয়**। উদাহরণ: ব্যাচ A ১০০ বস্তা × ৫৭০, ব্যাচ B ১০০ বস্তা × ৫৮০; ১২০ বস্তা ডেলিভারি → A থেকে ১০০ (৫৭,০০০) + B থেকে ২০ (১১,৬০০) = **৬৮,৬০০**; A-তে ০, B-তে ৮০ বাকি, মূল্য **৪৬,৪০০**। ডেলিভারি লাইন কোন ব্যাচ থেকে কত বস্তা নিয়েছে তা `delivery_item_allocations`-এ জমা থাকে (শুধু-যোগ-হয়)।
+- **বিক্রয়মূল্য ক্রয়মূল্যের উপর নির্ভর করে না**: লাইনের বিক্রয়মূল্য ব্যাচগুলোর মধ্যে বস্তার অনুপাতে ভাগ হয় (উপরের উদাহরণে ১০০/১২০ ও ২০/১২০), পয়সার অবশিষ্ট শেষ ব্যাচে; যোগফল ঠিক লাইনের মোট।
+- **ডেলিভারির খরচ জমে যায়**: লাইনে `unit_cost`/`cost_amount` বসে যায় (= ওই ডেলিভারি নিজে যা নিয়েছে) এবং পরের কেনা তা কখনো বদলায় না।
+- **দাম ছাড়া বস্তা** (স্টক সমন্বয়ে "পাওয়া", ব্যাচ-ব্যবস্থার আগের স্টক): দাম-অজানা ব্যাচ। নিজের পালায় (পুরনো আগে) ডেলিভারি হয়, স্টক থাকলে বাধা নেই; তবে সেই অংশের খরচ `null` (কখনো শূন্য নয়), লাইনের `uncostedQuantity` বাড়ে, আর খরচ, লাভ ও ব্যাচ অসম্পূর্ণ/যাচাইহীন দেখায়। পরের কেনা এদের দাম বসায় না।
+- **হিসাবের ক্রম ব্যবসার তারিখ অনুযায়ী** (একই দিনে হলে এন্ট্রির ক্রমে)।
+- **পুরনো কেনা সংশোধন (দাম/পরিমাণ/তারিখ), কেনা বাতিল, পুরনো তারিখের কেনা বা ডেলিভারি**: কোনো মূল রেকর্ড বদলায় না। ইতিহাস আবার তারিখের ক্রমে FIFO-তে হিসাব হয়; ডেলিভারি লাইনের দেখানো খরচ ও আগের allocation যেমন ছিল তেমনই থাকে, আর পার্থক্যটা শুধু-যোগ-হওয়া `adjustment` allocation ও একটা `inventory_cost_corrections` সারি (`cogs_delta`, `stock_value_delta`, `kind`, `reason`) হয়ে **সংশোধনের দিনের** তারিখে বসে — যেভাবে এই সিস্টেমে সব উল্টো এন্ট্রি বাতিলের তারিখে বসে। ফলে বন্ধ হয়ে যাওয়া মাসের রিপোর্ট আর বদলায়; ঢুকে যায় যে মাসে সংশোধন হলো সেই মাসে। বিক্রয়মূল্য বদলায় না, শুধু ব্যাচগুলোর মধ্যে সরে যায়।
+- **ডেলিভারি বাতিল বা কমলে** বস্তা যে ব্যাচ থেকে বেরিয়েছিল ঠিক সেই ব্যাচেই, যে দামে বেরিয়েছিল সেই দামে ফেরত ঢোকে (`reversal` সারি)।
 - **ব্যবসার তারিখের ক্রমে স্টক ঋণাত্মক হয়ে গেলে** (যে কেনা মাল দিয়েছে তার আগের তারিখে ডেলিভারি) কাজটা 409 `BACKDATED_STOCK_NEGATIVE` দিয়ে আটকে যায় (`details`: `productId`, `date`, `shortfall`) — আন্দাজে কোনো দাম বসানো হয় না।
 
-পুরনো ডেটায় খরচ বসাতে: `npm run inventory:cost-backfill -- --dry-run` (কিছু লেখে না, রিপোর্ট দেয়), তারপর দেখে নিয়ে `-- --commit`। migration শুধু খালি ঘর যোগ করে, নিজে কোনো হিসাব করে না।
+**ব্যাচ-ব্যবস্থার আগের ডেটা**: migration শুধু খালি টেবিল যোগ করে, কোনো সারি বদলায় না, কোনো ব্যাচ বানায় না। তার আগের স্টক "ব্যাচহীন" (দাম অজানা, সবচেয়ে পুরনো বলে আগে বেরোয়)। ইতিহাস থেকে ব্যাচ গড়তে: `npm run inventory:fifo-backfill -- --business <slug>` — **ডিফল্ট dry-run, কিছু লেখে না**; পণ্য-ভিত্তিক রিপোর্ট দেয় (গড়া ব্যাচ, ছোঁয়া ডেলিভারি লাইন, আগের ও পরের cogs/নিট লাভ, বাকি স্টক ও মূল্য, উদ্ধার-অযোগ্য ও অস্পষ্ট অংশ) আর একটা `fingerprint`। `--commit --fingerprint <মান>` তখনই চলে যখন সদ্য-করা dry-run-এর fingerprint মেলে; প্রতি পণ্য আলাদা transaction, আবার চালালে ব্যাচওয়ালা পণ্য বাদ (idempotent), লেখা সব সারিতে run id, `--rollback <run id>` দিয়ে ফেরানো যায় (পরে সেই ব্যাচে ডেলিভারি/সংশোধন হলে নয়)। কোনো দাম বানানো হয় না: দাম-ছাড়া বস্তা অজানাই থাকে, ইতিহাস মেলে না এমন পণ্য `unresolved` ধরে বাদ। আগে জমা চলমান-গড় খরচ কখনো নিজে নিজে বদলানো হয় না; FIFO-র সঙ্গে পার্থক্য `--book-policy-correction` দিলে তবেই একটা `costing_policy_change` সংশোধনে বসে।
+
+### `GET inventory/batches` ও `GET inventory/batches/:id` (`profit.view`, owner-only)
+
+ক্রয়-ব্যাচ রিপোর্টের ডেটা। শুধু পড়া; ব্যাচ বদলায় কেবল কেনা, ডেলিভারি ও তাদের অনুমোদিত সংশোধনে। প্রতি পাতায় ১০ সারি (`page`)। ফিল্টার (সব ঐচ্ছিক, একসাথে চলে): `productId`, `supplierId`, `purchaseFrom`/`purchaseTo` (ব্যাচের কেনার তারিখ), `deliveryFrom`/`deliveryTo` (এই সীমার ডেলিভারিই শুধু ডেলিভারি/আয়/খরচে গোনা হয়), `result=profit|loss` (শুধু জানা-দামের ব্যাচ), `source=purchase|adjustment`। সাজানো: কেনার তারিখ, তারপর ব্যাচের ক্রমে (পুরনো আগে)।
+
+```json
+{ "items": [{
+    "id": "…", "productId": "…", "productCode": "P-0001", "productNameEn": "Cement", "productNameBn": "সিমেন্ট",
+    "sourceType": "purchase", "purchaseId": "…", "purchaseCode": "PUR-0001", "supplierId": "…",
+    "purchaseDate": "2026-09-01", "originalPurchaseDate": "2026-09-01",
+    "unitCost": "570.00", "originalUnitCost": "570.00",
+    "purchasedQuantity": "100", "originalQuantity": "100", "purchaseValue": "57000.00",
+    "deliveredQuantity": "100", "remainingQuantity": "0", "remainingValue": "0.00",
+    "revenue": "90000.00", "cogs": "57000.00", "grossProfit": "33000.00", "profitPerBag": "330.00",
+    "costComplete": true
+  }], "page": 1, "pageSize": 10, "total": 2 }
+```
+
+- `revenue` = এই ব্যাচের বস্তা যে ডেলিভারি লাইনে গেছে তার বিক্রয়মূল্যের ভাগ (বস্তার অনুপাতে); `cogs` = সেই বস্তাগুলোর খরচ; `grossProfit = revenue − cogs`; `profitPerBag = grossProfit ÷ deliveredQuantity` (ডেলিভারি না হলে `null`)। সব ডেলিভারি-allocation থেকে হিসাব, চলতি দামকে মোট বিক্রয়ের সঙ্গে তুলনা করে নয়।
+- **দাম-অজানা ব্যাচ** (`source=adjustment`): `unitCost`, `purchaseValue`, `remainingValue`, `cogs`, `grossProfit`, `profitPerBag` সব `null`, `costComplete: false` — শূন্য নয়, যাচাইহীন।
+- `GET inventory/batches/:id` একই ঘরগুলোর সঙ্গে `deliveries` (কোন ডেলিভারি কত বস্তা, খরচ ও আয় নিয়েছে, তারিখের ক্রমে) আর `events` (প্রাপ্তি, সংশোধন, বাতিল — শুধু-যোগ-হওয়া ইতিহাস) দেয়। অন্য ব্যবসার বা না-থাকা id হলে 404 `BATCH_NOT_FOUND`।
 
 ## ১৫. ত্রুটির রূপ ও কোড
 
@@ -2297,6 +2321,7 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `PURCHASE_DATE_TOO_OLD` | 400 | `purchaseDate` | `purchase.edit` ছাড়া শেষ ৭ দিনের (Settings) আগের তারিখ |
 | `PURCHASE_ALREADY_VOID` | 409 | - | বাতিল কেনা আবার বাতিল বা সংশোধনের চেষ্টা |
 | `STOCK_INSUFFICIENT` | 409 | সংশোধনে `items.<id>.quantity`, সমন্বয়ে `quantity`, বাতিলে নেই | স্টক শূন্যের নিচে নামত; `details`: `productId`, `available`, `required` |
+| `BATCH_NOT_FOUND` | 404 | নেই | `GET inventory/batches/:id`: না-থাকা বা অন্য ব্যবসার ব্যাচ |
 | `ADJUSTMENT_APPROVAL_REQUIRED` | 403 | `quantity` | আজ এই পণ্যে নিজের সমন্বয়ের মোট দৈনিক সীমা পার; `details`: `limit`, `usedToday`; অনুরোধ পাঠাতে হবে |
 | `ADJUST_BY_INVALID` | 400 | `proposedChange.adjustBy` | বড় সমন্বয়ের অনুরোধে পরিমাণ শূন্য বা এককের নিয়ম ভাঙে |
 | `NOTE_INVALID` / `SUPPLIER_REFERENCE_INVALID` | 400 | `proposedChange.note` / `.supplierReference` | অনুরোধে লেখা খুব লম্বা বা লেখা নয় |
@@ -2344,8 +2369,8 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE` | 400 | `categoryId` | ধরন নেই, অন্য ব্যবসার, বা নিষ্ক্রিয় |
 | `EXPENSE_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `expenseDate` | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | `FROM_INVALID` / `TO_INVALID` | 400 | `from` / `to` | তারিখ আসল নয়, বা `to` < `from` |
-| `PREV_FROM_REQUIRED` / `PREV_TO_REQUIRED` | 400 | `prevFrom` / `prevTo` | তুলনার সময়ের একটা দিক পাঠানো হয়েছে, অন্যটা নয় |
-| `PREV_FROM_INVALID` / `PREV_TO_INVALID` | 400 | `prevFrom` / `prevTo` | তারিখ আসল নয়, বা `prevTo` < `prevFrom` |
+| `PREV_FROM_REQUIRED` / `PREV_TO_REQUIRED` | 400 | `prevFrom` / `prevTo` | **আর আসে না** (তুলনার সময় তুলে দেওয়া হয়েছে); আগে: একটা দিক পাঠানো, অন্যটা নয় |
+| `PREV_FROM_INVALID` / `PREV_TO_INVALID` | 400 | `prevFrom` / `prevTo` | **আর আসে না**; আগে: তারিখ আসল নয়, বা `prevTo` < `prevFrom` |
 | `EXPENSE_NOT_FOUND` | 404 | - | খরচ নেই বা অন্য ব্যবসার |
 | `EXPENSE_CATEGORY_NOT_FOUND` | 404 | - | ধরন নেই বা অন্য ব্যবসার |
 | `EXPENSE_ALREADY_VOID` | 409 | - | বাতিল খরচে আবার বদল বা বাতিলের চেষ্টা |

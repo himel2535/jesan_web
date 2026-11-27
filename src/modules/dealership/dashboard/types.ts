@@ -59,13 +59,25 @@ export interface FinanceSummaryResponse {
   totalPurchase?: string;
   currentStockQuantity?: string;
   currentStockValue?: string;
-  /** Sold Products Purchase Cost. */
+  /** Sold Products Purchase Cost: each bag at the price of the purchase batch it came from (FIFO). */
   cogs?: string;
+  /** sales − cogs. */
+  grossProfit?: string;
   netProfit?: string;
   /** Above zero, COGS is understated by an unknown amount. */
   uncostedQuantityDelivered?: string;
   uncostedQuantityOnHand?: string;
+  /** Delivery lines whose cost is unknown in whole or in part. */
   uncostedDeliveryLines?: number;
+  productsWithUnknownCostStock?: number;
+  /** False when any bag delivered in the window had no known cost: cogs and profit are incomplete. */
+  costComplete?: boolean;
+  /** Absent without `purchase.view`. */
+  purchaseQuantity?: string;
+  openingStockQuantity?: string;
+  closingStockQuantity?: string;
+  openingStockValue?: string;
+  closingStockValue?: string;
 }
 
 /** One window of `GET dashboard/kpis`. `purchaseQuantity` is absent without `purchase.view`. */
@@ -80,6 +92,4 @@ export interface KpiWindow {
 
 export interface KpisResponse {
   current: KpiWindow;
-  /** `null` when no comparison window was asked for (All Time). */
-  previous: KpiWindow | null;
 }

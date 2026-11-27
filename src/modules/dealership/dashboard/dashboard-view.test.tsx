@@ -38,7 +38,7 @@ const kpiWindow = {
 };
 
 const routes = ({ withProfit = true }: { withProfit?: boolean } = {}) => ({
-  [`GET ${B}/dashboard/kpis`]: () => json(200, { current: kpiWindow, previous: kpiWindow }),
+  [`GET ${B}/dashboard/kpis`]: () => json(200, { current: kpiWindow }),
   [`GET ${B}/reports/sales`]: () =>
     json(200, {
       totalAmount: '485200.00',
@@ -205,11 +205,26 @@ describe('<DashboardView>', () => {
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
     await screen.findByRole('link', { name: 'Total Collection: open page' });
     const paths = calls.map((call) => call.path);
-    // This Month row and Today row: one request each, carrying both windows.
+    // This Month row and Today row: one request each, for the selected window only.
     expect(paths.filter((p) => p === `${B}/dashboard/kpis`)).toHaveLength(2);
+    // Nothing is compared with last month or yesterday, so nothing is asked for.
+    expect(calls.some((call) => call.url.includes('prevFrom') || call.url.includes('prevTo'))).toBe(
+      false,
+    );
     expect(paths).not.toContain(`${B}/reports/sales`);
     expect(paths).not.toContain(`${B}/reports/collections`);
     expect(paths).not.toContain(`${B}/purchases/summary`);
+  });
+
+  it('shows no comparison line on any KPI card', async () => {
+    mockApi(routes());
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    await screen.findByRole('link', { name: 'Total Collection: open page' });
+    for (const name of ['Total Collection', 'Total Sales', "Today's Sales"]) {
+      const card = cardFor(name);
+      expect(within(card).queryByText(/vs Last Month|vs Yesterday/)).toBeNull();
+      expect(card.textContent).not.toMatch(/[▲▼]/);
+    }
   });
 
   it('hides the bags-bought cards when the answer has no purchase quantity', async () => {
@@ -217,7 +232,7 @@ describe('<DashboardView>', () => {
       ...routes(),
       [`GET ${B}/dashboard/kpis`]: () => {
         const { purchaseQuantity: _omitted, ...withoutPurchase } = kpiWindow;
-        return json(200, { current: withoutPurchase, previous: withoutPurchase });
+        return json(200, { current: withoutPurchase });
       },
     });
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
@@ -251,16 +266,20 @@ describe('<DashboardView>', () => {
     const user = userEvent.setup();
     const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
     const panel = heading.closest('section') as HTMLElement;
-    await user.selectOptions(
-      within(panel).getByLabelText('Choose month for Financial Summary'),
-      '2',
+    await user.click(
+      within(panel).getByRole('combobox', { name: 'Choose month for Financial Summary' }),
     );
+    await user.click(await screen.findByRole('option', { name: 'Feb' }));
     expect(within(panel).getByRole('button', { name: 'All Time' })).toBeInTheDocument();
+    expect(
+      within(panel).getByRole('combobox', { name: 'Choose month for Financial Summary' }),
+    ).toHaveTextContent('Feb');
     const daily = (await screen.findByRole('heading', { name: 'Monthly / Daily Summary' })).closest(
       'section',
     ) as HTMLElement;
-    await user.selectOptions(within(daily).getByRole('combobox'), 'today');
-    expect(within(daily).getByRole('combobox')).toHaveValue('today');
+    await user.click(within(daily).getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'Today' }));
+    expect(within(daily).getByRole('combobox')).toHaveTextContent('Today');
     expect(
       within(
         screen
@@ -287,8 +306,10 @@ describe('<DashboardView>', () => {
     expect(row.contains(year)).toBe(true);
     expect(row.contains(allTimeButton)).toBe(true);
 
-    await user.selectOptions(year, '2025');
-    await user.selectOptions(month, '2');
+    await user.click(year);
+    await user.click(await screen.findByRole('option', { name: '25' }));
+    await user.click(month);
+    await user.click(await screen.findByRole('option', { name: 'Feb' }));
     expect(collection.querySelector('a')).toHaveAttribute(
       'href',
       `${B}/collections?from=2025-02-01&to=2025-02-28`,
@@ -376,5 +397,76 @@ describe('<DashboardView>', () => {
     const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
     const panel = heading.closest('section') as HTMLElement;
     expect(await within(panel).findByText(/no cost basis/i)).toBeInTheDocument();
+    // The same warning sits beside the cost-of-sales row itself, with the counts the API sent.
+    expect(
+      within(panel).getByText(
+        '12 bags (1 delivery line) have no known cost, so this cost of sales is incomplete.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  const summaryWith = (extra: Record<string, string | number>) => ({
+    ...routes(),
+    [`GET ${B}/dashboard/finance-summary`]: () =>
+      json(200, {
+        from: MONTH_START,
+        to: TODAY,
+        sales: '485200.00',
+        collection: '0.00',
+        customerDue: '485200.00',
+        expenses: '0.00',
+        commissionReceived: '0.00',
+        totalPurchase: '310000.00',
+        currentStockQuantity: '980.000',
+        currentStockValue: '588000.00',
+        cogs: '454750.00',
+        netProfit: '30450.00',
+        uncostedQuantityDelivered: '0.000',
+        uncostedQuantityOnHand: '0.000',
+        uncostedDeliveryLines: 0,
+        ...extra,
+      }),
+  });
+
+  it('never shows a bare ৳0 cost of sales as verified when sales exist', async () => {
+    mockApi(summaryWith({ cogs: '0.00', netProfit: '485200.00' }));
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
+    const panel = heading.closest('section') as HTMLElement;
+    expect(
+      await within(panel).findByText(
+        'Sales exist but the cost of sales is zero, so the cost has not been verified.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('says so when the API reports an incomplete cost for lines that were never costed', async () => {
+    mockApi(summaryWith({ costComplete: false as unknown as string, uncostedDeliveryLines: 2 }));
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
+    const panel = heading.closest('section') as HTMLElement;
+    expect(
+      await within(panel).findByText(
+        '2 delivery lines were delivered with no recorded cost, so this cost of sales is incomplete.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no cost warning when the cost of sales is complete', async () => {
+    mockApi(summaryWith({}));
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
+    const panel = heading.closest('section') as HTMLElement;
+    await within(panel).findByText('Total Net Profit');
+    expect(within(panel).queryByRole('note')).toBeNull();
+  });
+
+  it('does not call a legitimate zero cost unverified when nothing was sold', async () => {
+    mockApi(summaryWith({ sales: '0.00', cogs: '0.00', netProfit: '0.00' }));
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    const heading = await screen.findByRole('heading', { name: 'Financial Summary' });
+    const panel = heading.closest('section') as HTMLElement;
+    await within(panel).findByText('Total Net Profit');
+    expect(within(panel).queryByRole('note')).toBeNull();
   });
 });

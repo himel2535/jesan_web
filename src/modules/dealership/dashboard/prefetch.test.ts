@@ -28,7 +28,7 @@ describe('prefetchDashboard', () => {
     await prefetchDashboard(queryClient, options);
 
     for (const windows of [monthPeriods(TODAY, 'thisMonth'), dayPeriods(TODAY, 'today')]) {
-      const { queryKey } = dashboardKpisQuery('example-cement', 'b1', windows);
+      const { queryKey } = dashboardKpisQuery('example-cement', 'b1', windows.current);
       expect(queryClient.getQueryData(queryKey)).toEqual({
         path: '/b/example-cement/dashboard/kpis',
       });
@@ -36,6 +36,8 @@ describe('prefetchDashboard', () => {
     const paths = getter.mock.calls.map((call) => call[0] as string);
     // The KPI rows cost one request each; commission and cash book are included for an owner.
     expect(paths.filter((p) => p.endsWith('/kpis'))).toHaveLength(2);
+    // No comparison window is ever asked for.
+    expect(getter.mock.calls.some((call) => JSON.stringify(call).includes('prevFrom'))).toBe(false);
     expect(paths.some((p) => p.endsWith('/commission-series'))).toBe(true);
     expect(paths.some((p) => p.endsWith('/cashbook'))).toBe(true);
   });
@@ -61,7 +63,7 @@ describe('prefetchDashboard', () => {
     const { queryKey } = dashboardKpisQuery(
       'example-cement',
       'b1',
-      monthPeriods(TODAY, 'thisMonth'),
+      monthPeriods(TODAY, 'thisMonth').current,
     );
     expect(queryClient.getQueryData(queryKey)).toBeUndefined();
   });
@@ -76,7 +78,7 @@ describe('prefetchDashboard', () => {
     const { queryKey } = dashboardKpisQuery(
       'example-cement',
       'b1',
-      monthPeriods(TODAY, 'thisMonth'),
+      monthPeriods(TODAY, 'thisMonth').current,
     );
     expect(queryClient.getQueryData(queryKey)).toEqual({ ok: true });
   });

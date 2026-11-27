@@ -26,17 +26,9 @@ export const HUE: Record<TileHue, { card: string; icon: string }> = {
   },
 };
 
-export interface Growth {
-  /** The real change, or null when there is nothing to compare against. */
-  percent: number | null;
-  /** What it is compared with, e.g. "vs Last Month". */
-  label: string;
-}
-
 /**
  * One KPI card from the reference: icon, title and a chevron on top, the figure
- * large beneath it, the change under that, and the period pills along the
- * bottom.
+ * large beneath it, and the period pills along the bottom.
  *
  * The whole card navigates through an overlay link. The pills sit above that
  * overlay and stop the click themselves, so changing a period never follows the
@@ -49,7 +41,6 @@ export function KpiTile({
   linkLabel,
   href,
   value,
-  growth,
   pills,
   loading = false,
   errorText,
@@ -60,12 +51,10 @@ export function KpiTile({
   linkLabel: string;
   href: string;
   value: ReactNode;
-  growth: Growth | null;
   pills: ReactNode;
   loading?: boolean;
   errorText?: string;
 }) {
-  const up = growth?.percent !== null && growth?.percent !== undefined && growth.percent >= 0;
   return (
     <article
       className={cn(
@@ -105,27 +94,6 @@ export function KpiTile({
         ) : (
           <p className="truncate text-xl leading-tight font-bold text-[var(--dash-fg)] tabular-nums">
             {value}
-          </p>
-        )}
-      </div>
-
-      <div className="pointer-events-none min-h-4 text-[11px]">
-        {growth && !loading && !errorText && (
-          <p
-            className={cn(
-              'flex min-w-0 items-center gap-1 font-semibold',
-              growth.percent === null
-                ? 'text-[var(--dash-fg-muted)]'
-                : up
-                  ? 'text-[var(--dash-success)]'
-                  : 'text-[var(--dash-danger)]',
-            )}
-          >
-            {growth.percent !== null && <span aria-hidden>{up ? '▲' : '▼'}</span>}
-            <span className="truncate">
-              {growth.percent === null ? '—' : `${up ? '+' : ''}${growth.percent.toFixed(1)}%`}{' '}
-              <span className="font-normal text-[var(--dash-fg-muted)]">{growth.label}</span>
-            </span>
           </p>
         )}
       </div>

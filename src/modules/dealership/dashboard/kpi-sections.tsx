@@ -8,8 +8,8 @@ import { useFormat } from '@/core/i18n/use-format';
 import { useDefaultUnit } from '../commission/shared';
 import { useDashboardKpis } from './api';
 import type { KpiWindow } from './types';
-import { changePercent, dayPeriods, monthYearPeriods, type DaySelection } from './periods';
-import { KpiTile, type Growth, type TileHue } from './kpi-tile';
+import { dayPeriods, monthYearPeriods, type DaySelection } from './periods';
+import { KpiTile, type TileHue } from './kpi-tile';
 import { PeriodPills } from './period-pills';
 import { MonthFilter, useMonthFilter } from './month-filter';
 import { PillSelect } from './pill-select';
@@ -91,14 +91,13 @@ function MetricCard({
 
   const periods =
     scope === 'month' ? monthYearPeriods(today, month.selection) : dayPeriods(today, day);
-  // One request for all four figures and both windows. Cards with the same windows share it.
-  const kpis = useDashboardKpis(slug, businessId, periods);
+  // One request for all four figures. Cards with the same window share it.
+  const kpis = useDashboardKpis(slug, businessId, periods.current);
   const current = {
     value: metricValue(metric, kpis.data?.current),
     error: kpis.error,
     loading: kpis.isPending,
   };
-  const previousValue = metricValue(metric, kpis.data?.previous);
 
   if (isForbidden(current.error)) return null;
   // Bags bought come only with `purchase.view`; without it the answer has no such field.
@@ -122,17 +121,6 @@ function MetricCard({
       format.moneyRounded(current.value)
     );
 
-  const growth: Growth | null =
-    periods.previous === null
-      ? null
-      : {
-          percent:
-            previousValue !== undefined && current.value !== undefined
-              ? changePercent(Number(current.value), Number(previousValue))
-              : null,
-          label: scope === 'month' ? t('compare.vsLastMonth') : t('compare.vsYesterday'),
-        };
-
   const params = new URLSearchParams({ from: periods.current.from, to: periods.current.to });
   const href = `/b/${encodeURIComponent(slug)}/${METRIC_PARENT[metric]}?${params.toString()}`;
   const Icon = METRIC_ICON[metric];
@@ -146,7 +134,6 @@ function MetricCard({
       linkLabel={t('openLabel', { title })}
       href={href}
       value={value}
-      growth={growth}
       loading={current.loading}
       errorText={current.error && !isForbidden(current.error) ? t('loadError') : undefined}
       pills={
