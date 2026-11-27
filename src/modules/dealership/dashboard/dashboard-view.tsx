@@ -1,13 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Bell, CalendarDays } from 'lucide-react';
 import { useCan } from '@/core/auth/can';
-import { usePendingCount } from '@/core/approvals/api';
 import { businessToday } from '@/core/i18n/format';
-import { useFormat } from '@/core/i18n/use-format';
 import { CashFlowSnapshot } from './cash-flow-snapshot';
 import { KeyInformation } from './key-information';
 import { KpiSections } from './kpi-sections';
@@ -44,48 +40,18 @@ const CommissionPanel = dynamic(() => import('./commission-panel').then((m) => m
  */
 export function DashboardView({ slug, businessId }: { slug: string; businessId: string }) {
   const t = useTranslations('dealership.dashboard');
-  const format = useFormat();
   const today = businessToday();
   const month = monthPeriods(today, 'thisMonth').current;
   const canCommission = useCan('commission.view');
   const canCost = useCan('product.cost.view');
-  const pending = usePendingCount(slug);
-  const pendingCount = pending.data ?? 0;
 
-  // One call feeds the header's month, Key Information and the Cash Flow
+  // One call feeds Key Information and the Cash Flow
   // panel, so every one of them names the same customer due.
   const summary = useDashboardFinanceSummary(slug, businessId, month);
-  const monthLabel = format.date(`${month.from}T00:00:00.000Z`, {
-    month: 'long',
-    year: 'numeric',
-  });
 
   return (
-    <div className="dash-scope flex flex-col gap-[5px] lg:grid lg:h-[calc(100dvh-7rem)] lg:min-h-0 lg:grid-rows-[auto_auto_minmax(0,1fr)_minmax(0,1.05fr)]">
-      <header className="flex min-w-0 items-center justify-end gap-3">
-        <h1 className="sr-only">{t('title')}</h1>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden items-center gap-1.5 rounded-full border border-[var(--dash-border)] bg-[var(--dash-surface)] px-3 py-2 text-xs font-semibold text-[var(--dash-fg)] sm:inline-flex">
-            <CalendarDays aria-hidden className="size-4 text-[var(--dash-primary)]" />
-            {monthLabel}
-          </span>
-          <Link
-            href={`/b/${encodeURIComponent(slug)}/approvals`}
-            aria-label={t('notifications', { count: pendingCount })}
-            className="relative inline-flex size-10 items-center justify-center rounded-full border border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-fg)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
-          >
-            <Bell aria-hidden className="size-5" />
-            {pendingCount > 0 && (
-              <span
-                aria-hidden
-                className="absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-[var(--dash-danger)] px-1 text-center text-[10px] leading-5 font-semibold text-white"
-              >
-                {format.number(pendingCount)}
-              </span>
-            )}
-          </Link>
-        </div>
-      </header>
+    <div className="dash-scope flex flex-col gap-[5px] lg:grid lg:h-[calc(100dvh-5.5rem)] lg:min-h-0 lg:grid-rows-[auto_minmax(0,1fr)_minmax(0,1.05fr)]">
+      <h1 className="sr-only">{t('title')}</h1>
 
       <KpiSections slug={slug} businessId={businessId} today={today} />
 

@@ -49,7 +49,7 @@ export function AppShell({ navItems, initialCollapsed, theme, title, children }:
         <Topbar theme={theme} onOpenMenu={() => setDrawerOpen(true)} />
         {/* One place for "the server is waking up", so no page carries its own copy. */}
         <WakingNotice />
-        <main id="main" tabIndex={-1} className="flex-1 p-4 md:p-6">
+        <main id="main" tabIndex={-1} className="flex-1 p-2 md:p-3">
           {children}
         </main>
       </div>

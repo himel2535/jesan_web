@@ -18,7 +18,8 @@
     "openMenu": "মেনু খুলুন",
     "collapseSidebar": "সাইডবার ছোট করুন",
     "expandSidebar": "সাইডবার বড় করুন",
-    "userMenu": "ব্যবহারকারী মেনু"
+    "userMenu": "ব্যবহারকারী মেনু",
+    "notifications": "বিজ্ঞপ্তি ({count}টি অনুমোদন বাকি)"
   },
   "theme": {
     "label": "থিম",
@@ -1208,7 +1209,6 @@
     },
     "dashboard": {
       "title": "ড্যাশবোর্ড",
-      "notifications": "বিজ্ঞপ্তি ({count}টি অনুমোদন বাকি)",
       "monthly": {
         "title": "এই মাস"
       },

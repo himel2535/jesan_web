@@ -18,7 +18,8 @@
     "openMenu": "Open menu",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
-    "userMenu": "User menu"
+    "userMenu": "User menu",
+    "notifications": "Notifications ({count} pending approvals)"
   },
   "theme": {
     "label": "Theme",
@@ -1208,7 +1209,6 @@
     },
     "dashboard": {
       "title": "Dashboard",
-      "notifications": "Notifications ({count} pending approvals)",
       "monthly": {
         "title": "This Month"
       },
