@@ -2077,22 +2077,20 @@ Akij থেকে নগদে কেনা, স্টক আর মাসিক
 }
 ```
 
-### `GET dashboard/kpis?from=&to=&prevFrom=&prevTo=` (`report.view`)
+### `GET dashboard/kpis?from=&to=` (`report.view`)
 
-ড্যাশবোর্ডের KPI কার্ডের চারটা সংখ্যা এক কলে, একটা সময়ের (`from`/`to`) এবং চাইলে তুলনার আরেকটা সময়ের (`prevFrom`/`prevTo`)। আগে প্রতিটা সংখ্যার জন্য আলাদা রিপোর্ট কল লাগত। `from`/`to` না দিলে চলতি মাস। `prevFrom` ও `prevTo` একসাথে দিতে হয়, নয়তো একসাথেই বাদ।
+ড্যাশবোর্ডের KPI কার্ডের চারটা সংখ্যা এক কলে, একটা সময়ের (`from`/`to`)। আগে প্রতিটা সংখ্যার জন্য আলাদা রিপোর্ট কল লাগত। `from`/`to` না দিলে চলতি মাস। **কোনো তুলনার সময় নেই**: `prevFrom`/`prevTo` ও উত্তরের `previous` তুলে দেওয়া হয়েছে (মালিকের নির্দেশে, KPI কার্ডে গত মাস/গতকালের সঙ্গে তুলনা নেই); `prevFrom`/`prevTo` পাঠালে এখন অন্য সব অজানা প্যারামিটারের মতো 400 `NOT_ALLOWED`। তাই **ডিপ্লয়ের ক্রম: আগে frontend, পরে API**।
 
 - `collection`: আদায় (active), `sales`: active ডেলিভারির মূল্য, `salesQuantity`: ডেলিভারি হওয়া বস্তা। তিনটাই `reports/collections` ও `reports/sales`-এর `totalAmount` / `totalQuantity`-এর সমান।
 - `purchaseQuantity`: কেনা বস্তা, `purchases/summary`-র `totalQuantity`-র সমান। শুধু `purchase.view` থাকলে উত্তরে আসে; না থাকলে ঘরটাই থাকে না (রিপোর্ট দেখার অনুমতি আছে এমন হিসাবরক্ষকের জন্যও না)।
-- `previous` তুলনার সময় না দিলে `null`।
 
 ```json
 {
-  "current":  { "from": "2026-11-01", "to": "2026-11-27", "collection": "325750.00", "sales": "485200.00", "salesQuantity": "1250.000", "purchaseQuantity": "980.000" },
-  "previous": { "from": "2026-10-01", "to": "2026-10-27", "collection": "290000.00", "sales": "430000.00", "salesQuantity": "1100.000", "purchaseQuantity": "900.000" }
+  "current": { "from": "2026-11-01", "to": "2026-11-27", "collection": "325750.00", "sales": "485200.00", "salesQuantity": "1250.000", "purchaseQuantity": "980.000" }
 }
 ```
 
-ত্রুটি: `from`/`to` ভুল 400 (`FROM_INVALID` / `TO_INVALID`); তুলনার সময় আধা-পাঠালে 400 `PREV_FROM_REQUIRED` (`prevFrom`) / `PREV_TO_REQUIRED` (`prevTo`); তারিখ আসল নয়, বা `prevTo` < `prevFrom` হলে 400 `PREV_FROM_INVALID` / `PREV_TO_INVALID`; অনুমতি নেই 403 `ACCESS_DENIED`।
+ত্রুটি: `from`/`to` ভুল 400 (`FROM_INVALID` / `TO_INVALID`); অনুমতি নেই 403 `ACCESS_DENIED`। (`PREV_*` code আর আসে না; নিচের তালিকায় শুধু ইতিহাস হিসেবে আছে, অন্য অর্থে ব্যবহার হবে না।)
 
 ### `GET dashboard/monthly-series?year=` (`report.view`)
 
@@ -2371,8 +2369,8 @@ query string-এর ভুলও (`?page=0`) একই রূপে আসে, `
 | `EXPENSE_CATEGORY_NOT_FOUND_OR_INACTIVE` | 400 | `categoryId` | ধরন নেই, অন্য ব্যবসার, বা নিষ্ক্রিয় |
 | `EXPENSE_DATE_INVALID` / `_IN_FUTURE` / `_TOO_OLD` | 400 | `expenseDate` | তারিখ আসল নয় / ভবিষ্যৎ / ৭ দিনের আগের |
 | `FROM_INVALID` / `TO_INVALID` | 400 | `from` / `to` | তারিখ আসল নয়, বা `to` < `from` |
-| `PREV_FROM_REQUIRED` / `PREV_TO_REQUIRED` | 400 | `prevFrom` / `prevTo` | তুলনার সময়ের একটা দিক পাঠানো হয়েছে, অন্যটা নয় |
-| `PREV_FROM_INVALID` / `PREV_TO_INVALID` | 400 | `prevFrom` / `prevTo` | তারিখ আসল নয়, বা `prevTo` < `prevFrom` |
+| `PREV_FROM_REQUIRED` / `PREV_TO_REQUIRED` | 400 | `prevFrom` / `prevTo` | **আর আসে না** (তুলনার সময় তুলে দেওয়া হয়েছে); আগে: একটা দিক পাঠানো, অন্যটা নয় |
+| `PREV_FROM_INVALID` / `PREV_TO_INVALID` | 400 | `prevFrom` / `prevTo` | **আর আসে না**; আগে: তারিখ আসল নয়, বা `prevTo` < `prevFrom` |
 | `EXPENSE_NOT_FOUND` | 404 | - | খরচ নেই বা অন্য ব্যবসার |
 | `EXPENSE_CATEGORY_NOT_FOUND` | 404 | - | ধরন নেই বা অন্য ব্যবসার |
 | `EXPENSE_ALREADY_VOID` | 409 | - | বাতিল খরচে আবার বদল বা বাতিলের চেষ্টা |
