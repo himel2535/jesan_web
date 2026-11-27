@@ -18,9 +18,8 @@ import type { CommissionSeriesResponse } from './types';
 import { Info } from 'lucide-react';
 
 /**
- * Commission Overview, owner-only. Received commission (the money Akij actually paid) is shown
- * by month, this year against last year. Calculated commission is a separate figure and never
- * mixed into received totals; receivable = calculated − received over all time.
+ * Commission Overview, owner-only. Commission received (what the owner recorded) is shown by
+ * month, this year against last year.
  */
 export function CommissionPanel({
   slug,
