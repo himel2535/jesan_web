@@ -7,15 +7,32 @@ export interface PillOption<T extends string> {
   label: string;
 }
 
-/** The selected pill takes its card's own colour, as in the reference. */
+/** The accent only draws the ring round the chosen pill; the fill stays pastel and glassless. */
 export type PillHue = 'blue' | 'green' | 'purple' | 'orange';
 
-export const SELECTED: Record<PillHue, string> = {
-  blue: 'bg-[var(--dash-blue-accent)] text-white',
-  green: 'bg-[var(--dash-green-accent)] text-white',
-  purple: 'bg-[var(--dash-purple-accent)] text-white',
-  orange: 'bg-[var(--dash-orange-accent)] text-white',
+/** `card` pills sit on a tinted KPI card, `panel` pills on a white panel. */
+export type PillTone = 'card' | 'panel';
+
+const RING: Record<PillHue, string> = {
+  blue: 'ring-[var(--dash-blue-accent)]',
+  green: 'ring-[var(--dash-green-accent)]',
+  purple: 'ring-[var(--dash-purple-accent)]',
+  orange: 'ring-[var(--dash-orange-accent)]',
 };
+
+/** The one pastel pill look shared by every dashboard filter (buttons and dropdowns alike). */
+export function pillClass(selected: boolean, hue: PillHue, tone: PillTone): string {
+  if (selected) {
+    return cn(
+      'bg-[var(--dash-surface)] text-[var(--dash-fg)] shadow-sm ring-1 ring-inset',
+      RING[hue],
+    );
+  }
+  return cn(
+    tone === 'card' ? 'bg-[var(--dash-surface)]/70' : 'bg-[var(--dash-bg)]',
+    'text-[var(--dash-fg-muted)] hover:bg-[var(--dash-surface)]',
+  );
+}
 
 /**
  * The row of small period pills on a KPI card. They read as ~26px tall, as in
@@ -31,12 +48,14 @@ export function PeriodPills<T extends string>({
   options,
   onChange,
   hue = 'blue',
+  tone = 'card',
 }: {
   label: string;
   value: T;
   options: readonly PillOption<T>[];
   onChange: (value: T) => void;
   hue?: PillHue;
+  tone?: PillTone;
 }) {
   return (
     <div role="group" aria-label={label} className="flex min-w-0 flex-wrap gap-1">
@@ -56,9 +75,7 @@ export function PeriodPills<T extends string>({
               'relative isolate rounded-full px-2 py-1 text-[11px] font-medium whitespace-nowrap',
               'before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""]',
               'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)]',
-              selected
-                ? `${SELECTED[hue]} shadow-sm`
-                : 'bg-[var(--dash-surface)]/70 text-[var(--dash-fg-muted)] hover:bg-[var(--dash-surface)]',
+              pillClass(selected, hue, tone),
             )}
           >
             {option.label}

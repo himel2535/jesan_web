@@ -68,9 +68,9 @@ export function CommissionPanel({
         {t('commission.title')}
       </h2>
       <div className="flex min-h-0 flex-1 flex-col gap-2">
-        <div className="min-h-0 min-w-0 flex-1">
+        <div className="h-[220px] min-h-0 min-w-0 lg:h-auto lg:flex-1">
           {thisYear.isPending || lastYear.isPending ? (
-            <div className="h-full min-h-[150px] animate-pulse rounded bg-[var(--dash-border)]" />
+            <div className="h-full animate-pulse rounded bg-[var(--dash-border)]" />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chart} margin={{ top: 4, right: 6, bottom: 0, left: 0 }}>
@@ -79,7 +79,8 @@ export function CommissionPanel({
                   dataKey="label"
                   tickLine={false}
                   axisLine={false}
-                  interval={0}
+                  interval="preserveStartEnd"
+                  minTickGap={6}
                   tick={{ fontSize: 11, fill: 'var(--dash-fg-muted)' }}
                 />
                 <YAxis

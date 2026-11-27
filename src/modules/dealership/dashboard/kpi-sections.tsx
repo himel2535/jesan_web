@@ -15,21 +15,13 @@ import {
   monthYearPeriods,
   type DayRange,
   type DaySelection,
-  type MonthYearSelection,
 } from './periods';
 import { KpiTile, type Growth, type TileHue } from './kpi-tile';
 import { PeriodPills } from './period-pills';
-import { MonthYearSelect } from './month-year-select';
+import { MonthFilter, useMonthFilter } from './month-filter';
+import { PillSelect } from './pill-select';
 
 export type Metric = 'collection' | 'sales' | 'salesQuantity' | 'purchaseQuantity';
-
-type PeriodKey = 'period.allTime' | 'period.today' | 'period.yesterday';
-
-const DAY_PILLS: readonly { value: DaySelection; label: PeriodKey }[] = [
-  { value: 'today', label: 'period.today' },
-  { value: 'yesterday', label: 'period.yesterday' },
-  { value: 'lifetime', label: 'period.allTime' },
-];
 
 const METRIC_ICON: Record<Metric, LucideIcon> = {
   collection: Wallet,
@@ -136,19 +128,13 @@ function MetricCard({
 }) {
   const t = useTranslations('dealership.dashboard');
   const format = useFormat();
-  const [month, setMonth] = useState<MonthYearSelection>(() => ({
-    kind: 'month',
-    year: Number(today.slice(0, 4)),
-    month: Number(today.slice(5, 7)),
-  }));
-  // The dropdowns keep showing the last chosen month while "All Time" is on.
-  const [lastMonth, setLastMonth] = useState({
-    year: Number(today.slice(0, 4)),
-    month: Number(today.slice(5, 7)),
-  });
+  const month = useMonthFilter(today);
   const [day, setDay] = useState<DaySelection>('today');
+  // The day dropdown keeps showing the last chosen day while "All Time" is on.
+  const [lastDay, setLastDay] = useState<'today' | 'yesterday'>('today');
 
-  const periods = scope === 'month' ? monthYearPeriods(today, month) : dayPeriods(today, day);
+  const periods =
+    scope === 'month' ? monthYearPeriods(today, month.selection) : dayPeriods(today, day);
   const current = useMetric(metric, slug, businessId, periods.current);
   const previous = useMetric(metric, slug, businessId, periods.previous);
 
@@ -195,38 +181,31 @@ function MetricCard({
       errorText={current.error && !isForbidden(current.error) ? t('loadError') : undefined}
       pills={
         scope === 'month' ? (
+          <MonthFilter title={title} filter={month} hue={hue} />
+        ) : (
           <div className="flex flex-nowrap items-center justify-end gap-0.5 sm:gap-1">
-            <MonthYearSelect
-              title={title}
-              year={lastMonth.year}
-              month={lastMonth.month}
-              onChange={(year, m) => {
-                setLastMonth({ year, month: m });
-                setMonth({ kind: 'month', year, month: m });
+            <PillSelect
+              label={t('periodFor', { title })}
+              value={lastDay}
+              options={[
+                { value: 'today' as const, label: t('period.today') },
+                { value: 'yesterday' as const, label: t('period.yesterday') },
+              ]}
+              onChange={(value) => {
+                setLastDay(value);
+                setDay(value);
               }}
             />
             <PeriodPills
               label={t('periodFor', { title })}
-              value={month.kind === 'lifetime' ? 'lifetime' : ''}
+              value={day === 'lifetime' ? 'lifetime' : ''}
               hue={hue}
               options={[{ value: 'lifetime', label: t('period.allTime') }]}
               onChange={() => {
-                setMonth(
-                  month.kind === 'lifetime'
-                    ? { kind: 'month', ...lastMonth }
-                    : { kind: 'lifetime' },
-                );
+                setDay(day === 'lifetime' ? lastDay : 'lifetime');
               }}
             />
           </div>
-        ) : (
-          <PeriodPills
-            label={t('periodFor', { title })}
-            value={day}
-            hue={hue}
-            options={DAY_PILLS.map((pill) => ({ value: pill.value, label: t(pill.label) }))}
-            onChange={setDay}
-          />
         )
       }
     />

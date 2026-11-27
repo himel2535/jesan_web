@@ -1207,8 +1207,7 @@
       }
     },
     "dashboard": {
-      "welcome": "স্বাগতম, {name} 👋",
-      "subtitle": "{month}-এর ব্যবসার সারসংক্ষেপ",
+      "title": "ড্যাশবোর্ড",
       "notifications": "বিজ্ঞপ্তি ({count}টি অনুমোদন বাকি)",
       "monthly": {
         "title": "এই মাস"

@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useFormat } from '@/core/i18n/use-format';
 import { cn } from '@/core/ui/cn';
+import { useCan } from '@/core/auth/can';
+import { PillSelect } from './pill-select';
 import { useDashboardMonthlySeries } from './api';
 import type { MonthlySeriesRow } from './types';
 import { monthKey } from './periods';
@@ -104,8 +106,13 @@ export function SalesCollectionChart({
   const lastYear = useDashboardMonthlySeries(slug, businessId, currentYear - 1);
   const needsLastYear = range === 'last12';
 
+  // Purchase is the third series for anyone who may see cost: the permission decides, so the
+  // legend and bars are there from the first paint, not only once a year's data has arrived.
+  const canCost = useCan('product.cost.view');
   const hasPurchase =
-    thisYear.data?.months.some((row) => row.purchaseAmount !== undefined) ?? false;
+    canCost ||
+    (thisYear.data?.months.some((row) => row.purchaseAmount !== undefined) ?? false) ||
+    (lastYear.data?.months.some((row) => row.purchaseAmount !== undefined) ?? false);
 
   const points = useMemo(() => {
     const rows = new Map<string, MonthlySeriesRow>();
@@ -127,24 +134,16 @@ export function SalesCollectionChart({
         <h2 id="dash-sales-chart" className="truncate text-sm font-semibold text-[var(--dash-fg)]">
           {t('chart.salesCollectionTitle')}
         </h2>
-        <div role="group" aria-label={t('chart.range')} className="flex gap-1">
-          {(['last12', 'thisYear'] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={range === value}
-              onClick={() => setRange(value)}
-              className={cn(
-                'h-10 rounded-md border px-2 text-xs font-medium focus-visible:outline-2 focus-visible:outline-[var(--focus)]',
-                range === value
-                  ? 'border-[var(--dash-primary)] text-[var(--dash-primary)]'
-                  : 'border-[var(--dash-border)] text-[var(--dash-fg-muted)]',
-              )}
-            >
-              {t(value === 'last12' ? 'chart.last12' : 'chart.thisYear')}
-            </button>
-          ))}
-        </div>
+        <PillSelect
+          label={t('chart.range')}
+          value={range}
+          tone="panel"
+          options={[
+            { value: 'last12' as const, label: t('chart.last12') },
+            { value: 'thisYear' as const, label: t('chart.thisYear') },
+          ]}
+          onChange={setRange}
+        />
       </header>
 
       <ul className="flex flex-wrap gap-3 text-xs text-[var(--dash-fg-muted)]">
@@ -156,11 +155,11 @@ export function SalesCollectionChart({
         ))}
       </ul>
 
-      <div className="min-h-[160px] min-w-0 flex-1">
+      <div className="h-[220px] min-w-0 lg:h-auto lg:min-h-0 lg:flex-1">
         {failed ? (
           <p className="text-sm text-[var(--dash-danger)]">{t('loadError')}</p>
         ) : loading ? (
-          <div className="h-full min-h-[160px] animate-pulse rounded bg-[var(--dash-border)]" />
+          <div className="h-full animate-pulse rounded bg-[var(--dash-border)]" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -175,7 +174,8 @@ export function SalesCollectionChart({
                 tickLine={false}
                 axisLine={false}
                 tick={{ fontSize: 11, fill: 'var(--dash-fg-muted)' }}
-                interval={0}
+                interval="preserveStartEnd"
+                minTickGap={6}
               />
               <YAxis
                 width={44}

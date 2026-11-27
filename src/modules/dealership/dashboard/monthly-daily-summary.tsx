@@ -7,7 +7,7 @@ import { useFormat } from '@/core/i18n/use-format';
 import { cn } from '@/core/ui/cn';
 import { useDashboardFinanceSummary } from './api';
 import { dayPeriods, monthPeriods } from './periods';
-import { PeriodPills } from './period-pills';
+import { PillSelect } from './pill-select';
 import type { DayRange } from './periods';
 
 type Scope = 'thisMonth' | 'today';
@@ -136,9 +136,10 @@ export function MonthlyDailySummary({
           <CalendarRange aria-hidden className="size-4 text-[var(--dash-primary)]" />
           {t('summary.monthlyDailyTitle')}
         </h2>
-        <PeriodPills
+        <PillSelect
           label={t('summary.monthlyDailyFilter')}
           value={scope}
+          tone="panel"
           options={[
             { value: 'thisMonth' as const, label: t('period.thisMonth') },
             { value: 'today' as const, label: t('period.today') },

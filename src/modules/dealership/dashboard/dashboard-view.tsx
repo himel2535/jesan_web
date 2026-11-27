@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Bell, CalendarDays } from 'lucide-react';
 import { useCan } from '@/core/auth/can';
-import { useSession } from '@/core/auth/session-context';
 import { usePendingCount } from '@/core/approvals/api';
 import { businessToday } from '@/core/i18n/format';
 import { useFormat } from '@/core/i18n/use-format';
@@ -29,7 +28,6 @@ import { monthPeriods } from './periods';
 export function DashboardView({ slug, businessId }: { slug: string; businessId: string }) {
   const t = useTranslations('dealership.dashboard');
   const format = useFormat();
-  const session = useSession();
   const today = businessToday();
   const month = monthPeriods(today, 'thisMonth').current;
   const canCommission = useCan('commission.view');
@@ -47,15 +45,8 @@ export function DashboardView({ slug, businessId }: { slug: string; businessId: 
 
   return (
     <div className="dash-scope flex flex-col gap-[5px] lg:grid lg:h-[calc(100dvh-7rem)] lg:min-h-0 lg:grid-rows-[auto_auto_minmax(0,1fr)_minmax(0,1.05fr)]">
-      <header className="flex min-w-0 items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-bold text-[var(--dash-fg)]">
-            {t('welcome', { name: session.user.name })}
-          </h1>
-          <p className="max-h-[760px]:hidden truncate text-xs text-[var(--dash-fg-muted)]">
-            {t('subtitle', { month: monthLabel })}
-          </p>
-        </div>
+      <header className="flex min-w-0 items-center justify-end gap-3">
+        <h1 className="sr-only">{t('title')}</h1>
         <div className="flex shrink-0 items-center gap-2">
           <span className="hidden items-center gap-1.5 rounded-full border border-[var(--dash-border)] bg-[var(--dash-surface)] px-3 py-2 text-xs font-semibold text-[var(--dash-fg)] sm:inline-flex">
             <CalendarDays aria-hidden className="size-4 text-[var(--dash-primary)]" />
