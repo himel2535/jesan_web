@@ -12,24 +12,18 @@ import { useDefaultUnit } from '../commission/shared';
 import {
   changePercent,
   dayPeriods,
-  monthPeriods,
+  monthYearPeriods,
   type DayRange,
   type DaySelection,
-  type MonthSelection,
+  type MonthYearSelection,
 } from './periods';
 import { KpiTile, type Growth, type TileHue } from './kpi-tile';
 import { PeriodPills } from './period-pills';
+import { MonthYearSelect } from './month-year-select';
 
 export type Metric = 'collection' | 'sales' | 'salesQuantity' | 'purchaseQuantity';
 
-type PeriodKey =
-  'period.thisMonth' | 'period.lastMonth' | 'period.allTime' | 'period.today' | 'period.yesterday';
-
-const MONTH_PILLS: readonly { value: MonthSelection; label: PeriodKey }[] = [
-  { value: 'thisMonth', label: 'period.thisMonth' },
-  { value: 'previousMonth', label: 'period.lastMonth' },
-  { value: 'lifetime', label: 'period.allTime' },
-];
+type PeriodKey = 'period.allTime' | 'period.today' | 'period.yesterday';
 
 const DAY_PILLS: readonly { value: DaySelection; label: PeriodKey }[] = [
   { value: 'today', label: 'period.today' },
@@ -142,10 +136,19 @@ function MetricCard({
 }) {
   const t = useTranslations('dealership.dashboard');
   const format = useFormat();
-  const [month, setMonth] = useState<MonthSelection>('thisMonth');
+  const [month, setMonth] = useState<MonthYearSelection>(() => ({
+    kind: 'month',
+    year: Number(today.slice(0, 4)),
+    month: Number(today.slice(5, 7)),
+  }));
+  // The dropdowns keep showing the last chosen month while "All Time" is on.
+  const [lastMonth, setLastMonth] = useState({
+    year: Number(today.slice(0, 4)),
+    month: Number(today.slice(5, 7)),
+  });
   const [day, setDay] = useState<DaySelection>('today');
 
-  const periods = scope === 'month' ? monthPeriods(today, month) : dayPeriods(today, day);
+  const periods = scope === 'month' ? monthYearPeriods(today, month) : dayPeriods(today, day);
   const current = useMetric(metric, slug, businessId, periods.current);
   const previous = useMetric(metric, slug, businessId, periods.previous);
 
@@ -190,15 +193,37 @@ function MetricCard({
       growth={growth}
       loading={current.loading}
       errorText={current.error && !isForbidden(current.error) ? t('loadError') : undefined}
+      headerAction={
+        scope === 'month' ? (
+          <MonthYearSelect
+            title={title}
+            year={lastMonth.year}
+            month={lastMonth.month}
+            dimmed={month.kind === 'lifetime'}
+            onChange={(year, m) => {
+              setLastMonth({ year, month: m });
+              setMonth({ kind: 'month', year, month: m });
+            }}
+          />
+        ) : undefined
+      }
       pills={
         scope === 'month' ? (
-          <PeriodPills
-            label={t('periodFor', { title })}
-            value={month}
-            hue={hue}
-            options={MONTH_PILLS.map((pill) => ({ value: pill.value, label: t(pill.label) }))}
-            onChange={setMonth}
-          />
+          <div className="flex justify-end">
+            <PeriodPills
+              label={t('periodFor', { title })}
+              value={month.kind === 'lifetime' ? 'lifetime' : ''}
+              hue={hue}
+              options={[{ value: 'lifetime', label: t('period.allTime') }]}
+              onChange={() => {
+                setMonth(
+                  month.kind === 'lifetime'
+                    ? { kind: 'month', ...lastMonth }
+                    : { kind: 'lifetime' },
+                );
+              }}
+            />
+          </div>
         ) : (
           <PeriodPills
             label={t('periodFor', { title })}

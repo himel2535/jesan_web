@@ -5,6 +5,7 @@ import {
   monthEndOf,
   monthPeriods,
   monthStartOf,
+  monthYearPeriods,
   previousMonthKey,
   previousMonthRange,
   sameDaysPreviousMonth,
@@ -118,5 +119,27 @@ describe('changePercent', () => {
     expect(changePercent(10, 0)).toBeNull();
     expect(changePercent(null, 100)).toBeNull();
     expect(changePercent(10, null)).toBeNull();
+  });
+});
+
+describe('monthYearPeriods (month and year dropdowns)', () => {
+  it('treats the current month as month-to-date against the same days last month', () => {
+    expect(monthYearPeriods('2026-11-26', { kind: 'month', year: 2026, month: 11 })).toEqual(
+      monthPeriods('2026-11-26', 'thisMonth'),
+    );
+  });
+
+  it('gives a past month whole, compared with the whole month before it', () => {
+    expect(monthYearPeriods('2026-11-26', { kind: 'month', year: 2026, month: 2 })).toEqual({
+      current: { from: '2026-02-01', to: '2026-02-28' },
+      previous: { from: '2026-01-01', to: '2026-01-31' },
+    });
+    expect(
+      monthYearPeriods('2026-11-26', { kind: 'month', year: 2025, month: 1 }).previous,
+    ).toEqual({ from: '2024-12-01', to: '2024-12-31' });
+  });
+
+  it('has no comparison for all time', () => {
+    expect(monthYearPeriods('2026-11-26', { kind: 'lifetime' }).previous).toBeNull();
   });
 });

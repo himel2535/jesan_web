@@ -80,6 +80,23 @@ export function monthPeriods(today: string, selection: MonthSelection): PeriodPa
   };
 }
 
+/** A KPI card's month choice: one calendar month (year + 1-12) or everything. */
+export type MonthYearSelection =
+  { kind: 'month'; year: number; month: number } | { kind: 'lifetime' };
+
+/**
+ * Windows for a chosen calendar month. The current month is month-to-date compared with the same
+ * days last month; any past month is the whole month compared with the whole month before it.
+ */
+export function monthYearPeriods(today: string, selection: MonthYearSelection): PeriodPair {
+  if (selection.kind === 'lifetime') return monthPeriods(today, 'lifetime');
+  const key = monthKey(selection.year, selection.month);
+  if (key === monthKeyOf(today)) return monthPeriods(today, 'thisMonth');
+  const from = `${key}-01`;
+  const current = { from, to: monthEndOf(from) };
+  return { current, previous: previousMonthRange(from) };
+}
+
 /** Daily card windows for a selection. `customDate` is used only with `custom`. */
 export function dayPeriods(
   today: string,

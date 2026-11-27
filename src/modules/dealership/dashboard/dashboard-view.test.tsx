@@ -189,6 +189,30 @@ describe('<DashboardView>', () => {
     );
   });
 
+  it('picks a month and year from the dropdowns and keeps All Time at the bottom', async () => {
+    mockApi(routes());
+    renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
+    const user = userEvent.setup();
+    await screen.findByRole('link', { name: 'Total Collection: open page' });
+
+    const collection = cardFor('Total Collection');
+    expect(within(collection).queryByRole('button', { name: 'Last Month' })).toBeNull();
+    const month = within(collection).getByLabelText('Choose month for Total Collection');
+    const year = within(collection).getByLabelText('Choose year for Total Collection');
+    expect(collection.querySelector('a')?.contains(month)).toBe(false);
+
+    await user.selectOptions(year, '2025');
+    await user.selectOptions(month, '2');
+    expect(collection.querySelector('a')).toHaveAttribute(
+      'href',
+      `${B}/collections?from=2025-02-01&to=2025-02-28`,
+    );
+    expect(cardFor('Total Sales').querySelector('a')).toHaveAttribute(
+      'href',
+      `${B}/sales?from=${MONTH_START}&to=${TODAY}`,
+    );
+  });
+
   it('shows the net profit the backend computed, with its change', async () => {
     mockApi(routes());
     renderInBusiness(<DashboardView slug="example-cement" businessId={BID} />, { me: ownerMe });
